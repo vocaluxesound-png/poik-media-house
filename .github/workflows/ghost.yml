@@ -1,4 +1,4 @@
-name: AI Ghost - Simple Test
+name: AI Ghost - Supabase Test
 
 on:
   workflow_dispatch:
@@ -9,15 +9,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Simple Python Test
+      - name: Test Supabase Connection
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          pip3 install supabase requests --quiet
+          
           python3 << 'EOF'
           import os
-          print("Python started")
-          print(f"URL exists: {os.environ.get('SUPABASE_URL') is not None}")
-          print(f"Key exists: {os.environ.get('SUPABASE_KEY') is not None}")
-          print("Test passed")
+          from supabase import create_client
+          
+          print("Testing Supabase connection...")
+          
+          SUPABASE_URL = os.environ.get("SUPABASE_URL")
+          SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+          
+          supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+          
+          # Test listing buckets
+          buckets = supabase.storage.list_buckets()
+          print(f"✅ Connected! Found buckets: {[b['name'] for b in buckets]}")
+          
+          # Test getting posts
+          posts = supabase.table("posts").select("*").limit(1).execute()
+          print(f"✅ Posts table accessible. Found {len(posts.data)} posts.")
+          
+          print("All tests passed!")
           EOF
