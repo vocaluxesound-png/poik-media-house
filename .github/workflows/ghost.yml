@@ -1,0 +1,61 @@
+name: AI Ghost - Generate Every 10 Minutes
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate and Post AI Image
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip
+          pip3 install supabase requests
+          
+          python3 << 'EOF'
+          import requests, os, time, random
+          from supabase import create_client
+          
+          SUPABASE_URL = os.environ["SUPABASE_URL"]
+          SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+          supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+          
+          prompts = [
+              "cinematic cyberpunk fashion model neon Tokyo street rain 8k photorealistic",
+              "stunning realistic portrait futuristic city holographic fashion vogue 8k",
+              "luxury sports car rainy Miami sunset cinematic reflections 8k",
+              "serene Japanese garden autumn cherry blossoms National Geographic 8k",
+              "northern lights snow mountains mirror lake realistic 8k",
+              "minimalist luxury apartment floor-to-ceiling sunset city 8k",
+              "futuristic train station clouds glass architecture golden hour 8k"
+          ]
+          
+          prompt = random.choice(prompts)
+          print(f"Generating: {prompt}")
+          
+          url = f"https://image.pollinations.ai/prompt/{prompt.replace(' ', '%20')}?width=1080&height=1920&nologo=true&seed={random.randint(1,999999)}"
+          
+          response = requests.get(url, timeout=60)
+          if response.status_code == 200:
+              filename = f"ai_{int(time.time())}.jpg"
+              supabase.storage.from_("post-images").upload(filename, response.content)
+              public_url = supabase.storage.from_("post-images").get_public_url(filename)
+              
+              supabase.table("posts").insert({
+                  "image_url": public_url,
+                  "caption": prompt[:100],
+                  "is_ai": True,
+                  "likes": 0
+              }).execute()
+              print("✅ Image posted!")
+          else:
+              print(f"❌ Failed: {response.status_code}")
+          EOF
