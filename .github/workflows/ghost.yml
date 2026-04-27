@@ -1,8 +1,6 @@
-name: AI Ghost - Generate Every 10 Minutes
+name: AI Ghost - Debug
 
 on:
-  schedule:
-    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,54 +9,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate and Post AI Image
+      - name: Debug
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          pip3 install supabase requests --quiet
+          pip3 install supabase requests
           
           python3 << 'EOF'
           import requests, os, time, random
           from supabase import create_client
           
-          SUPABASE_URL = os.environ.get("SUPABASE_URL")
-          SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-          supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-          
-          # Prompts for realistic images
-          prompts = [
-              "fashion model cyberpunk city night rain neon lights",
-              "luxury sports car tokyo street night reflections",
-              "japanese garden autumn cherry blossoms sunset",
-              "northern lights mountains snow lake reflection"
-          ]
-          
-          prompt = random.choice(prompts)
-          print(f"Generating: {prompt}")
-          
-          # Pollinations AI (free)
-          url = f"https://image.pollinations.ai/prompt/{prompt.replace(' ', '%20')}?width=1080&height=1920"
-          
-          response = requests.get(url, timeout=60)
-          print(f"Status: {response.status_code}")
-          
-          if response.status_code == 200:
-              filename = f"ai_{int(time.time())}.jpg"
+          try:
+              print("Step 1: Getting secrets...")
+              SUPABASE_URL = os.environ.get("SUPABASE_URL")
+              SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+              print(f"URL: {SUPABASE_URL[:30]}...")
               
-              # Upload to Supabase
-              supabase.storage.from_("post-images").upload(filename, response.content)
+              print("Step 2: Creating client...")
+              supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+              
+              print("Step 3: Testing image download...")
+              url = "https://picsum.photos/500/500"
+              response = requests.get(url, timeout=30)
+              print(f"Download status: {response.status_code}")
+              print(f"Image size: {len(response.content)} bytes")
+              
+              print("Step 4: Testing upload to Supabase...")
+              filename = f"test_{int(time.time())}.jpg"
+              result = supabase.storage.from_("post-images").upload(filename, response.content)
+              print(f"Upload result: {result}")
+              
+              print("Step 5: Getting public URL...")
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
+              print(f"URL: {public_url}")
               
-              # Save to database
-              supabase.table("posts").insert({
+              print("Step 6: Inserting into posts table...")
+              insert = supabase.table("posts").insert({
                   "image_url": public_url,
-                  "caption": prompt,
+                  "caption": "Test image",
                   "is_ai": True,
                   "likes": 0
               }).execute()
+              print(f"Insert result: {insert}")
               
-              print("✅ Image posted!")
-          else:
-              print(f"❌ Failed: {response.status_code}")
+              print("✅ ALL STEPS PASSED!")
+              
+          except Exception as e:
+              print(f"❌ ERROR: {e}")
+              import traceback
+              traceback.print_exc()
           EOF
