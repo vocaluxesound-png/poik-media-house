@@ -1,239 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poik Poik | AI Media House</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; color: #fff; font-family: system-ui; }
-        .header {
-            position: sticky;
-            top: 0;
-            background: #000;
-            border-bottom: 1px solid #222;
-            padding: 12px 16px;
-            z-index: 100;
-        }
-        .header-content {
-            max-width: 600px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-size: 24px; font-weight: bold; }
-        .logo span { color: #00ff88; }
-        .btn {
-            padding: 8px 16px;
-            border-radius: 24px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .btn-primary { background: #00ff88; color: #000; }
-        .btn-outline { background: transparent; border: 1px solid #333; color: #fff; }
-        .feed { max-width: 600px; margin: 0 auto; padding-bottom: 60px; }
-        .post {
-            margin-bottom: 20px;
-            background: #0a0a0a;
-            border-bottom: 1px solid #222;
-        }
-        .post-image { width: 100%; aspect-ratio: 1; object-fit: cover; }
-        .post-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
-        .post-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .post-username { font-weight: 600; font-size: 14px; }
-        .post-badge { color: #00ff88; font-size: 12px; margin-left: 6px; }
-        .post-actions { padding: 8px 16px; display: flex; gap: 24px; }
-        .action-btn {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .action-count { font-size: 14px; color: #888; }
-        .post-caption { padding: 0 16px 12px; font-size: 14px; }
-        .comments-section { padding: 12px 16px; border-top: 1px solid #222; }
-        .comment { font-size: 13px; padding: 6px 0; color: #ccc; }
-        .comment-input { display: flex; gap: 10px; margin-top: 10px; }
-        .comment-input input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 24px;
-            border: 1px solid #333;
-            background: #111;
-            color: #fff;
-        }
-        .comment-input button {
-            padding: 8px 16px;
-            border-radius: 24px;
-            border: none;
-            background: #00ff88;
-            color: #000;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .upload-area {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 2px dashed #333;
-            border-radius: 16px;
-            text-align: center;
-            cursor: pointer;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: #111;
-            padding: 24px;
-            border-radius: 16px;
-            max-width: 400px;
-            width: 90%;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #222;
-            color: #fff;
-        }
-        .modal-content button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .loading { text-align: center; padding: 40px; color: #888; }
-        footer { text-align: center; padding: 20px; color: #444; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">POIK<span>POIK</span></div>
-            <div id="authButtons">
-                <button class="btn btn-outline" onclick="showLogin()">Login</button>
-                <button class="btn btn-primary" onclick="showSignup()">Sign Up</button>
-            </div>
-            <div id="userInfo" style="display:none">
-                <span id="userEmail"></span>
-                <button class="btn btn-outline" onclick="logout()" style="margin-left:10px">Logout</button>
-            </div>
-        </div>
-    </div>
-    
-    <div style="max-width:600px;margin:20px auto;padding:0 16px">
-        <div class="upload-area" onclick="document.getElementById('uploadFile').click()">
-            📸 Click to upload your own image
-        </div>
-        <input type="file" id="uploadFile" accept="image/*" style="display:none" onchange="uploadImage()">
-        <input type="text" id="uploadCaption" placeholder="Add a caption..." style="width:100%;padding:10px;margin-top:10px;border-radius:24px;border:1px solid #333;background:#111;color:#fff">
-    </div>
-    
-    <div class="feed" id="feed"><div class="loading">Loading...</div></div>
-    <footer>Powered by Poik Poik • AI Media House</footer>
-
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h3>Login</h3>
-            <input type="email" id="loginEmail" placeholder="Email">
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button class="btn-primary" onclick="login()">Login</button>
-            <button onclick="closeModal('loginModal')">Cancel</button>
-        </div>
-    </div>
-    
-    <div id="signupModal" class="modal">
-        <div class="modal-content">
-            <h3>Sign Up</h3>
-            <input type="email" id="signupEmail" placeholder="Email">
-            <input type="password" id="signupPassword" placeholder="Password">
-            <button class="btn-primary" onclick="signup()">Sign Up</button>
-            <button onclick="closeModal('signupModal')">Cancel</button>
-        </div>
-    </div>
-
-    <script>
-        // REPLACE WITH YOUR ACTUAL VALUES
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        // Supabase Configuration - USE YOUR ACTUAL VALUES
+        const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
         
-        supabase.auth.getSession().then(({ data }) => {
-            if (data.session) {
-                currentUser = data.session.user;
-                document.getElementById('authButtons').style.display = 'none';
-                document.getElementById('userInfo').style.display = 'block';
-                document.getElementById('userEmail').innerText = currentUser.email.split('@')[0];
-            }
-            loadFeed();
-        });
-        
+        // Function to load posts
         async function loadFeed() {
-            const { data: posts } = await supabase
+            console.log("Loading feed...");
+            
+            const { data: posts, error } = await supabase
                 .from('posts')
                 .select('*')
                 .order('created_at', { ascending: false });
             
+            console.log("Posts:", posts);
+            console.log("Error:", error);
+            
+            const feedDiv = document.getElementById('feed');
+            
+            if (error) {
+                feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+                return;
+            }
+            
             if (!posts || posts.length === 0) {
-                document.getElementById('feed').innerHTML = '<div class="loading">No posts yet. AI Ghost is generating...</div>';
+                feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is generating...</div>';
                 return;
             }
             
             let html = '';
             for (const post of posts) {
-                const { count: likeCount } = await supabase
-                    .from('likes')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('post_id', post.id);
-                
-                let userLiked = false;
-                if (currentUser) {
-                    const { data: likeData } = await supabase
-                        .from('likes')
-                        .select()
-                        .eq('post_id', post.id)
-                        .eq('user_id', currentUser.id)
-                        .single();
-                    userLiked = !!likeData;
-                }
-                
-                const { data: comments } = await supabase
-                    .from('comments')
-                    .select('*')
-                    .eq('post_id', post.id)
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-                
                 html += `
                     <div class="post">
                         <div class="post-header">
@@ -243,126 +40,23 @@
                                 ${post.is_ai ? '<span class="post-badge">AI</span>' : ''}
                             </div>
                         </div>
-                        <img class="post-image" src="${post.image_url}" loading="lazy">
-                        <div class="post-actions">
-                            <button class="action-btn" onclick="likePost(${post.id})">
-                                ${userLiked ? '❤️' : '🤍'} <span class="action-count" id="likes-${post.id}">${likeCount || 0}</span>
-                            </button>
-                            <button class="action-btn" onclick="toggleComments(${post.id})">
-                                💬 <span class="action-count">${comments ? comments.length : 0}</span>
-                            </button>
-                        </div>
+                        <img class="post-image" src="${post.image_url}" loading="lazy" onerror="this.src='https://picsum.photos/800/800?random=1'">
                         <div class="post-caption">
                             <strong>${post.is_ai ? 'Poik Ghost' : 'User'}</strong> ${post.caption || ''}
                         </div>
-                        <div class="comments-section" id="comments-${post.id}" style="display:none">
-                            <div id="comments-list-${post.id}">
-                `;
-                
-                if (comments && comments.length > 0) {
-                    for (const comment of comments) {
-                        html += `<div class="comment">💬 ${comment.content}</div>`;
-                    }
-                } else {
-                    html += `<div class="comment">No comments yet.</div>`;
-                }
-                
-                html += `
-                            </div>
-                            <div class="comment-input">
-                                <input type="text" id="comment-input-${post.id}" placeholder="Add a comment...">
-                                <button onclick="addComment(${post.id})">Post</button>
-                            </div>
+                        <div class="post-actions">
+                            <button class="action-btn" onclick="alert('Login to like')">❤️ <span class="action-count">${post.likes || 0}</span></button>
+                            <button class="action-btn" onclick="alert('Login to comment')">💬 <span class="action-count">0</span></button>
                         </div>
                     </div>
                 `;
             }
-            document.getElementById('feed').innerHTML = html;
+            feedDiv.innerHTML = html;
         }
         
-        async function likePost(postId) {
-            if (!currentUser) { showLogin(); return; }
-            
-            const { data: existing } = await supabase
-                .from('likes')
-                .select()
-                .eq('post_id', postId)
-                .eq('user_id', currentUser.id)
-                .single();
-            
-            if (existing) {
-                await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-            } else {
-                await supabase.from('likes').insert({ post_id: postId, user_id: currentUser.id });
-            }
-            loadFeed();
-        }
+        // Auth functions (simplified for now)
+        function showLogin() { alert("Login feature coming soon!"); }
+        function showSignup() { alert("Signup feature coming soon!"); }
         
-        async function addComment(postId) {
-            if (!currentUser) { showLogin(); return; }
-            
-            const input = document.getElementById(`comment-input-${postId}`);
-            if (input.value.trim()) {
-                await supabase.from('comments').insert({
-                    post_id: postId,
-                    user_id: currentUser.id,
-                    content: input.value
-                });
-                input.value = '';
-                loadFeed();
-            }
-        }
-        
-        function toggleComments(postId) {
-            const section = document.getElementById(`comments-${postId}`);
-            section.style.display = section.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        async function uploadImage() {
-            if (!currentUser) { showLogin(); return; }
-            
-            const file = document.getElementById('uploadFile').files[0];
-            const caption = document.getElementById('uploadCaption').value;
-            if (!file) return;
-            
-            const fileName = `${currentUser.id}_${Date.now()}.jpg`;
-            await supabase.storage.from('post-images').upload(fileName, file);
-            const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
-            
-            await supabase.from('posts').insert({
-                image_url: urlData.publicUrl,
-                caption: caption,
-                user_id: currentUser.id,
-                is_ai: false
-            });
-            
-            document.getElementById('uploadCaption').value = '';
-            loadFeed();
-        }
-        
-        function showLogin() { document.getElementById('loginModal').style.display = 'flex'; }
-        function showSignup() { document.getElementById('signupModal').style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) alert(error.message);
-            else { closeModal('loginModal'); location.reload(); }
-        }
-        
-        async function signup() {
-            const email = document.getElementById('signupEmail').value;
-            const password = document.getElementById('signupPassword').value;
-            const { error } = await supabase.auth.signUp({ email, password });
-            if (error) alert(error.message);
-            else { alert('Check your email to confirm!'); closeModal('signupModal'); }
-        }
-        
-        async function logout() { await supabase.auth.signOut(); location.reload(); }
-        
-        setInterval(loadFeed, 30000);
-    </script>
-</body>
-</html>
+        // Load feed immediately
+        loadFeed();
