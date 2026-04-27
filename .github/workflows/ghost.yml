@@ -1,8 +1,6 @@
-name: AI Ghost - Generate Every 10 Minutes
+name: AI Ghost - Test Version
 
 on:
-  schedule:
-    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,68 +9,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate and Post AI Image
+      - name: Test Supabase Connection
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          echo "Step 1: Check if secrets exist"
+          if [ -z "$SUPABASE_URL" ]; then echo "SUPABASE_URL is empty"; exit 1; else echo "SUPABASE_URL exists"; fi
+          if [ -z "$SUPABASE_KEY" ]; then echo "SUPABASE_KEY is empty"; exit 1; else echo "SUPABASE_KEY exists"; fi
+          
+          echo "Step 2: Install Python packages"
           sudo apt-get update
           sudo apt-get install -y python3 python3-pip
           pip3 install supabase requests
           
+          echo "Step 3: Run Python test"
           python3 << 'EOF'
           import requests, os, time, random
           from supabase import create_client
           
-          SUPABASE_URL = os.environ["SUPABASE_URL"]
-          SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-          supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+          print("Python script started")
           
-          # Test connection first
-          print("Testing Supabase connection...")
+          SUPABASE_URL = os.environ.get("SUPABASE_URL")
+          SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+          
+          print(f"URL found: {SUPABASE_URL[:20]}...")
+          print(f"Key found: {SUPABASE_KEY[:20]}...")
+          
           try:
-              # List buckets to verify connection
+              print("Creating Supabase client...")
+              supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+              print("Client created successfully")
+              
+              print("Testing storage access...")
               buckets = supabase.storage.list_buckets()
-              print(f"Connected! Found {len(buckets)} buckets")
+              print(f"Buckets found: {buckets}")
+              
+              print("SUCCESS! Connection works.")
+              
           except Exception as e:
-              print(f"Connection error: {e}")
+              print(f"ERROR: {e}")
+              import traceback
+              traceback.print_exc()
               exit(1)
-          
-          prompts = [
-              "cinematic cyberpunk fashion model neon Tokyo street rain 8k photorealistic",
-              "stunning realistic portrait futuristic city holographic fashion vogue 8k",
-              "luxury sports car rainy Miami sunset cinematic reflections 8k"
-          ]
-          
-          prompt = random.choice(prompts)
-          print(f"Generating: {prompt}")
-          
-          url = f"https://image.pollinations.ai/prompt/{prompt.replace(' ', '%20')}?width=1080&height=1920&nologo=true&seed={random.randint(1,999999)}"
-          
-          response = requests.get(url, timeout=60)
-          print(f"API Response Status: {response.status_code}")
-          
-          if response.status_code == 200:
-              filename = f"ai_{int(time.time())}.jpg"
-              print(f"Uploading {filename} to bucket 'post-images'...")
-              
-              # Try to upload
-              result = supabase.storage.from_("post-images").upload(filename, response.content)
-              print(f"Upload result: {result}")
-              
-              public_url = supabase.storage.from_("post-images").get_public_url(filename)
-              print(f"Public URL: {public_url}")
-              
-              # Insert into posts table
-              insert_result = supabase.table("posts").insert({
-                  "image_url": public_url,
-                  "caption": prompt[:100],
-                  "is_ai": True,
-                  "likes": 0
-              }).execute()
-              print(f"Insert result: {insert_result}")
-              
-              print("✅ Image posted successfully!")
-          else:
-              print(f"❌ API failed with status {response.status_code}")
           EOF
+          
+          echo "Step 4: Done"
