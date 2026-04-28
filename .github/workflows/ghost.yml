@@ -1,8 +1,8 @@
-name: AI Ghost - Fashion Engine
+name: Poik Ghost - Replicate SDXL
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,70 +11,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate and Post
+      - name: Generate Fashion Image
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }}
         run: |
-          pip3 install supabase requests
+          pip3 install supabase requests replicate
           python3 << 'EOF'
-          import requests, os, time, random, urllib.parse
+          import requests, os, time, random
           from supabase import create_client
+          import replicate
 
           SUPABASE_URL = os.environ["SUPABASE_URL"]
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+          
+          os.environ["REPLICATE_API_TOKEN"] = os.environ["REPLICATE_API_KEY"]
 
           subjects = ["female model", "male model", "fashion influencer"]
-          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip"]
+          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "luxury suit"]
           
           subject = random.choice(subjects)
           style = random.choice(styles)
-          short_caption = f"{subject} in {style}"
+          clean_caption = f"{subject} in {style}"
           
-          # STRONG PROMPT WITH NEGATIVE CONSTRAINTS
-          prompt = f"""
-          Ultra realistic RAW photo of {subject}, real person, not CGI, not 3D render,
-          wearing {style}, full body shot, head to toe visible, standing naturally,
-          perfect human anatomy, realistic skin texture, detailed face, natural eyes,
-          clean hands with 5 fingers, feet visible on ground, realistic shoes,
-          85mm lens, professional fashion photography, studio lighting, soft shadows,
-          8K, photorealistic, high detail skin pores, fabric texture visible
-          
-          --no deformed face, bad anatomy, extra fingers, missing fingers, distorted body,
-          unrealistic, blurry, CGI, 3D render, cartoon, illustration, painting, doll,
-          mannequin, fake skin, plastic texture, extra limbs, wrong proportions
-          """
-          
-          print(f"Generating: {subject} in {style}")
-          print(f"Caption: {short_caption}")
+          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, standing, head to toe visible, shoes visible, professional fashion photography, 8K"
 
-          encoded = urllib.parse.quote(prompt)
-          img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
+          print(f"🎨 Generating: {clean_caption}")
 
-          try:
-              response = requests.get(img_url, timeout=120)
-              print(f"API Status: {response.status_code}")
-              
-              if response.status_code != 200:
-                  print(f"❌ API error: {response.status_code}")
-                  exit(1)
-                  
-              filename = f"fashion_{int(time.time())}.jpg"
-              
-              supabase.storage.from_("post-images").upload(filename, response.content)
-              public_url = supabase.storage.from_("post-images").get_public_url(filename)
-              
-              supabase.table("posts").insert({
-                  "image_url": public_url,
-                  "caption": short_caption,
-                  "is_ai": True,
-                  "likes": 0
-              }).execute()
-              
-              print(f"✅ Posted: {short_caption}")
-              
-          except Exception as e:
-              print(f"❌ Error: {e}")
-              exit(1)
+          output = replicate.run(
+              "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+              input={
+                  "prompt": prompt,
+                  "negative_prompt": "deformed face, bad hands, extra fingers, missing fingers, distorted body, unrealistic, blurry, cartoon, cgi, 3d render, illustration",
+                  "width": 1024,
+                  "height": 1536,
+                  "num_outputs": 1,
+                  "scheduler": "DPMSolverMultistep",
+                  "num_inference_steps": 30,
+                  "guidance_scale": 7.5
+              }
+          )
+          
+          image_url = output[0] if isinstance(output, list) else output
+          print(f"✅ Image generated")
+          
+          img_response = requests.get(image_url)
+          filename = f"poik_{int(time.time())}.jpg"
+          supabase.storage.from_("post-images").upload(filename, img_response.content)
+          public_url = supabase.storage.from_("post-images").get_public_url(filename)
+          
+          supabase.table("posts").insert({
+              "image_url": public_url,
+              "caption": clean_caption,
+              "is_ai": True,
+              "likes": 0
+          }).execute()
+          print(f"✅ Posted: {clean_caption}")
           EOF
