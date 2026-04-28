@@ -1,294 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #000;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding-bottom: 70px;
-        }
-        
-        /* Header */
-        .header {
-            position: sticky;
-            top: 0;
-            background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #222;
-            padding: 12px 16px;
-            z-index: 100;
-        }
-        .header-content {
-            max-width: 600px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-        .nav-icons {
-            display: flex;
-            gap: 20px;
-            font-size: 22px;
-            cursor: pointer;
-        }
-        .nav-icons i:hover { color: #00ff88; }
-        
-        /* Feed */
-        .feed {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 0;
-        }
-        .post {
-            margin-bottom: 20px;
-            background: #0a0a0a;
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        .post-header {
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00ff88, #0066ff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-            overflow: hidden;
-        }
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .username {
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .ai-badge {
-            font-size: 10px;
-            color: #00ff88;
-            margin-left: 6px;
-        }
-        .post-img {
-            width: 100%;
-            height: auto;
-            object-fit: contain;
-            cursor: pointer;
-        }
-        .post-actions {
-            padding: 10px 16px;
-            display: flex;
-            gap: 20px;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .post-actions i:active { transform: scale(1.1); }
-        .caption-text {
-            padding: 0 16px 12px;
-            font-size: 14px;
-        }
-        .likes-count {
-            color: #888;
-            font-size: 13px;
-        }
-        
-        /* Fullscreen Modal */
-        .fullscreen-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .fullscreen-modal img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            font-size: 40px;
-            color: #fff;
-            cursor: pointer;
-        }
-        
-        /* Auth Modal */
-        .auth-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-        }
-        .auth-box {
-            background: #111;
-            padding: 30px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 350px;
-            text-align: center;
-        }
-        .auth-box input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background: #222;
-            border: 1px solid #333;
-            border-radius: 10px;
-            color: #fff;
-        }
-        .auth-box button {
-            width: 100%;
-            padding: 12px;
-            background: #00ff88;
-            color: #000;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-        .loading { text-align: center; padding: 50px; color: #888; }
+        body { background: black; color: white; font-family: system-ui; margin: 0; padding: 20px; }
+        .feed { max-width: 600px; margin: 0 auto; }
+        .post { margin-bottom: 30px; background: #111; border-radius: 16px; overflow: hidden; }
+        .post img { width: 100%; display: block; }
+        .caption { padding: 12px; font-size: 14px; color: #ccc; }
+        h2 { text-align: center; color: #00ff88; }
+        .loading { text-align: center; padding: 50px; color: #666; }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">
-                <span style="color: white;">POIK</span><span style="color: #00ff88;">POIK</span>
-            </div>
-            <div class="nav-icons">
-                <i class="fas fa-search"></i>
-                <i class="far fa-heart"></i>
-                <i class="far fa-user-circle" id="userIcon"></i>
-            </div>
-        </div>
-    </div>
-
+    <h2>⚡ POIK POIK</h2>
     <div class="feed" id="feed">
-        <div class="loading">Loading stunning visuals...</div>
-    </div>
-
-    <!-- Fullscreen Modal -->
-    <div id="fullscreenModal" class="fullscreen-modal" onclick="closeFullscreen()">
-        <span class="close-btn" onclick="closeFullscreen()">&times;</span>
-        <img id="fullscreenImage" src="">
-    </div>
-
-    <!-- Auth Modal -->
-    <div id="authModal" class="auth-modal">
-        <div class="auth-box">
-            <h3 style="margin-bottom: 20px;">Join Poik Poik</h3>
-            <input type="email" id="authEmail" placeholder="Email">
-            <input type="password" id="authPassword" placeholder="Password">
-            <button id="authButton">Log In / Sign Up</button>
-            <button id="closeAuth" style="background:#333; margin-top:10px;">Cancel</button>
-        </div>
+        <div class="loading">Loading...</div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        let currentUser = null;
-        
-        // Fullscreen functions
-        function openFullscreen(imageUrl) {
-            document.getElementById('fullscreenImage').src = imageUrl;
-            document.getElementById('fullscreenModal').style.display = 'flex';
-        }
-        function closeFullscreen() {
-            document.getElementById('fullscreenModal').style.display = 'none';
-        }
-        
-        // Check current user
-        async function checkUser() {
-            const { data: { user } } = await supabase.auth.getUser();
-            currentUser = user;
-            const userIcon = document.getElementById('userIcon');
-            if (user) {
-                userIcon.classList.remove('far');
-                userIcon.classList.add('fas');
-            } else {
-                userIcon.classList.remove('fas');
-                userIcon.classList.add('far');
-            }
-        }
-        
-        // Auth modal
-        const authModal = document.getElementById('authModal');
-        document.getElementById('userIcon').onclick = () => authModal.style.display = 'flex';
-        document.getElementById('closeAuth').onclick = () => authModal.style.display = 'none';
-        
-        document.getElementById('authButton').onclick = async () => {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            if (!email || !password) {
-                alert('Enter email and password');
-                return;
-            }
-            
-            let { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                let { error: signUpError } = await supabase.auth.signUp({ email, password });
-                if (signUpError) {
-                    alert('Error: ' + signUpError.message);
-                } else {
-                    alert('Account created! Check your email to confirm.');
-                }
-            } else {
-                alert('Welcome back!');
-            }
-            authModal.style.display = 'none';
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPassword').value = '';
-            checkUser();
-            loadFeed();
-        };
+        // SINGLE DECLARATION - NO DUPLICATES
+        const _supabaseClient = window.supabase.createClient(
+            'https://xxnuhisweolpibzthjcc.supabase.co',
+            'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P'
+        );
         
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
-            feedDiv.innerHTML = '<div class="loading">Loading stunning visuals...</div>';
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await _supabaseClient
                     .from('posts')
                     .select('*')
                     .order('id', { ascending: false });
                 
-                if (error) throw error;
+                console.log("Data:", data);
+                console.log("Error:", error);
+                
+                if (error) {
+                    feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+                    return;
+                }
                 
                 if (!data || data.length === 0) {
                     feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
@@ -297,68 +50,21 @@
                 
                 let html = '';
                 for (let i = 0; i < data.length; i++) {
-                    const post = data[i];
-                    
-                    let avatarHtml = '';
-                    let usernameHtml = '';
-                    
-                    if (post.is_ai === true) {
-                        avatarHtml = '<div class="avatar" style="background:#333;">🤖</div>';
-                        usernameHtml = '<div class="username">Poik Ghost <span class="ai-badge">AI</span></div>';
-                    } else {
-                        avatarHtml = '<div class="avatar" style="background:#00ff88;"><i class="fas fa-user" style="color:#000;"></i></div>';
-                        usernameHtml = '<div class="username">Member</div>';
-                    }
-                    
                     html += `
                         <div class="post">
-                            <div class="post-header">
-                                ${avatarHtml}
-                                ${usernameHtml}
-                            </div>
-                            <img class="post-img" src="${post.image_url}" onclick="openFullscreen('${post.image_url}')" loading="lazy">
-                            <div class="post-actions">
-                                <i class="far fa-heart" onclick="likePost(${post.id})"></i>
-                                <i class="far fa-comment" onclick="commentPost(${post.id})"></i>
-                                <i class="far fa-paper-plane"></i>
-                            </div>
-                            <div class="caption-text">
-                                ${post.caption || 'Fashion visual'}
-                                <div class="likes-count">❤️ ${post.likes || 0} likes</div>
-                            </div>
+                            <img src="${data[i].image_url}" loading="lazy">
+                            <div class="caption">✨ ${data[i].caption || 'Fashion'}</div>
                         </div>
                     `;
                 }
                 feedDiv.innerHTML = html;
+                
             } catch (err) {
-                feedDiv.innerHTML = '<div class="loading">Error loading feed. Refresh.</div>';
-                console.error(err);
+                feedDiv.innerHTML = `<div class="loading">Error: ${err.message}</div>`;
             }
         }
         
-        // Like function (placeholder - will implement fully next)
-        async function likePost(postId) {
-            if (!currentUser) {
-                alert('Please login to like posts');
-                authModal.style.display = 'flex';
-                return;
-            }
-            alert('Like feature coming soon!');
-        }
-        
-        // Comment function (placeholder)
-        async function commentPost(postId) {
-            if (!currentUser) {
-                alert('Please login to comment');
-                authModal.style.display = 'flex';
-                return;
-            }
-            alert('Comment feature coming soon!');
-        }
-        
-        checkUser();
         loadFeed();
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFullscreen(); });
     </script>
 </body>
 </html>
