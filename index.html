@@ -2,66 +2,87 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poik Poik</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: black; color: white; font-family: system-ui; margin: 0; padding: 20px; }
-        .feed { max-width: 600px; margin: 0 auto; }
-        .post { margin-bottom: 30px; background: #111; border-radius: 16px; overflow: hidden; }
-        .post img { width: 100%; display: block; }
-        .caption { padding: 12px; font-size: 14px; color: #ccc; }
-        h2 { text-align: center; color: #00ff88; }
-        .loading { text-align: center; padding: 50px; color: #666; }
+        body {
+            background: black;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .feed {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .post {
+            margin-bottom: 30px;
+            background: #111;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .post img {
+            width: 100%;
+            display: block;
+        }
+        .caption {
+            padding: 12px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        h2 {
+            text-align: center;
+            color: #00ff88;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <h2>⚡ POIK POIK</h2>
-    <div class="feed" id="feed">
+    <div id="feed">
         <div class="loading">Loading...</div>
     </div>
 
     <script>
-        // SINGLE DECLARATION - NO DUPLICATES
-        const _supabaseClient = window.supabase.createClient(
-            'https://xxnuhisweolpibzthjcc.supabase.co',
-            'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P'
-        );
+        const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
             
-            try {
-                const { data, error } = await _supabaseClient
-                    .from('posts')
-                    .select('*')
-                    .order('id', { ascending: false });
-                
-                console.log("Data:", data);
-                console.log("Error:", error);
-                
-                if (error) {
-                    feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
-                    return;
-                }
-                
-                if (!data || data.length === 0) {
-                    feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
-                    return;
-                }
-                
-                let html = '';
-                for (let i = 0; i < data.length; i++) {
-                    html += `
-                        <div class="post">
-                            <img src="${data[i].image_url}" loading="lazy">
-                            <div class="caption">✨ ${data[i].caption || 'Fashion'}</div>
-                        </div>
-                    `;
-                }
-                feedDiv.innerHTML = html;
-                
-            } catch (err) {
-                feedDiv.innerHTML = `<div class="loading">Error: ${err.message}</div>`;
+            const { data, error } = await supabase
+                .from('posts')
+                .select('*')
+                .order('id', { ascending: false });
+            
+            if (error) {
+                feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+                console.error(error);
+                return;
             }
+            
+            if (!data || data.length === 0) {
+                feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < data.length; i++) {
+                html += `
+                    <div class="post">
+                        <img src="${data[i].image_url}" loading="lazy">
+                        <div class="caption">${data[i].caption || 'Fashion'}</div>
+                    </div>
+                `;
+            }
+            feedDiv.innerHTML = html;
         }
         
         loadFeed();
