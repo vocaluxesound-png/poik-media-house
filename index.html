@@ -3,16 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poik Poik | AI Media House</title>
+    <title>Poik Poik</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: black; color: white; font-family: system-ui; }
-        .feed { max-width: 600px; margin: auto; padding: 20px; }
+        body { 
+            background: black; 
+            color: white; 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }
+        .feed {
+            max-width: 500px;
+            margin: auto;
+        }
         .post {
             background: #111;
             margin-bottom: 20px;
-            border-radius: 16px;
+            border-radius: 10px;
             overflow: hidden;
             cursor: pointer;
         }
@@ -20,32 +28,20 @@
             width: 100%;
             display: block;
         }
-        .post-caption {
-            padding: 12px;
+        .caption {
+            padding: 10px;
             font-size: 14px;
             color: #ccc;
         }
-        .header {
-            padding: 16px;
+        h1 {
             text-align: center;
-            border-bottom: 1px solid #222;
-            margin-bottom: 10px;
-        }
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
             color: #00ff88;
+            font-size: 24px;
         }
         .loading {
             text-align: center;
-            padding: 50px;
+            padding: 40px;
             color: #666;
-        }
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #444;
-            font-size: 12px;
         }
         .modal {
             display: none;
@@ -56,13 +52,12 @@
             height: 100%;
             background: black;
             z-index: 1000;
-            justify-content: center;
-            align-items: center;
+            text-align: center;
         }
         .modal img {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain;
+            margin-top: 50px;
         }
         .close {
             position: absolute;
@@ -71,22 +66,18 @@
             font-size: 40px;
             color: white;
             cursor: pointer;
-            z-index: 1001;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">⚡ POIK POIK</div>
-    </div>
+    <h1>⚡ POIK POIK</h1>
     <div class="feed" id="feed">
-        <div class="loading">Loading stunning fashion...</div>
+        <div class="loading">Loading posts...</div>
     </div>
-    <footer>⚡ New AI fashion visual every 10 minutes</footer>
 
     <div id="modal" class="modal" onclick="closeModal()">
         <span class="close" onclick="closeModal()">&times;</span>
-        <img id="modalImage" src="">
+        <img id="modalImg" src="">
     </div>
 
     <script>
@@ -94,9 +85,9 @@
         const SUPABASE_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function openModal(imageUrl) {
-            document.getElementById('modalImage').src = imageUrl;
-            document.getElementById('modal').style.display = 'flex';
+        function openModal(url) {
+            document.getElementById('modalImg').src = url;
+            document.getElementById('modal').style.display = 'block';
         }
 
         function closeModal() {
@@ -105,7 +96,6 @@
 
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
-            feedDiv.innerHTML = '<div class="loading">Loading stunning fashion...</div>';
             
             const { data, error } = await supabase
                 .from('posts')
@@ -113,25 +103,28 @@
                 .order('created_at', { ascending: false });
             
             if (error) {
-                feedDiv.innerHTML = '<div class="loading">Error loading feed. Please refresh.</div>';
+                feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+                console.error("Supabase error:", error);
                 return;
             }
             
+            console.log("Posts loaded:", data.length);
+            
             if (!data || data.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating fashion visuals...</div>';
+                feedDiv.innerHTML = '<div class="loading">No posts yet.</div>';
                 return;
             }
             
             let html = '';
             for (let i = 0; i < data.length; i++) {
                 const post = data[i];
-                let caption = post.caption || '';
-                // Remove any "AI Ghost" prefix if present
-                caption = caption.replace(/^AI Ghost\s*[•\-]?\s*/, '');
+                let caption = post.caption || 'Fashion visual';
+                // Remove any prefix
+                caption = caption.replace(/AI Ghost\s*[•\-]?\s*/g, '');
                 html += `
                     <div class="post" onclick="openModal('${post.image_url}')">
                         <img src="${post.image_url}" loading="lazy">
-                        <div class="post-caption">${caption}</div>
+                        <div class="caption">${caption}</div>
                     </div>
                 `;
             }
@@ -139,12 +132,6 @@
         }
         
         loadFeed();
-        setInterval(loadFeed, 30000);
-        
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeModal();
-        });
     </script>
 </body>
 </html>
