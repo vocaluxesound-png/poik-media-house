@@ -24,7 +24,10 @@
         }
         .post img {
             width: 100%;
+            max-width: 600px;
+            height: auto;
             display: block;
+            margin: 0 auto;
         }
         .caption {
             padding: 12px;
@@ -50,7 +53,7 @@
         <span style="color: white;">POIK</span><span style="color: #00ff88;">POIK</span>
     </div>
     <div id="feed">
-        <div class="loading">Loading...</div>
+        <div class="loading">Loading stunning visuals...</div>
     </div>
 
     <script>
@@ -67,25 +70,28 @@
                 const feed = document.getElementById('feed');
                 if (result.error) {
                     feed.innerHTML = `<div class="loading">Error: ${result.error.message}</div>`;
-                } else if (!result.data || result.data.length === 0) {
-                    feed.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
-                } else {
-                    let html = '';
-                    for (let i = 0; i < result.data.length; i++) {
-                        const post = result.data[i];
-                        let caption = post.caption || 'Fashion visual';
-                        if (caption === 'AI Fashion' || caption === 'FINAL IMAGE') {
-                            caption = 'Fashion visual';
-                        }
-                        html += `
-                            <div class="post">
-                                <img src="${post.image_url}" loading="lazy">
-                                <div class="caption">${caption}</div>
-                            </div>
-                        `;
-                    }
-                    feed.innerHTML = html;
+                    return;
                 }
+                if (!result.data || result.data.length === 0) {
+                    feed.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
+                    return;
+                }
+                let html = '';
+                for (let i = 0; i < result.data.length; i++) {
+                    const post = result.data[i];
+                    let caption = post.caption || 'Fashion visual';
+                    // Clean up old captions
+                    if (caption === 'AI Fashion' || caption === 'FINAL IMAGE' || caption === 'TEST INSERT') {
+                        caption = 'Fashion visual';
+                    }
+                    html += `
+                        <div class="post">
+                            <img src="${post.image_url}" loading="lazy">
+                            <div class="caption">${caption}</div>
+                        </div>
+                    `;
+                }
+                feed.innerHTML = html;
             });
     </script>
 </body>
