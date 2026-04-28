@@ -18,92 +18,49 @@ jobs:
         run: |
           pip3 install supabase requests
           python3 << 'EOF'
-          import requests, os, time, random, json
+          import requests, os, time, random
           from supabase import create_client
 
           SUPABASE_URL = os.environ["SUPABASE_URL"]
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          # ============================================
-          # SIMPLIFIED FASHION POOLS (Quality Focused)
-          # ============================================
-          
+          # Full body focused prompts
           subjects = [
-              "female model, 25, sharp jawline", "male model, 28, chiseled jaw",
-              "androgynous model, ethereal", "billionaire heir, confident smirk",
-              "royal figure, elegant posture", "fashion influencer, walking"
+              "female model full body", "male model full body standing",
+              "fashion influencer full body walking", "royal figure full body elegant"
           ]
           
           styles = [
-              "haute couture silk", "cyberpunk neon techwear", "minimalist luxury",
+              "haute couture gown", "cyberpunk techwear", "minimalist luxury suit",
               "streetwear drip", "chrome liquid metal", "arabic gold embroidery"
           ]
           
-          poses = [
-              "walking confidently", "leaning against wall", "turning back looking over shoulder",
-              "standing with hand in hair", "posing on staircase", "sitting on throne"
-          ]
+          # Force full body in every prompt
+          base_prompt = f"Ultra realistic full body shot, head to toe visible, {random.choice(subjects)} wearing {random.choice(styles)} fashion, standing pose, cinematic lighting, 8K, fashion photography, full frame, shoes visible"
           
-          environments = [
-              "Tokyo neon street night", "floating glass city sunset", "ancient temple with columns",
-              "infinity pool Dubai Burj Khalifa", "Paris rooftop golden hour", "cherry blossom street"
-          ]
-          
-          moods = [
-              "powerful", "mysterious", "dreamy romantic", "rebellious", "royal noble"
-          ]
-          
-          lighting = [
-              "golden hour warm", "neon purple and blue", "dramatic shadows",
-              "soft diffused window", "backlit silhouette", "studio ring light"
-          ]
+          short_caption = f"{random.choice(['fashion influencer', 'model', 'royal figure'])} in {random.choice(styles)}"
 
-          # ============================================
-          # SELECT RANDOMLY
-          # ============================================
-          subject = random.choice(subjects)
-          style = random.choice(styles)
-          pose = random.choice(poses)
-          env = random.choice(environments)
-          mood = random.choice(moods)
-          light = random.choice(lighting)
+          print(f"Generating: {base_prompt[:100]}...")
 
-          # Build prompt (shorter for better results)
-          prompt = f"Ultra realistic {subject}, wearing {style} fashion, {pose}, in {env}, {mood} mood, {light} lighting, 8K, cinematic, fashion photography, highly detailed"
-
-          # Short caption for display (max 60 chars)
-          short_caption = f"{subject.split(',')[0]} in {style[:30]}"
-
-          print(f"🎨 Generating: {prompt[:100]}...")
-
-          # ============================================
-          # GENERATE IMAGE with better parameters
-          # ============================================
-          encoded = prompt.replace(" ", "%20")
+          encoded = base_prompt.replace(" ", "%20")
           seed = random.randint(1, 999999)
-          
-          # Try Pollinations with enhance flag
           img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true&seed={seed}&enhance=true"
           
           response = requests.get(img_url, timeout=90)
 
           if response.status_code == 200:
               filename = f"fashion_{int(time.time())}.jpg"
-              
-              # Upload to Supabase
               supabase.storage.from_("post-images").upload(filename, response.content)
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
-              # Save to database with short caption
-              result = supabase.table("posts").insert({
+              supabase.table("posts").insert({
                   "image_url": public_url,
                   "caption": short_caption,
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              
-              print(f"✅ Image posted! {short_caption}")
+              print(f"✅ Posted: {short_caption}")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
