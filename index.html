@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poik Poik</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: system-ui;
+            margin: 0;
+            padding: 20px;
+        }
+        .feed {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .post {
+            margin-bottom: 30px;
+            background: #111;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .post img {
+            width: 100%;
+            display: block;
+        }
+        .caption {
+            padding: 12px;
+            font-size: 14px;
+            color: #ccc;
+            text-align: center;
+        }
+        .logo {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <span style="color: white;">POIK</span><span style="color: #00ff88;">POIK</span>
+    </div>
+    <div id="feed">
+        <div class="loading">Loading...</div>
+    </div>
+
+    <script>
+        const MY_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
+        const MY_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
+        
+        const myClient = window.supabase.createClient(MY_URL, MY_KEY);
+        
+        myClient
+            .from('posts')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(result => {
+                const feed = document.getElementById('feed');
+                if (result.error) {
+                    feed.innerHTML = `<div class="loading">Error: ${result.error.message}</div>`;
+                } else if (!result.data || result.data.length === 0) {
+                    feed.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
+                } else {
+                    let html = '';
+                    for (let i = 0; i < result.data.length; i++) {
+                        const post = result.data[i];
+                        let caption = post.caption || 'Fashion visual';
+                        if (caption === 'AI Fashion' || caption === 'FINAL IMAGE') {
+                            caption = 'Fashion visual';
+                        }
+                        html += `
+                            <div class="post">
+                                <img src="${post.image_url}" loading="lazy">
+                                <div class="caption">${caption}</div>
+                            </div>
+                        `;
+                    }
+                    feed.innerHTML = html;
+                }
+            });
+    </script>
+</body>
+</html>
