@@ -25,27 +25,20 @@ jobs:
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          # ============================================
-          # FULL BODY FASHION POOLS
-          # ============================================
+          # Fashion pools
           subjects = ["female model", "male model", "fashion influencer", "royal figure"]
           styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip", "chrome liquid metal"]
-          poses = ["standing confidently", "walking naturally", "posing head to toe", "looking back over shoulder"]
-          environments = ["studio background", "city street", "runway", "modern interior"]
           
           subject = random.choice(subjects)
           style = random.choice(styles)
-          pose = random.choice(poses)
-          env = random.choice(environments)
           
-          # Clean caption (remove "full body" junk)
-          clean_subject = subject.replace("full body", "").strip()
-          short_caption = f"{clean_subject} in {style}"
+          # Clean caption
+          short_caption = f"{subject} in {style}"
           
-          # STRONG full body prompt
-          prompt = f"""Ultra realistic full body fashion photography of {subject}, wearing {style}, {pose}, in {env}, entire body visible from head to toe, feet clearly visible, shoes included, standing naturally, centered framing, shot from a distance, no cropping, fashion magazine style, 8K, ultra detailed, sharp focus, cinematic lighting, full length shot, wide framing, subject fully in frame"""
+          # Full body prompt
+          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, standing, head to toe visible, shoes visible, 8K, cinematic lighting, fashion magazine"
 
-          print(f"Generating: {prompt[:150]}...")
+          print(f"Generating: {prompt[:100]}...")
           print(f"Caption: {short_caption}")
 
           encoded = prompt.replace(" ", "%20")
@@ -56,15 +49,11 @@ jobs:
           if response.status_code == 200:
               filename = f"fashion_{int(time.time())}.jpg"
               
-              # FIXED: Correct upload method
-              supabase.storage.from_("post-images").upload(
-                  path=filename,
-                  file=response.content,
-                  file_options={"content-type": "image/jpeg"}
-              )
+              # WORKING UPLOAD METHOD
+              supabase.storage.from_("post-images").upload(filename, response.content)
               
-              # FIXED: Correct public URL extraction
-              public_url = supabase.storage.from_("post-images").get_public_url(filename)["publicUrl"]
+              # WORKING PUBLIC URL
+              public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
               supabase.table("posts").insert({
                   "image_url": public_url,
@@ -73,7 +62,6 @@ jobs:
                   "likes": 0
               }).execute()
               print(f"✅ Posted: {short_caption}")
-              print(f"🔗 URL: {public_url}")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
