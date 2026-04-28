@@ -18,230 +18,75 @@ jobs:
         run: |
           pip3 install supabase requests
           python3 << 'EOF'
-          import requests, os, time, random, json, hashlib
+          import requests, os, time, random, json
           from supabase import create_client
-          from datetime import datetime
 
           SUPABASE_URL = os.environ["SUPABASE_URL"]
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
           # ============================================
-          # MEMORY SYSTEM (Prevents Repetition)
+          # SIMPLIFIED FASHION POOLS (Quality Focused)
           # ============================================
-          class MemoryTracker:
-              def __init__(self):
-                  self.last_subjects = []
-                  self.last_styles = []
-                  self.last_environments = []
-                  self.last_moods = []
-                  self.last_categories = []
-                  self.max_memory = 30
-              
-              def is_recent(self, value, memory_list):
-                  return value in memory_list
-              
-              def add(self, value, memory_list):
-                  memory_list.append(value)
-                  if len(memory_list) > self.max_memory:
-                      memory_list.pop(0)
-              
-              def force_variation(self, candidate, memory_list, all_options):
-                  if self.is_recent(candidate, memory_list):
-                      # Pick something different
-                      available = [o for o in all_options if o not in memory_list]
-                      if available:
-                          return random.choice(available)
-                  return candidate
-
-          memory = MemoryTracker()
-
-          # ============================================
-          # CATEGORY 1: FASHION STYLES (50+)
-          # ============================================
-          fashion_styles = [
-              "haute couture luxury editorial", "streetwear drip oversized hoodie", "cyberpunk neon techwear",
-              "minimalist clean aesthetic", "avant-garde runway experimental", "dark mafia elegant suit",
-              "romantic silk flowing dress", "chrome liquid metal jacket", "transparent mesh and layering",
-              "embroidery arabic gold details", "satin slip dress old money", "leather biker rebellious",
-              "futuristic holographic fabric", "y2k nostalgia velvet tracksuit", "royal velvet cape",
-              "bohemian earth tones", "preppy tailored blazer", "gothic victorian lace",
-              "athleisure luxury sweats", "resort vacation linen", "punk studded leather",
-              "boho-chiric layered fringe", "power suit shoulder pads", "corset top dramatic hourglass",
-              "kimono inspired wrap", "safari utility jacket", "space age silver jumpsuit",
-              "neo-tribal african print", "korean ulzzang soft aesthetic", "parisian chic effortless"
-          ]
-
-          # ============================================
-          # CATEGORY 2: SUBJECTS (Gender + Type)
-          # ============================================
+          
           subjects = [
-              "female model, 25 years old, sharp jawline, freckles", "male model, 28 years old, chiseled jaw, stubble",
-              "androgynous model, ethereal features", "fashion influencer walking confidently",
-              "royal personality with elegant posture", "CEO type power pose leaning on desk",
-              "rebellious teenager looking away", "billionaire heir with confident smirk",
-              "angelic figure with soft expression", "dark villain aesthetic with intense stare",
-              "innocent romantic looking down shyly", "warrior queen standing tall",
-              "mysterious stranger half in shadow", "dreamy artist lost in thought"
+              "female model, 25, sharp jawline", "male model, 28, chiseled jaw",
+              "androgynous model, ethereal", "billionaire heir, confident smirk",
+              "royal figure, elegant posture", "fashion influencer, walking"
           ]
-
-          # ============================================
-          # CATEGORY 3: POSES (ACTION + ATTITUDE)
-          # ============================================
+          
+          styles = [
+              "haute couture silk", "cyberpunk neon techwear", "minimalist luxury",
+              "streetwear drip", "chrome liquid metal", "arabic gold embroidery"
+          ]
+          
           poses = [
-              "walking confidently toward camera", "turning back looking over shoulder",
-              "leaning against wall with arms crossed", "sitting on throne with one leg crossed",
-              "standing with hand in hair", "walking away looking back",
-              "posing with hand on hip", "adjusting jacket collar",
-              "holding a glass of champagne", "looking up at something above",
-              "sitting on edge of pool", "walking through automatic doors opening",
-              "standing in wind with hair blowing", "leaning forward with intense expression",
-              "sitting sideways on chair", "descending grand staircase"
+              "walking confidently", "leaning against wall", "turning back looking over shoulder",
+              "standing with hand in hair", "posing on staircase", "sitting on throne"
           ]
-
-          # ============================================
-          # CATEGORY 4: ENVIRONMENTS (Global + Fantasy)
-          # ============================================
+          
           environments = [
-              "futuristic Tokyo neon street at night", "floating glass city in clouds sunset",
-              "ancient Roman marble temple with columns", "underwater crystal palace with marine life",
-              "vertical jungle city with hanging gardens", "ice palace with northern lights above",
-              "space colony observation deck viewing Earth", "Moroccan rizz courtyard with fountain",
-              "Dubai infinity pool overlooking Burj Khalifa", "Parisian rooftop at golden hour",
-              "New York alleyway with steam rising", "Korean cherry blossom street in Seoul",
-              "Abandoned industrial warehouse with graffiti", "Luxury penthouse floor to ceiling windows",
-              "Maldives overwater bungalow sunrise", "Bali rice terraces misty morning",
-              "Egyptian desert with pyramids at sunset", "Greek Santorini white buildings blue dome",
-              "Swiss Alps mountain luxury chalet", "Japanese zen garden with koi pond"
+              "Tokyo neon street night", "floating glass city sunset", "ancient temple with columns",
+              "infinity pool Dubai Burj Khalifa", "Paris rooftop golden hour", "cherry blossom street"
           ]
-
-          # ============================================
-          # CATEGORY 5: MOODS / ENERGY
-          # ============================================
+          
           moods = [
-              "powerful confidence", "mysterious seduction (tasteful)", "dreamy romantic softness",
-              "rebellious dark energy", "calm serene peace", "intense passionate drama",
-              "joyful carefree happiness", "lonely luxury melancholy", "bold aggressive determination",
-              "innocent pure wonder", "royal noble dignity", "chaotic creative energy"
+              "powerful", "mysterious", "dreamy romantic", "rebellious", "royal noble"
           ]
-
-          # ============================================
-          # CATEGORY 6: LIGHTING STYLES
-          # ============================================
+          
           lighting = [
-              "golden hour warm soft glow", "neon purple and blue cyberpunk", "dramatic shadows chiaroscuro",
-              "soft diffused overcast window light", "backlit silhouette with rim light",
-              "high contrast noir style", "volumetric rays through fog",
-              "blue moonlight cold ethereal", "warm candlelight flickering",
-              "studio ring light clean", "sunset orange and pink gradient"
+              "golden hour warm", "neon purple and blue", "dramatic shadows",
+              "soft diffused window", "backlit silhouette", "studio ring light"
           ]
 
           # ============================================
-          # CATEGORY 7: CAMERA / LENS
+          # SELECT RANDOMLY
           # ============================================
-          camera_styles = [
-              "85mm portrait lens shallow depth of field", "35mm wide cinematic angle",
-              "low angle looking up dramatic", "close-up detailed texture view",
-              "aerial drone shot top down", "action shot motion blur background",
-              "symmetrical architectural framing", "Dutch angle tilted dramatic",
-              "fisheye creative distortion", "macro extreme close-up details"
-          ]
-
-          # ============================================
-          # CATEGORY 8: EXTRA DETAILS (Avoids Repetition)
-          # ============================================
-          details = [
-              "rain on ground reflecting lights", "fog rising from street vents",
-              "glowing particles floating around", "wind blowing fabric and hair",
-              "holographic projections in background", "mirror reflection showing multiple angles",
-              "smoke swirling around feet", "water droplets on skin and clothes",
-              "sparks falling like rain", "butterflies or birds nearby",
-              "shadow play on wall", "lens flare hitting camera"
-          ]
-
-          # ============================================
-          # CATEGORY 9: VIRAL HOOK CONCEPTS (20% of time)
-          # ============================================
-          viral_concepts = [
-              "This outfit shouldn't exist but it does", "Future fashion 2050 prediction",
-              "If billionaires dressed like gods", "Before → After transformation",
-              "The outfit that broke the internet", "AI designed this dress",
-              "When royalty meets streetwear", "What angels wear to parties"
-          ]
-
-          # ============================================
-          # INTELLIGENT SELECTION WITH MEMORY
-          # ============================================
-          def select_with_memory(pool, memory_list, force_variation=True):
-              candidate = random.choice(pool)
-              if force_variation:
-                  candidate = memory.force_variation(candidate, memory_list, pool)
-              memory.add(candidate, memory_list)
-              return candidate
-
-          # ============================================
-          # SMART MATCHING RULES
-          # ============================================
-          def smart_match(style, env, mood):
-              # Futuristic style + neon environment = match
-              if any(word in style.lower() for word in ["cyberpunk", "futuristic", "space", "chrome"]):
-                  if "neon" not in env and "space" not in env and "floating" not in env:
-                      env = random.choice(["futuristic Tokyo neon street", "space colony", "floating glass city"])
-              
-              # Fantasy mood + magical environment
-              if any(word in mood.lower() for word in ["dreamy", "romantic", "angelic"]):
-                  if "garden" not in env and "cherry" not in env:
-                      env = random.choice(["cherry blossom garden", "floating island", "moonlit forest"])
-              
-              # Luxury style + luxury environment
-              if any(word in style.lower() for word in ["luxury", "haute", "royal", "silk", "velvet"]):
-                  if "penthouse" not in env and "infinity" not in env and "rooftop" not in env:
-                      env = random.choice(["luxury penthouse", "infinity pool Dubai", "Paris rooftop"])
-              
-              return env
-
-          # ============================================
-          # TREND BOOSTER (20% VIRAL CONTENT)
-          # ============================================
-          use_viral = random.random() < 0.2  # 20% chance
-          viral_hook = random.choice(viral_concepts) if use_viral else ""
-
-          # ============================================
-          # SELECT ALL COMPONENTS
-          # ============================================
-          category = random.choice(["fashion editorial", "streetwear culture", "luxury lifestyle", "cyberpunk fashion", "fantasy couture"])
-          subject = select_with_memory(subjects, memory.last_subjects)
-          style = select_with_memory(fashion_styles, memory.last_styles)
+          subject = random.choice(subjects)
+          style = random.choice(styles)
           pose = random.choice(poses)
-          env = select_with_memory(environments, memory.last_environments)
-          mood = select_with_memory(moods, memory.last_moods)
+          env = random.choice(environments)
+          mood = random.choice(moods)
           light = random.choice(lighting)
-          camera = random.choice(camera_styles)
-          detail = random.choice(details)
 
-          # Apply smart matching
-          env = smart_match(style, env, mood)
+          # Build prompt (shorter for better results)
+          prompt = f"Ultra realistic {subject}, wearing {style} fashion, {pose}, in {env}, {mood} mood, {light} lighting, 8K, cinematic, fashion photography, highly detailed"
 
-          # ============================================
-          # BUILD THE FINAL PROMPT
-          # ============================================
-          prompt = f"Ultra-realistic {subject}, wearing {style} fashion, {pose}, in {env}, {mood} mood, {light} lighting, {camera} camera angle, {detail}, 8K, cinematic, highly detailed, fashion photography, editorial quality"
+          # Short caption for display (max 60 chars)
+          short_caption = f"{subject.split(',')[0]} in {style[:30]}"
 
-          # Add viral hook if selected
-          if viral_hook:
-              prompt = f"{viral_hook}. {prompt}"
-
-          print(f"🎨 Category: {category}")
-          print(f"📝 Prompt: {prompt[:200]}...")
+          print(f"🎨 Generating: {prompt[:100]}...")
 
           # ============================================
-          # GENERATE IMAGE
+          # GENERATE IMAGE with better parameters
           # ============================================
           encoded = prompt.replace(" ", "%20")
           seed = random.randint(1, 999999)
-          url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true&seed={seed}&enhance=true"
-
-          response = requests.get(url, timeout=90)
+          
+          # Try Pollinations with enhance flag
+          img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true&seed={seed}&enhance=true"
+          
+          response = requests.get(img_url, timeout=90)
 
           if response.status_code == 200:
               filename = f"fashion_{int(time.time())}.jpg"
@@ -250,16 +95,15 @@ jobs:
               supabase.storage.from_("post-images").upload(filename, response.content)
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
-              # Save to database
+              # Save to database with short caption
               result = supabase.table("posts").insert({
                   "image_url": public_url,
-                  "caption": prompt[:200],
+                  "caption": short_caption,
                   "is_ai": True,
                   "likes": 0
               }).execute()
               
-              print(f"✅ Image posted! ID: {result.data[0]['id'] if result.data else 'unknown'}")
-              print(f"🔗 {public_url}")
+              print(f"✅ Image posted! {short_caption}")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
