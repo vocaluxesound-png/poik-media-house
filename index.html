@@ -2,22 +2,65 @@
 <html>
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .feed {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .post {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 20px;
+        }
+        .post img {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 16px;
+            display: block;
+            margin: 0 auto;
+        }
+        .post-caption {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        .post-likes {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #888;
+        }
+        h2 {
+            text-align: center;
+            color: #00ff88;
+        }
+        .loading {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+    </style>
 </head>
-<body style="background:black;color:white;font-family:sans-serif;padding:20px">
-    <h2>⚡ POIK POIK FEED</h2>
-    <div id="feed">Loading...</div>
+<body>
+    <h2>⚡ POIK POIK</h2>
+    <div class="feed" id="feed">
+        <div class="loading">Loading...</div>
+    </div>
 
     <script>
-        // SINGLE DECLARATION - NO DUPLICATES
         const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
-        
-        // Create client only once
         const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
-            feedDiv.innerHTML = 'Loading posts...';
+            feedDiv.innerHTML = '<div class="loading">Loading stunning visuals...</div>';
             
             try {
                 const { data, error } = await _supabase
@@ -25,16 +68,13 @@
                     .select('*')
                     .order('id', { ascending: false });
                 
-                console.log('Data:', data);
-                console.log('Error:', error);
-                
                 if (error) {
-                    feedDiv.innerHTML = 'Error: ' + error.message;
+                    feedDiv.innerHTML = '<div class="loading">Error: ' + error.message + '</div>';
                     return;
                 }
                 
                 if (!data || data.length === 0) {
-                    feedDiv.innerHTML = 'No posts found. Ghost is creating images...';
+                    feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
                     return;
                 }
                 
@@ -42,36 +82,21 @@
                 for (let i = 0; i < data.length; i++) {
                     const post = data[i];
                     html += `
-                        <div style="margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px;">
-                            <img src="${post.image_url}" style="width: 100%; max-width: 500px; border-radius: 10px;" 
-                                 onerror="this.style.display='none'">
-                            <p style="margin-top: 10px;">✨ ${post.caption || 'Fashion'}</p>
-                            <small>❤️ ${post.likes || 0} likes</small>
+                        <div class="post">
+                            <img src="${post.image_url}" loading="lazy" onerror="this.src='https://placehold.co/600x800?text=Loading+Failed'">
+                            <div class="post-caption">✨ ${post.caption || 'Fashion visual'}</div>
+                            <div class="post-likes">❤️ ${post.likes || 0} likes</div>
                         </div>
                     `;
                 }
                 feedDiv.innerHTML = html;
                 
             } catch (err) {
-                feedDiv.innerHTML = 'Error: ' + err.message;
-                console.error(err);
+                feedDiv.innerHTML = '<div class="loading">Error: ' + err.message + '</div>';
             }
         }
         
-        // Direct fetch test
-        async function testFetch() {
-            const response = await fetch(SUPABASE_URL + '/rest/v1/posts?select=*', {
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                }
-            });
-            const data = await response.json();
-            console.log('Direct fetch:', data);
-        }
-        
         loadFeed();
-        testFetch();
     </script>
 </body>
 </html>
