@@ -19,31 +19,41 @@ jobs:
           pip3 install supabase requests
           python3 << 'EOF'
           import requests, os, time, random, urllib.parse
+          from supabase import create_client
 
           SUPABASE_URL = os.environ["SUPABASE_URL"]
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-          
-          from supabase import create_client
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          subjects = ["female model", "male model", "fashion influencer", "royal figure"]
-          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip", "chrome liquid metal"]
+          subjects = ["female model", "male model", "fashion influencer"]
+          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip"]
           
           subject = random.choice(subjects)
           style = random.choice(styles)
           short_caption = f"{subject} in {style}"
           
-          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, standing, head to toe visible, shoes visible, 8K, cinematic lighting, fashion magazine"
+          # STRONG PROMPT WITH NEGATIVE CONSTRAINTS
+          prompt = f"""
+          Ultra realistic RAW photo of {subject}, real person, not CGI, not 3D render,
+          wearing {style}, full body shot, head to toe visible, standing naturally,
+          perfect human anatomy, realistic skin texture, detailed face, natural eyes,
+          clean hands with 5 fingers, feet visible on ground, realistic shoes,
+          85mm lens, professional fashion photography, studio lighting, soft shadows,
+          8K, photorealistic, high detail skin pores, fabric texture visible
           
-          print(f"Generating: {prompt[:100]}...")
+          --no deformed face, bad anatomy, extra fingers, missing fingers, distorted body,
+          unrealistic, blurry, CGI, 3D render, cartoon, illustration, painting, doll,
+          mannequin, fake skin, plastic texture, extra limbs, wrong proportions
+          """
+          
+          print(f"Generating: {subject} in {style}")
           print(f"Caption: {short_caption}")
 
-          # URL encode properly
           encoded = urllib.parse.quote(prompt)
           img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
 
           try:
-              response = requests.get(img_url, timeout=90)
+              response = requests.get(img_url, timeout=120)
               print(f"API Status: {response.status_code}")
               
               if response.status_code != 200:
@@ -52,13 +62,9 @@ jobs:
                   
               filename = f"fashion_{int(time.time())}.jpg"
               
-              # Upload to Supabase
               supabase.storage.from_("post-images").upload(filename, response.content)
-              
-              # Get public URL
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
-              # Insert into database
               supabase.table("posts").insert({
                   "image_url": public_url,
                   "caption": short_caption,
