@@ -25,27 +25,27 @@ jobs:
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          # Full body fashion prompts
-          subjects = [
-              "female model full body", "male model full body",
-              "fashion influencer full body", "royal figure full body"
-          ]
-          
-          styles = [
-              "haute couture gown", "arabic gold embroidery", "cyberpunk techwear",
-              "minimalist luxury suit", "streetwear drip", "chrome liquid metal"
-          ]
+          # ============================================
+          # FULL BODY FASHION POOLS
+          # ============================================
+          subjects = ["female model", "male model", "fashion influencer", "royal figure"]
+          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip", "chrome liquid metal"]
+          poses = ["standing confidently", "walking naturally", "posing head to toe", "looking back over shoulder"]
+          environments = ["studio background", "city street", "runway", "modern interior"]
           
           subject = random.choice(subjects)
           style = random.choice(styles)
+          pose = random.choice(poses)
+          env = random.choice(environments)
           
-          # Clean caption (no "AI Ghost" prefix)
-          short_caption = f"{subject.split()[0]} in {style}"
+          # Clean caption (remove "full body" junk)
+          clean_subject = subject.replace("full body", "").strip()
+          short_caption = f"{clean_subject} in {style}"
           
-          # Full body prompt
-          prompt = f"Ultra realistic full body photo of {subject} wearing {style} fashion, standing pose, head to toe visible, shoes visible, 8K, cinematic lighting, fashion photography, full frame"
+          # STRONG full body prompt
+          prompt = f"""Ultra realistic full body fashion photography of {subject}, wearing {style}, {pose}, in {env}, entire body visible from head to toe, feet clearly visible, shoes included, standing naturally, centered framing, shot from a distance, no cropping, fashion magazine style, 8K, ultra detailed, sharp focus, cinematic lighting, full length shot, wide framing, subject fully in frame"""
 
-          print(f"Generating: {prompt[:100]}...")
+          print(f"Generating: {prompt[:150]}...")
           print(f"Caption: {short_caption}")
 
           encoded = prompt.replace(" ", "%20")
@@ -55,8 +55,16 @@ jobs:
 
           if response.status_code == 200:
               filename = f"fashion_{int(time.time())}.jpg"
-              supabase.storage.from_("post-images").upload(filename, response.content)
-              public_url = supabase.storage.from_("post-images").get_public_url(filename)
+              
+              # FIXED: Correct upload method
+              supabase.storage.from_("post-images").upload(
+                  path=filename,
+                  file=response.content,
+                  file_options={"content-type": "image/jpeg"}
+              )
+              
+              # FIXED: Correct public URL extraction
+              public_url = supabase.storage.from_("post-images").get_public_url(filename)["publicUrl"]
               
               supabase.table("posts").insert({
                   "image_url": public_url,
@@ -65,6 +73,7 @@ jobs:
                   "likes": 0
               }).execute()
               print(f"✅ Posted: {short_caption}")
+              print(f"🔗 URL: {public_url}")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
