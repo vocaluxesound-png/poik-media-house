@@ -1,0 +1,75 @@
+name: AI Ghost DEBUG
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Debug Ghost
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          pip install requests supabase
+          python << EOF
+          import requests, time, os, urllib.parse
+          from supabase import create_client
+
+          print("🚀 STARTING SCRIPT")
+
+          url = os.environ.get("SUPABASE_URL")
+          key = os.environ.get("SUPABASE_KEY")
+          print("URL:", url)
+          print("KEY START:", key[:20] if key else "NO KEY")
+          supabase = create_client(url, key)
+          print("✅ Supabase connected")
+
+          print("🧪 Testing simple insert...")
+          test = supabase.table("posts").insert({
+              "image_url": "https://via.placeholder.com/300",
+              "caption": "TEST INSERT",
+              "is_ai": True,
+              "likes": 0
+          }).execute()
+          print("INSERT RESPONSE:", test)
+
+          prompt = "fashion model full body realistic photography"
+          encoded = urllib.parse.quote(prompt)
+          img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=512&height=768"
+          print("🌐 Fetching image:", img_url)
+          r = requests.get(img_url, timeout=60)
+          print("IMAGE STATUS:", r.status_code)
+
+          if r.status_code != 200:
+              print("❌ Image failed")
+              exit()
+
+          filename = f"{int(time.time())}.jpg"
+          print("⬆️ Uploading to storage:", filename)
+          upload = supabase.storage.from_("post-images").upload(
+              path=filename,
+              file=r.content,
+              file_options={"content-type": "image/jpeg"}
+          )
+          print("UPLOAD RESPONSE:", upload)
+
+          public = supabase.storage.from_("post-images").get_public_url(filename)
+          print("PUBLIC URL RAW:", public)
+          if isinstance(public, dict):
+              public_url = public.get("publicUrl")
+          else:
+              public_url = public
+          print("FINAL URL:", public_url)
+
+          print("📦 Inserting final post...")
+          final = supabase.table("posts").insert({
+              "image_url": public_url,
+              "caption": "FINAL IMAGE",
+              "is_ai": True,
+              "likes": 0
+          }).execute()
+          print("FINAL INSERT RESPONSE:", final)
+          print("✅ SCRIPT COMPLETE")
+          EOF
