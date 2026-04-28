@@ -20,38 +20,34 @@ jobs:
           key = os.environ["SUPABASE_KEY"]
           supabase = create_client(url, key)
 
-          # Simple prompt
-          prompt = "fashion model, full body, professional photography"
+          prompt = "ultra realistic fashion model, full body, professional photography, 85mm lens, perfect anatomy"
           encoded = urllib.parse.quote(prompt)
-          img = f"https://image.pollinations.ai/prompt/{encoded}?width=800&height=1000&nologo=true"
+          img = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
 
-          print("Downloading image...")
-          r = requests.get(img, timeout=60)
-          print(f"Status: {r.status_code}")
-
-          if r.status_code == 200:
-              filename = f"post_{int(time.time())}.jpg"
+          try:
+              r = requests.get(img, timeout=60)
+              print("Status:", r.status_code)
+              if r.status_code != 200:
+                  raise Exception("Image failed")
+                  
+              filename = f"{int(time.time())}.jpg"
+              supabase.storage.from_("post-images").upload(
+                  path=filename,
+                  file=r.content,
+                  file_options={"content-type": "image/jpeg"}
+              )
               
-              # Upload to storage
-              supabase.storage.from_("post-images").upload(filename, r.content)
+              public = supabase.storage.from_("post-images").get_public_url(filename)
               
-              # FIXED: Get public URL correctly
-              public_obj = supabase.storage.from_("post-images").get_public_url(filename)
-              public_url = public_obj["publicUrl"] if isinstance(public_obj, dict) else public_obj
-              
-              print(f"Public URL: {public_url}")
-              
-              # Insert into database
-              result = supabase.table("posts").insert({
-                  "image_url": public_url,
+              supabase.table("posts").insert({
+                  "image_url": public["publicUrl"] if isinstance(public, dict) else public,
                   "caption": "AI Fashion",
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              
-              print(f"✅ Inserted successfully!")
-          else:
-              print(f"❌ Failed: {r.status_code}")
+              print("✅ DONE")
+          except Exception as e:
+              print("ERROR:", e)
           EOF
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
