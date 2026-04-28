@@ -3,43 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poik Poik</title>
+    <title>Poik Poik | AI Media House</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: black; color: white; font-family: system-ui; }
-        .header { padding: 15px; text-align: center; border-bottom: 1px solid #222; }
-        .logo { font-size: 28px; font-weight: bold; }
+        body { background: #000; color: #fff; font-family: system-ui; padding-bottom: 60px; }
+        .header {
+            position: sticky;
+            top: 0;
+            background: #000;
+            border-bottom: 1px solid #222;
+            padding: 12px 16px;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 24px; font-weight: bold; }
         .logo span { color: #00ff88; }
-        .feed { max-width: 500px; margin: auto; }
-        .post { margin-bottom: 20px; background: #111; }
-        .post img { width: 100%; display: block; }
-        .post-info { padding: 10px; }
-        .loading { text-align: center; padding: 50px; color: #666; }
+        .feed { max-width: 600px; margin: 0 auto; }
+        .post {
+            margin-bottom: 20px;
+            background: #0a0a0a;
+            border-bottom: 1px solid #222;
+        }
+        .post img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+        }
+        .post-info { padding: 12px; font-size: 14px; }
+        .loading { text-align: center; padding: 40px; color: #888; }
         footer { text-align: center; padding: 20px; color: #444; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo">POIK<span>POIK</span></div>
-        <div style="font-size: 12px; color: #888;">AI Media House</div>
+        <div class="header-content">
+            <div class="logo">POIK<span>POIK</span></div>
+        </div>
     </div>
+
     <div class="feed" id="feed">
-        <div class="loading">Loading...</div>
+        <div class="loading">Loading posts...</div>
     </div>
-    <footer>⚡ New AI image every 10 minutes</footer>
+
+    <footer>⚡ Poik Poik • AI Media House • New image every 10 minutes</footer>
 
     <script>
-        // YOUR SUPABASE CREDENTIALS
         const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
+            feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
             
-            const { data, error } = await supabase
+            const { data, error } = await _supabase
                 .from('posts')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -50,7 +76,7 @@
             }
             
             if (!data || data.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is waking up...</div>';
+                feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is generating...</div>';
                 return;
             }
             
@@ -59,9 +85,9 @@
                 const post = data[i];
                 html += `
                     <div class="post">
-                        <img src="${post.image_url}" alt="Post">
+                        <img src="${post.image_url}" alt="Post image" loading="lazy">
                         <div class="post-info">
-                            ${post.is_ai ? '🤖 AI Ghost' : '👤 User'} • ${post.caption || ''}
+                            ${post.is_ai ? '🤖 AI Ghost' : '👤 User'} • ${post.caption || ''} • ❤️ ${post.likes || 0}
                         </div>
                     </div>
                 `;
@@ -70,8 +96,6 @@
         }
         
         loadFeed();
-        
-        // Reload every 30 seconds
         setInterval(loadFeed, 30000);
     </script>
 </body>
