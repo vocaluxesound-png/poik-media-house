@@ -56,7 +56,6 @@
         .loading { text-align: center; padding: 40px; color: #888; }
         footer { text-align: center; padding: 20px; color: #444; font-size: 12px; }
         
-        /* Fullscreen modal */
         .fullscreen-modal {
             display: none;
             position: fixed;
@@ -138,7 +137,6 @@
             
             let html = '';
             for (const post of posts) {
-                // Clean caption - remove "AI Ghost • " prefix
                 let cleanCaption = post.caption || '';
                 cleanCaption = cleanCaption.replace(/^AI Ghost\s*[•\-]?\s*/, '');
                 
@@ -148,7 +146,7 @@
                             <div class="post-avatar">✨</div>
                             <div class="post-username">Poik Poik</div>
                         </div>
-                        <img class="post-image" src="${post.image_url}" loading="lazy">
+                        <img class="post-image" src="${post.image_url}" loading="lazy" onerror="this.style.display='none'">
                         <div class="post-caption">${cleanCaption}</div>
                     </div>
                 `;
@@ -158,7 +156,6 @@
         
         loadFeed();
         
-        // Escape key to close fullscreen
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeFullscreen();
         });
