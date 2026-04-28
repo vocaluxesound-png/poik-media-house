@@ -8,7 +8,7 @@
         body {
             background: black;
             color: white;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui;
             margin: 0;
             padding: 20px;
         }
@@ -49,43 +49,34 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
+        const url = 'https://xxnuhisweolpibzthjcc.supabase.co';
+        const key = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const client = window.supabase.createClient(url, key);
         
-        async function loadFeed() {
-            const feedDiv = document.getElementById('feed');
-            
-            const { data, error } = await supabase
-                .from('posts')
-                .select('*')
-                .order('id', { ascending: false });
-            
-            if (error) {
-                feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
-                console.error(error);
-                return;
-            }
-            
-            if (!data || data.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
-                return;
-            }
-            
-            let html = '';
-            for (let i = 0; i < data.length; i++) {
-                html += `
-                    <div class="post">
-                        <img src="${data[i].image_url}" loading="lazy">
-                        <div class="caption">${data[i].caption || 'Fashion'}</div>
-                    </div>
-                `;
-            }
-            feedDiv.innerHTML = html;
-        }
-        
-        loadFeed();
+        client
+            .from('posts')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(result => {
+                const feed = document.getElementById('feed');
+                if (result.error) {
+                    feed.innerHTML = `<div class="loading">Error: ${result.error.message}</div>`;
+                } else if (!result.data || result.data.length === 0) {
+                    feed.innerHTML = '<div class="loading">No posts yet. Ghost is creating...</div>';
+                } else {
+                    let html = '';
+                    for (const post of result.data) {
+                        html += `
+                            <div class="post">
+                                <img src="${post.image_url}" loading="lazy">
+                                <div class="caption">${post.caption || 'Fashion'}</div>
+                            </div>
+                        `;
+                    }
+                    feed.innerHTML = html;
+                }
+            });
     </script>
 </body>
 </html>
