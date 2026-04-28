@@ -24,7 +24,10 @@
         }
         .post img {
             width: 100%;
+            max-width: 600px;
+            height: auto;
             display: block;
+            margin: 0 auto;
         }
         .caption {
             padding: 12px;
@@ -39,6 +42,23 @@
             text-align: center;
             padding: 50px;
             color: #666;
+        }
+        
+        /* Desktop: keep images contained */
+        @media (min-width: 768px) {
+            .feed {
+                max-width: 600px;
+            }
+            .post img {
+                max-width: 600px;
+            }
+        }
+        
+        /* Mobile: full width */
+        @media (max-width: 600px) {
+            .post img {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
