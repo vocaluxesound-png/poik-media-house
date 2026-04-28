@@ -1,53 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background:black;color:white">
-<h2>POIK POIK FEED</h2>
-<div id="feed">Loading...</div>
-<script>
-const supabase = window.supabase.createClient(
-    "https://xxnuhisweolpibzthjcc.supabase.co",
-    "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
-);
+<body style="background:black;color:white;font-family:sans-serif;padding:20px">
+    <h2>⚡ POIK POIK FEED</h2>
+    <div id="feed">Loading images...</div>
 
-async function load() {
-    const feed = document.getElementById("feed");
-    try {
-        const { data, error } = await supabase
-            .from("posts")
-            .select("*");
-        
-        console.log("DATA:", data);
-        console.log("ERROR:", error);
-        
-        if (error) {
-            feed.innerHTML = "ERROR: " + error.message;
-            return;
+    <script>
+        // SINGLE DECLARATION - NO DUPLICATES
+        const _supabaseClient = window.supabase.createClient(
+            "https://xxnuhisweolpibzthjcc.supabase.co",
+            "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
+        );
+
+        async function loadPosts() {
+            const feedDiv = document.getElementById("feed");
+            
+            try {
+                const { data, error } = await _supabaseClient
+                    .from("posts")
+                    .select("*")
+                    .order("created_at", { ascending: false });
+                
+                console.log("Posts found:", data ? data.length : 0);
+                
+                if (error) {
+                    feedDiv.innerHTML = "❌ Error: " + error.message;
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    feedDiv.innerHTML = "📭 No posts yet. AI Ghost is creating images...";
+                    return;
+                }
+                
+                let html = "";
+                for (let i = 0; i < data.length; i++) {
+                    const post = data[i];
+                    html += `
+                        <div style="margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                            <img src="${post.image_url}" style="width: 100%; max-width: 500px; border-radius: 10px;" onerror="this.style.display='none'">
+                            <p style="margin-top: 10px;">✨ ${post.caption || "Fashion visual"}</p>
+                            <small>❤️ ${post.likes || 0} likes</small>
+                        </div>
+                    `;
+                }
+                feedDiv.innerHTML = html;
+                
+            } catch (err) {
+                feedDiv.innerHTML = "❌ Crash: " + err.message;
+                console.error(err);
+            }
         }
         
-        if (!data || data.length === 0) {
-            feed.innerHTML = "NO POSTS FOUND";
-            return;
-        }
-        
-        let html = "";
-        data.forEach(p => {
-            html += `
-                <div style="margin-bottom:20px">
-                    <img src="${p.image_url}" width="300" onerror="this.remove()"/>
-                    <p>${p.caption}</p>
-                </div>
-            `;
-        });
-        feed.innerHTML = html;
-    } catch (e) {
-        feed.innerHTML = "CRASH: " + e.message;
-    }
-}
-
-load();
-</script>
+        loadPosts();
+    </script>
 </body>
 </html>
