@@ -1,139 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poik Poik | AI Media House</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; color: #fff; font-family: system-ui; padding-bottom: 60px; }
-        .header {
-            position: sticky;
-            top: 0;
-            background: #000;
-            border-bottom: 1px solid #222;
-            padding: 12px 16px;
-            z-index: 100;
-        }
-        .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 24px; font-weight: bold; }
-        .logo span { color: #00ff88; }
-        .feed { max-width: 600px; margin: 0 auto; }
-        .post {
-            margin-bottom: 20px;
-            background: #0a0a0a;
-            border-bottom: 1px solid #222;
-            cursor: pointer;
-        }
-        .post-image { width: 100%; display: block; }
-        .post-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
-        .post-avatar { width: 32px; height: 32px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; }
-        .post-username { font-weight: 600; font-size: 14px; }
-        .post-caption { padding: 0 16px 12px; font-size: 14px; }
-        .loading { text-align: center; padding: 40px; color: #888; }
-        footer { text-align: center; padding: 20px; color: #444; font-size: 12px; }
-        .fullscreen-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .fullscreen-modal img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            font-size: 40px;
-            color: #fff;
-            cursor: pointer;
-            z-index: 1001;
-        }
-    </style>
 </head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">POIK<span>POIK</span></div>
-        </div>
-    </div>
-
-    <div class="feed" id="feed">
-        <div class="loading">Loading posts...</div>
-    </div>
-
-    <footer>⚡ Poik Poik • AI Media House</footer>
-
-    <div id="fullscreenModal" class="fullscreen-modal" onclick="closeFullscreen()">
-        <span class="close-btn" onclick="closeFullscreen()">&times;</span>
-        <img id="fullscreenImage" src="">
-    </div>
-
+<body style="background:black;color:white">
+    <h2>POIK POIK FEED</h2>
+    <div id="feed">Loading...</div>
     <script>
-        // SINGLE Supabase declaration - no duplicates
-        const _supabase = window.supabase.createClient(
-            'https://xxnuhisweolpibzthjcc.supabase.co',
-            'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P'
+        const supabase = window.supabase.createClient(
+            "https://xxnuhisweolpibzthjcc.supabase.co",
+            "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
         );
-        
-        function openFullscreen(imageUrl) {
-            document.getElementById('fullscreenImage').src = imageUrl;
-            document.getElementById('fullscreenModal').style.display = 'flex';
-        }
-        
-        function closeFullscreen() {
-            document.getElementById('fullscreenModal').style.display = 'none';
-        }
-        
-        async function loadFeed() {
-            const feedDiv = document.getElementById('feed');
-            feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
-            
-            const { data: posts, error } = await _supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
-                return;
-            }
-            
-            if (!posts || posts.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is generating...</div>';
-                return;
-            }
-            
-            let html = '';
-            for (const post of posts) {
-                let cleanCaption = post.caption || '';
-                cleanCaption = cleanCaption.replace(/^AI Ghost\s*[•\-]?\s*/, '');
+
+        async function load() {
+            const feed = document.getElementById("feed");
+            try {
+                const { data, error } = await supabase
+                    .from("posts")
+                    .select("*");
+                    
+                console.log("DATA:", data);
+                console.log("ERROR:", error);
                 
-                html += `
-                    <div class="post" onclick="openFullscreen('${post.image_url}')">
-                        <div class="post-header">
-                            <div class="post-avatar">✨</div>
-                            <div class="post-username">Poik Poik</div>
+                if (error) {
+                    feed.innerHTML = "ERROR: " + error.message;
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    feed.innerHTML = "NO POSTS FOUND";
+                    return;
+                }
+                
+                let html = "";
+                data.forEach(p => {
+                    html += `
+                        <div style="margin-bottom:20px">
+                            <img src="${p.image_url}" width="300" onerror="this.remove()"/>
+                            <p>${p.caption}</p>
                         </div>
-                        <img class="post-image" src="${post.image_url}" loading="lazy" onerror="this.style.display='none'">
-                        <div class="post-caption">${cleanCaption}</div>
-                    </div>
-                `;
+                    `;
+                });
+                feed.innerHTML = html;
+            } catch (e) {
+                feed.innerHTML = "CRASH: " + e.message;
             }
-            feedDiv.innerHTML = html;
         }
         
-        loadFeed();
-        
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeFullscreen();
-        });
+        load();
     </script>
 </body>
 </html>
