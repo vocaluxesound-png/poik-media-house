@@ -1,53 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body style="background:black;color:white">
-    <h2>POIK POIK FEED</h2>
-    <div id="feed">Loading...</div>
-    <script>
-        const supabase = window.supabase.createClient(
-            "https://xxnuhisweolpibzthjcc.supabase.co",
-            "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
-        );
+<h2>POIK POIK FEED</h2>
+<div id="feed">Loading...</div>
+<script>
+const supabase = window.supabase.createClient(
+    "https://xxnuhisweolpibzthjcc.supabase.co",
+    "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
+);
 
-        async function load() {
-            const feed = document.getElementById("feed");
-            try {
-                const { data, error } = await supabase
-                    .from("posts")
-                    .select("*");
-                    
-                console.log("DATA:", data);
-                console.log("ERROR:", error);
-                
-                if (error) {
-                    feed.innerHTML = "ERROR: " + error.message;
-                    return;
-                }
-                
-                if (!data || data.length === 0) {
-                    feed.innerHTML = "NO POSTS FOUND";
-                    return;
-                }
-                
-                let html = "";
-                data.forEach(p => {
-                    html += `
-                        <div style="margin-bottom:20px">
-                            <img src="${p.image_url}" width="300" onerror="this.remove()"/>
-                            <p>${p.caption}</p>
-                        </div>
-                    `;
-                });
-                feed.innerHTML = html;
-            } catch (e) {
-                feed.innerHTML = "CRASH: " + e.message;
-            }
+async function load() {
+    const feed = document.getElementById("feed");
+    try {
+        const { data, error } = await supabase
+            .from("posts")
+            .select("*");
+        
+        console.log("DATA:", data);
+        console.log("ERROR:", error);
+        
+        if (error) {
+            feed.innerHTML = "ERROR: " + error.message;
+            return;
         }
         
-        load();
-    </script>
+        if (!data || data.length === 0) {
+            feed.innerHTML = "NO POSTS FOUND";
+            return;
+        }
+        
+        let html = "";
+        data.forEach(p => {
+            html += `
+                <div style="margin-bottom:20px">
+                    <img src="${p.image_url}" width="300" onerror="this.remove()"/>
+                    <p>${p.caption}</p>
+                </div>
+            `;
+        });
+        feed.innerHTML = html;
+    } catch (e) {
+        feed.innerHTML = "CRASH: " + e.message;
+    }
+}
+
+load();
+</script>
 </body>
 </html>
