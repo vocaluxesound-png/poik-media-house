@@ -8,26 +8,25 @@
     <div id="feed">Loading...</div>
 
     <script>
-        // Supabase configuration
+        // SINGLE DECLARATION - NO DUPLICATES
         const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         
-        // Initialize Supabase client
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Create client only once
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         async function loadFeed() {
             const feedDiv = document.getElementById('feed');
             feedDiv.innerHTML = 'Loading posts...';
             
             try {
-                // Method 1: Using Supabase client
-                const { data, error } = await supabase
+                const { data, error } = await _supabase
                     .from('posts')
                     .select('*')
                     .order('id', { ascending: false });
                 
-                console.log('Data from client:', data);
-                console.log('Error from client:', error);
+                console.log('Data:', data);
+                console.log('Error:', error);
                 
                 if (error) {
                     feedDiv.innerHTML = 'Error: ' + error.message;
@@ -35,11 +34,10 @@
                 }
                 
                 if (!data || data.length === 0) {
-                    feedDiv.innerHTML = 'No posts found. Waiting for Ghost...';
+                    feedDiv.innerHTML = 'No posts found. Ghost is creating images...';
                     return;
                 }
                 
-                // Display posts
                 let html = '';
                 for (let i = 0; i < data.length; i++) {
                     const post = data[i];
@@ -60,20 +58,20 @@
             }
         }
         
-        // Also test direct fetch with headers
-        async function testDirectFetch() {
-            const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/rest/v1/posts?select=*', {
+        // Direct fetch test
+        async function testFetch() {
+            const response = await fetch(SUPABASE_URL + '/rest/v1/posts?select=*', {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
                 }
             });
             const data = await response.json();
-            console.log('Direct fetch result:', data);
+            console.log('Direct fetch:', data);
         }
         
         loadFeed();
-        testDirectFetch();
+        testFetch();
     </script>
 </body>
 </html>
