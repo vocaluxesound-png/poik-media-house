@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Ghost
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           pip install requests supabase
           python << EOF
@@ -20,35 +23,42 @@ jobs:
           key = os.environ["SUPABASE_KEY"]
           supabase = create_client(url, key)
 
-          prompt = "ultra realistic fashion model, full body, professional photography, 85mm lens, perfect anatomy"
-          encoded = urllib.parse.quote(prompt)
-          img = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
+          # VARIETY POOLS
+          subjects = ["female model", "male model", "fashion influencer", "royal figure", "cyberpunk character"]
+          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist suit", "streetwear drip", "chrome metal", "velvet cape"]
+          poses = ["standing confidently", "walking on runway", "posing head to toe", "looking back", "sitting elegantly"]
+          lighting = ["golden hour", "neon lights", "studio soft", "dramatic shadows", "sunset glow"]
 
-          try:
-              r = requests.get(img, timeout=60)
-              print("Status:", r.status_code)
-              if r.status_code != 200:
-                  raise Exception("Image failed")
-                  
-              filename = f"{int(time.time())}.jpg"
-              supabase.storage.from_("post-images").upload(
-                  path=filename,
-                  file=r.content,
-                  file_options={"content-type": "image/jpeg"}
-              )
-              
+          # Random selection for variety
+          subject = random.choice(subjects)
+          style = random.choice(styles)
+          pose = random.choice(poses)
+          light = random.choice(lighting)
+          
+          caption = f"{subject} in {style}"
+          
+          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, {pose}, {light} lighting, professional 8K"
+          
+          print(f"🎨 Generating: {caption}")
+          print(f"📝 Prompt: {prompt}")
+
+          encoded = urllib.parse.quote(prompt)
+          img = f"https://image.pollinations.ai/prompt/{encoded}?width=800&height=1000&nologo=true&seed={random.randint(1,999999)}"
+
+          r = requests.get(img, timeout=60)
+          if r.status_code == 200:
+              filename = f"post_{int(time.time())}_{random.randint(1,999)}.jpg"
+              supabase.storage.from_("post-images").upload(filename, r.content)
               public = supabase.storage.from_("post-images").get_public_url(filename)
+              public_url = public["publicUrl"] if isinstance(public, dict) else public
               
               supabase.table("posts").insert({
-                  "image_url": public["publicUrl"] if isinstance(public, dict) else public,
-                  "caption": "AI Fashion",
+                  "image_url": public_url,
+                  "caption": caption,
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              print("✅ DONE")
-          except Exception as e:
-              print("ERROR:", e)
+              print(f"✅ Posted: {caption}")
+          else:
+              print(f"❌ Failed: {r.status_code}")
           EOF
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
