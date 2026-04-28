@@ -25,21 +25,25 @@ jobs:
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+          # Full body fashion prompts
           subjects = [
               "female model full body", "male model full body",
               "fashion influencer full body", "royal figure full body"
           ]
           
           styles = [
-              "haute couture gown", "cyberpunk techwear", "arabic gold embroidery",
+              "haute couture gown", "arabic gold embroidery", "cyberpunk techwear",
               "minimalist luxury suit", "streetwear drip", "chrome liquid metal"
           ]
           
           subject = random.choice(subjects)
           style = random.choice(styles)
+          
+          # Clean caption (no "AI Ghost" prefix)
           short_caption = f"{subject.split()[0]} in {style}"
           
-          prompt = f"Ultra realistic full body photo of {subject} wearing {style} fashion, standing, head to toe visible, shoes visible, 8K, cinematic lighting, fashion photography"
+          # Full body prompt
+          prompt = f"Ultra realistic full body photo of {subject} wearing {style} fashion, standing pose, head to toe visible, shoes visible, 8K, cinematic lighting, fashion photography, full frame"
 
           print(f"Generating: {prompt[:100]}...")
           print(f"Caption: {short_caption}")
@@ -50,7 +54,7 @@ jobs:
           response = requests.get(img_url, timeout=90)
 
           if response.status_code == 200:
-              filename = f"post_{int(time.time())}.jpg"
+              filename = f"fashion_{int(time.time())}.jpg"
               supabase.storage.from_("post-images").upload(filename, response.content)
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
@@ -60,7 +64,7 @@ jobs:
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              print("✅ Posted!")
+              print(f"✅ Posted: {short_caption}")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
