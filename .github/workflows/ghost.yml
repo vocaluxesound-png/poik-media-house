@@ -1,4 +1,4 @@
-name: AI Ghost - Visual Idea Engine
+name: AI Ghost - Fashion Engine
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate Fashion Visual
+      - name: Generate and Post
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -25,32 +25,32 @@ jobs:
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          # Full body focused prompts
           subjects = [
-              "female model full body", "male model full body standing",
-              "fashion influencer full body walking", "royal figure full body elegant"
+              "female model full body", "male model full body",
+              "fashion influencer full body", "royal figure full body"
           ]
           
           styles = [
-              "haute couture gown", "cyberpunk techwear", "minimalist luxury suit",
-              "streetwear drip", "chrome liquid metal", "arabic gold embroidery"
+              "haute couture gown", "cyberpunk techwear", "arabic gold embroidery",
+              "minimalist luxury suit", "streetwear drip", "chrome liquid metal"
           ]
           
-          # Force full body in every prompt
-          base_prompt = f"Ultra realistic full body shot, head to toe visible, {random.choice(subjects)} wearing {random.choice(styles)} fashion, standing pose, cinematic lighting, 8K, fashion photography, full frame, shoes visible"
+          subject = random.choice(subjects)
+          style = random.choice(styles)
+          short_caption = f"{subject.split()[0]} in {style}"
           
-          short_caption = f"{random.choice(['fashion influencer', 'model', 'royal figure'])} in {random.choice(styles)}"
+          prompt = f"Ultra realistic full body photo of {subject} wearing {style} fashion, standing, head to toe visible, shoes visible, 8K, cinematic lighting, fashion photography"
 
-          print(f"Generating: {base_prompt[:100]}...")
+          print(f"Generating: {prompt[:100]}...")
+          print(f"Caption: {short_caption}")
 
-          encoded = base_prompt.replace(" ", "%20")
-          seed = random.randint(1, 999999)
-          img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true&seed={seed}&enhance=true"
-          
+          encoded = prompt.replace(" ", "%20")
+          img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
+
           response = requests.get(img_url, timeout=90)
 
           if response.status_code == 200:
-              filename = f"fashion_{int(time.time())}.jpg"
+              filename = f"post_{int(time.time())}.jpg"
               supabase.storage.from_("post-images").upload(filename, response.content)
               public_url = supabase.storage.from_("post-images").get_public_url(filename)
               
@@ -60,7 +60,7 @@ jobs:
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              print(f"✅ Posted: {short_caption}")
+              print("✅ Posted!")
           else:
               print(f"❌ Failed: {response.status_code}")
           EOF
