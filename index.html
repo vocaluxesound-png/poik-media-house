@@ -1,53 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background:black;color:white">
-<h2>POIK POIK FEED</h2>
-<div id="feed">Loading...</div>
-<script>
-const supabase = window.supabase.createClient(
-    "https://xxnuhisweolpibzthjcc.supabase.co",
-    "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
-);
+<body style="background:black;color:white;font-family:sans-serif;padding:20px">
+    <h2>⚡ POIK POIK FEED</h2>
+    <div id="feed">Loading...</div>
 
-async function load() {
-    const feed = document.getElementById("feed");
-    try {
-        const { data, error } = await supabase
-            .from("posts")
-            .select("*");
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://xxnuhisweolpibzthjcc.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P';
         
-        console.log("DATA:", data);
-        console.log("ERROR:", error);
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        if (error) {
-            feed.innerHTML = "ERROR: " + error.message;
-            return;
+        async function loadFeed() {
+            const feedDiv = document.getElementById('feed');
+            feedDiv.innerHTML = 'Loading posts...';
+            
+            try {
+                // Method 1: Using Supabase client
+                const { data, error } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .order('id', { ascending: false });
+                
+                console.log('Data from client:', data);
+                console.log('Error from client:', error);
+                
+                if (error) {
+                    feedDiv.innerHTML = 'Error: ' + error.message;
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    feedDiv.innerHTML = 'No posts found. Waiting for Ghost...';
+                    return;
+                }
+                
+                // Display posts
+                let html = '';
+                for (let i = 0; i < data.length; i++) {
+                    const post = data[i];
+                    html += `
+                        <div style="margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                            <img src="${post.image_url}" style="width: 100%; max-width: 500px; border-radius: 10px;" 
+                                 onerror="this.style.display='none'">
+                            <p style="margin-top: 10px;">✨ ${post.caption || 'Fashion'}</p>
+                            <small>❤️ ${post.likes || 0} likes</small>
+                        </div>
+                    `;
+                }
+                feedDiv.innerHTML = html;
+                
+            } catch (err) {
+                feedDiv.innerHTML = 'Error: ' + err.message;
+                console.error(err);
+            }
         }
         
-        if (!data || data.length === 0) {
-            feed.innerHTML = "NO POSTS FOUND";
-            return;
+        // Also test direct fetch with headers
+        async function testDirectFetch() {
+            const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/rest/v1/posts?select=*', {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                }
+            });
+            const data = await response.json();
+            console.log('Direct fetch result:', data);
         }
         
-        let html = "";
-        data.forEach(p => {
-            html += `
-                <div style="margin-bottom:20px">
-                    <img src="${p.image_url}" width="300" onerror="this.remove()"/>
-                    <p>${p.caption}</p>
-                </div>
-            `;
-        });
-        feed.innerHTML = html;
-    } catch (e) {
-        feed.innerHTML = "CRASH: " + e.message;
-    }
-}
-
-load();
-</script>
+        loadFeed();
+        testDirectFetch();
+    </script>
 </body>
 </html>
