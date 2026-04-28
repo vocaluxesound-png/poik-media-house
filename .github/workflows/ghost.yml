@@ -1,4 +1,4 @@
-name: AI Ghost - Global Engine
+name: AI Ghost - Fashion Engine
 
 on:
   schedule:
@@ -18,169 +18,57 @@ jobs:
         run: |
           pip3 install supabase requests
           python3 << 'EOF'
-          import requests, os, time, random
-          from supabase import create_client
+          import requests, os, time, random, urllib.parse
 
           SUPABASE_URL = os.environ["SUPABASE_URL"]
           SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+          
+          from supabase import create_client
           supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-          # =========================
-          # 🌍 GLOBAL SYSTEM
-          # =========================
-
-          categories = ["fashion", "city", "sci-fi", "fantasy"]
-
-          subjects = [
-              "female model", "male model", "androgynous model",
-              "royal figure", "futuristic human", "warrior"
-          ]
-
-          fashion_styles = [
-              "haute couture gown", "streetwear outfit",
-              "futuristic chrome fashion", "minimal luxury suit",
-              "avant-garde fashion"
-          ]
-
-          city_styles = [
-              "futuristic мегacity", "floating city",
-              "underwater city", "cyberpunk city",
-              "ancient advanced civilization"
-          ]
-
-          sci_fi_styles = [
-              "alien planet", "robotic world",
-              "space station life", "interstellar civilization"
-          ]
-
-          fantasy_styles = [
-              "angelic warrior", "dark demon king",
-              "magical kingdom", "mythical realm"
-          ]
-
-          poses = [
-              "standing confidently", "walking forward",
-              "posing naturally", "looking into distance"
-          ]
-
-          environments = [
-              "modern city", "mountain landscape",
-              "space background", "futuristic environment",
-              "dreamlike world"
-          ]
-
-          lighting = [
-              "cinematic lighting", "neon glow",
-              "soft light", "dramatic shadows"
-          ]
-
-          moods = [
-              "powerful", "mysterious", "dreamy",
-              "epic", "calm luxury"
-          ]
-
-          camera = [
-              "wide cinematic shot", "low angle shot",
-              "portrait lens 85mm", "full frame shot"
-          ]
-
-          hooks = [
-              "future vision", "alternate reality",
-              "next generation concept", "what if world looked like this"
-          ]
-
-          # =========================
-          # 🎯 GENERATION
-          # =========================
-
-          category = random.choice(categories)
+          subjects = ["female model", "male model", "fashion influencer", "royal figure"]
+          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist luxury suit", "streetwear drip", "chrome liquid metal"]
+          
           subject = random.choice(subjects)
-          pose = random.choice(poses)
-          env = random.choice(environments)
-          light = random.choice(lighting)
-          mood = random.choice(moods)
-          cam = random.choice(camera)
-          hook = random.choice(hooks)
+          style = random.choice(styles)
+          short_caption = f"{subject} in {style}"
+          
+          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, standing, head to toe visible, shoes visible, 8K, cinematic lighting, fashion magazine"
+          
+          print(f"Generating: {prompt[:100]}...")
+          print(f"Caption: {short_caption}")
 
-          if category == "fashion":
-              style = random.choice(fashion_styles)
-              prompt = f"""
-              Ultra realistic full body fashion photography of {subject},
-              wearing {style},
-              {pose},
-              in {env},
-              entire body visible from head to toe, shoes visible,
-              wide framing, no cropping,
-              8K, ultra detailed, cinematic lighting
-              """
-
-          elif category == "city":
-              style = random.choice(city_styles)
-              prompt = f"""
-              Ultra realistic {style},
-              massive scale architecture,
-              {light},
-              {mood},
-              {cam},
-              8K, cinematic, ultra detailed
-              """
-
-          elif category == "sci-fi":
-              style = random.choice(sci_fi_styles)
-              prompt = f"""
-              Ultra realistic {subject} in {style},
-              {pose},
-              {env},
-              {light},
-              {mood},
-              8K, cinematic
-              """
-
-          else:
-              style = random.choice(fantasy_styles)
-              prompt = f"""
-              Ultra realistic {style},
-              {subject},
-              {pose},
-              in {env},
-              {light},
-              epic fantasy atmosphere,
-              8K ultra detailed
-              """
-
-          caption = f"{hook} • {style}"
-
-          print(f"Generating: {caption}")
-
-          # =========================
-          # 🖼 GENERATE IMAGE
-          # =========================
-
-          encoded = prompt.replace(" ", "%20")
+          # URL encode properly
+          encoded = urllib.parse.quote(prompt)
           img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true"
 
-          response = requests.get(img_url, timeout=120)
-
-          if response.status_code == 200:
-              filename = f"post_{int(time.time())}.jpg"
-
-              supabase.storage.from_("post-images").upload(
-                  path=filename,
-                  file=response.content,
-                  file_options={"content-type": "image/jpeg"}
-              )
-
-              public_url = supabase.storage.from_("post-images").get_public_url(filename)["publicUrl"]
-
+          try:
+              response = requests.get(img_url, timeout=90)
+              print(f"API Status: {response.status_code}")
+              
+              if response.status_code != 200:
+                  print(f"❌ API error: {response.status_code}")
+                  exit(1)
+                  
+              filename = f"fashion_{int(time.time())}.jpg"
+              
+              # Upload to Supabase
+              supabase.storage.from_("post-images").upload(filename, response.content)
+              
+              # Get public URL
+              public_url = supabase.storage.from_("post-images").get_public_url(filename)
+              
+              # Insert into database
               supabase.table("posts").insert({
                   "image_url": public_url,
-                  "caption": caption,
+                  "caption": short_caption,
                   "is_ai": True,
                   "likes": 0
               }).execute()
-
-              print(f"✅ Posted: {caption}")
-
-          else:
-              print(f"❌ Failed: {response.status_code}")
+              
+              print(f"✅ Posted: {short_caption}")
+              
+          except Exception as e:
+              print(f"❌ Error: {e}")
+              exit(1)
           EOF
