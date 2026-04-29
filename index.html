@@ -1,174 +1,634 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Poik Poik</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             background: black;
             color: white;
-            font-family: system-ui;
-            margin: 0;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-bottom: 70px;
         }
-        .logo {
-            text-align: center;
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 20px;
+
+        /* Header - TikTok Style */
+        .header {
+            position: sticky;
+            top: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            z-index: 100;
+            border-bottom: 1px solid #222;
         }
-        .toolbar {
+
+        .header-content {
             max-width: 600px;
-            margin: 0 auto 20px auto;
+            margin: 0 auto;
             display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
         }
-        .toolbar button {
-            background: #222;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .header-icons i {
+            font-size: 24px;
             cursor: pointer;
         }
-        .toolbar input {
-            background: #222;
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 20px;
+
+        .profile-upload {
+            position: relative;
+            cursor: pointer;
         }
+
+        .profile-upload .fa-user-circle {
+            font-size: 32px;
+            color: white;
+        }
+
+        .upload-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background: #ff4444;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border: 2px solid black;
+        }
+
+        /* Top Navigation - TikTok Explore/Following/Feed */
+        .top-nav {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 16px;
+            border-bottom: 1px solid #222;
+            position: sticky;
+            top: 60px;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(10px);
+            z-index: 99;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            color: white;
+            border-bottom: 2px solid #00ff88;
+        }
+
+        /* Feed */
         .feed {
             max-width: 600px;
             margin: 0 auto;
+            padding-bottom: 20px;
         }
+
         .post {
-            background: #111;
+            background: #0a0a0a;
             margin-bottom: 20px;
             border-radius: 16px;
             overflow: hidden;
         }
-        .post img {
+
+        .post-header {
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .post-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .post-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .post-user {
+            flex: 1;
+        }
+
+        .post-username {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .post-time {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .post-image {
             width: 100%;
             display: block;
+            cursor: pointer;
         }
-        .caption {
+
+        .post-caption {
             padding: 12px;
             font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Right Side Action Buttons (Like, Comment, Share) */
+        .post-actions-right {
+            position: fixed;
+            right: calc(50% - 300px - 10px);
+            bottom: 50%;
+            transform: translateY(50%);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 10;
+        }
+
+        @media (max-width: 768px) {
+            .post-actions-right {
+                right: 16px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .post-actions-right {
+                right: calc(50% - 300px - 20px);
+            }
+        }
+
+        .action-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .action-icon i {
+            font-size: 32px;
+            color: white;
+        }
+
+        .action-icon span {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .action-icon:hover i {
+            color: #00ff88;
+        }
+
+        /* Bottom Navigation - TikTok Style */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #222;
+            padding: 8px 20px;
+            z-index: 100;
+        }
+
+        .bottom-nav-items {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .bottom-nav-item i {
+            font-size: 24px;
+        }
+
+        .bottom-nav-item span {
+            font-size: 11px;
+        }
+
+        .bottom-nav-item.active {
+            color: #00ff88;
+        }
+
+        .plus-circle {
+            background: white;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: -20px;
+        }
+
+        .plus-circle i {
+            color: black;
+            font-size: 28px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Upload Modal */
+        .upload-modal {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 20px;
+            z-index: 200;
+            width: 90%;
+            max-width: 400px;
             text-align: center;
         }
+
+        .upload-modal input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: none;
+            background: #333;
+            color: white;
+        }
+
+        .upload-modal button {
+            background: #00ff88;
+            color: black;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .loading {
             text-align: center;
             padding: 50px;
-            color: #666;
+            color: #888;
+        }
+
+        /* Comments Section */
+        .comments-section {
+            padding: 12px;
+            background: #060606;
+        }
+
+        .comment {
+            font-size: 13px;
+            padding: 6px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .comment-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .comment-input input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 24px;
+            border: 1px solid #333;
+            background: #111;
+            color: white;
+        }
+
+        .comment-input button {
+            padding: 8px 16px;
+            border-radius: 24px;
+            border: none;
+            background: #00ff88;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="logo">
-        <span style="color:#00ff88;">POIK</span><span style="color:white;">POIK</span>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">POIK POIK</div>
+            <div class="header-icons">
+                <div class="profile-upload" onclick="openUploadModal()">
+                    <i class="fas fa-user-circle"></i>
+                    <div class="upload-badge">+</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="toolbar">
-        <button onclick="login()">Login</button>
-        <button onclick="logout()">Logout</button>
-        <input type="file" id="uploadFile" accept="image/*">
-        <button onclick="upload()">Upload</button>
+    <!-- Top Navigation (Explore, Following, Feed) -->
+    <div class="top-nav">
+        <button class="nav-item" onclick="switchTab('explore')">Explore</button>
+        <button class="nav-item" onclick="switchTab('following')">Following</button>
+        <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
     </div>
 
-    <div id="feed" class="feed">
+    <!-- Feed -->
+    <div class="feed" id="feed">
         <div class="loading">Loading...</div>
     </div>
 
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="bottom-nav-items">
+            <button class="bottom-nav-item active" onclick="bottomNav('home')">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </button>
+            <button class="bottom-nav-item" onclick="bottomNav('friends')">
+                <i class="fas fa-user-friends"></i>
+                <span>Friends</span>
+            </button>
+            <div class="plus-circle" onclick="openUploadModal()">
+                <i class="fas fa-plus"></i>
+            </div>
+            <button class="bottom-nav-item" onclick="bottomNav('inbox')">
+                <i class="far fa-comment-dots"></i>
+                <span>Inbox</span>
+            </button>
+            <button class="bottom-nav-item" onclick="bottomNav('profile')">
+                <i class="far fa-user"></i>
+                <span>Profile</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="upload-modal">
+        <h3>Upload New Post</h3>
+        <input type="file" id="uploadFile" accept="image/*">
+        <input type="text" id="uploadCaption" placeholder="Caption...">
+        <button onclick="uploadPost()">Post</button>
+        <button onclick="closeUploadModal()" style="background:#444; margin-top:10px;">Cancel</button>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img id="modalImage">
+    </div>
+
     <script>
-        // GLOBAL VARIABLES - accessible from console
+        // Global client
         window.SUPABASE_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
         window.SUPABASE_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-
-        // GLOBAL CLIENT - accessible from console
         window.client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+        window.currentTab = 'feed';
 
-        async function load() {
-            const feed = document.getElementById("feed");
-            feed.innerHTML = '<div class="loading">Loading...</div>';
+        function openModal(img) {
+            document.getElementById('modalImage').src = img;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
 
-            try {
-                const { data, error } = await window.client
-                    .from("posts")
-                    .select("*")
-                    .order("id", { ascending: false });
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
 
-                console.log("DATA:", data);
-                console.log("ERROR:", error);
+        function openUploadModal() {
+            document.getElementById('uploadModal').style.display = 'block';
+        }
 
-                if (error) {
-                    feed.innerHTML = "Error loading posts";
-                    return;
-                }
+        function closeUploadModal() {
+            document.getElementById('uploadModal').style.display = 'none';
+            document.getElementById('uploadFile').value = '';
+            document.getElementById('uploadCaption').value = '';
+        }
 
-                if (!data || data.length === 0) {
-                    feed.innerHTML = "No posts yet. AI Ghost is creating...";
-                    return;
-                }
+        function switchTab(tab) {
+            window.currentTab = tab;
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            if (tab === 'explore') document.querySelector('.nav-item:first-child').classList.add('active');
+            if (tab === 'following') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+            if (tab === 'feed') document.querySelector('.nav-item:last-child').classList.add('active');
+            loadFeed();
+        }
 
-                let html = "";
-                for (let i = 0; i < data.length; i++) {
-                    const p = data[i];
-                    html += `
-                        <div class="post">
-                            <img src="${p.image_url}" loading="lazy" onerror="this.remove()">
-                            <div class="caption">${p.caption || "Fashion"}</div>
-                        </div>
-                    `;
-                }
-                feed.innerHTML = html;
+        function bottomNav(page) {
+            document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+            if (page === 'home') document.querySelector('.bottom-nav-item:first-child').classList.add('active');
+            if (page === 'friends') document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
+            if (page === 'inbox') document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
+            if (page === 'profile') document.querySelector('.bottom-nav-item:last-child').classList.add('active');
+            if (page === 'home') switchTab('feed');
+            if (page === 'profile') alert('Profile page coming soon');
+            if (page === 'friends') alert('Friends page coming soon');
+            if (page === 'inbox') alert('Inbox coming soon');
+        }
 
-            } catch (e) {
-                feed.innerHTML = "Crash: " + e.message;
+        async function likePost(postId) {
+            await window.client.from("likes").insert({ post_id: postId });
+            loadFeed();
+        }
+
+        async function addComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const text = input.value;
+            if (text.trim()) {
+                await window.client.from("comments").insert({ post_id: postId, text: text });
+                input.value = '';
+                loadFeed();
             }
         }
 
-        async function login() {
-            const email = prompt("Enter your email:");
-            if (email) {
-                await window.client.auth.signInWithOtp({ email });
-                alert("Check your email for login link!");
-            }
+        function toggleComments(postId) {
+            const section = document.getElementById(`comments-${postId}`);
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function logout() {
-            await window.client.auth.signOut();
-            alert("Logged out");
-        }
-
-        async function upload() {
+        async function uploadPost() {
             const file = document.getElementById("uploadFile").files[0];
+            const caption = document.getElementById("uploadCaption").value;
             if (!file) {
-                alert("Select a file first");
+                alert("Select an image");
                 return;
             }
             const fileName = `${Date.now()}_${file.name}`;
             const { error } = await window.client.storage.from("post-images").upload(fileName, file);
             if (error) {
-                alert("Upload failed: " + error.message);
+                alert("Upload failed");
                 return;
             }
             const { data: urlData } = window.client.storage.from("post-images").getPublicUrl(fileName);
             await window.client.from("posts").insert({
                 image_url: urlData.publicUrl,
-                caption: "User upload",
+                caption: caption,
                 is_ai: false,
                 likes: 0
             });
-            alert("Uploaded!");
-            load();
+            alert("Posted!");
+            closeUploadModal();
+            loadFeed();
         }
 
-        // Load immediately
-        load();
+        async function loadFeed() {
+            const feedDiv = document.getElementById("feed");
+            feedDiv.innerHTML = '<div class="loading">Loading...</div>';
+
+            let query = window.client.from("posts").select("*").order("id", { ascending: false });
+            if (window.currentTab === 'following') {
+                // For following, we would filter by followed users
+            }
+            if (window.currentTab === 'explore') {
+                // For explore, we would show random popular posts
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                feedDiv.innerHTML = '<div class="loading">Error loading</div>';
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < data.length; i++) {
+                const p = data[i];
+                const { count: likeCount } = await window.client.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
+                const { data: comments } = await window.client.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false }).limit(3);
+                
+                html += `
+                    <div class="post">
+                        <div class="post-header">
+                            <div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div>
+                            <div class="post-user">
+                                <div class="post-username">${p.is_ai ? 'Poik Ghost' : 'User'}</div>
+                                <div class="post-time">✨ AI Generated</div>
+                            </div>
+                        </div>
+                        <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
+                        <div class="post-caption">${p.caption || 'Fashion visual'}</div>
+                        <div class="post-actions-right">
+                            <div class="action-icon" onclick="likePost(${p.id})">
+                                <i class="far fa-heart"></i>
+                                <span id="likes-${p.id}">${likeCount || 0}</span>
+                            </div>
+                            <div class="action-icon" onclick="toggleComments(${p.id})">
+                                <i class="far fa-comment-dots"></i>
+                                <span>${comments?.length || 0}</span>
+                            </div>
+                            <div class="action-icon" onclick="navigator.clipboard.writeText('${p.image_url}'); alert('Copied!')">
+                                <i class="fas fa-share"></i>
+                                <span>Share</span>
+                            </div>
+                            <div class="action-icon" onclick="alert('Save to favorites')">
+                                <i class="far fa-bookmark"></i>
+                                <span>Save</span>
+                            </div>
+                        </div>
+                        <div class="comments-section" id="comments-${p.id}" style="display:none">
+                            ${comments?.map(c => `<div class="comment">💬 ${c.text}</div>`).join('') || '<div>No comments yet</div>'}
+                            <div class="comment-input">
+                                <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
+                                <button onclick="addComment(${p.id})">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 4px;"></div>
+                `;
+            }
+            feedDiv.innerHTML = html;
+        }
+
+        // Auto refresh every 30 seconds
+        loadFeed();
+        setInterval(loadFeed, 30000);
     </script>
 </body>
 </html>
