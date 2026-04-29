@@ -86,7 +86,7 @@
             color: white;
         }
 
-        /* Smaller green underline - centered and shorter */
+        /* Smaller green underline */
         .nav-item.active::after {
             content: '';
             position: absolute;
@@ -103,13 +103,14 @@
             max-width: 600px;
             margin: 0 auto;
             padding-bottom: 20px;
+            overflow-x: visible;
         }
 
         .post {
             background: #0a0a0a;
             margin-bottom: 20px;
             border-radius: 16px;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
         }
 
@@ -156,30 +157,36 @@
         /* Action buttons - visible on both mobile and desktop */
         .post-actions-right {
             position: absolute;
-            right: 16px;
+            right: 8px;
             top: 50%;
             transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
             z-index: 10;
         }
 
-        /* Desktop adjustment - keep buttons visible */
-        @media (min-width: 768px) {
+        /* Mobile adjustment */
+        @media (max-width: 640px) {
             .post-actions-right {
-                right: 20px;
-                gap: 24px;
+                right: 8px;
+                gap: 14px;
             }
         }
 
-        /* For very large screens, keep relative to the feed */
-        @media (min-width: 1200px) {
-            .feed {
-                position: relative;
-            }
+        /* Desktop adjustment - buttons fully visible */
+        @media (min-width: 641px) and (max-width: 768px) {
             .post-actions-right {
-                right: -20px;
+                right: 12px;
+                gap: 16px;
+            }
+        }
+
+        /* For larger screens */
+        @media (min-width: 769px) {
+            .post-actions-right {
+                right: -10px;
+                gap: 20px;
             }
         }
 
