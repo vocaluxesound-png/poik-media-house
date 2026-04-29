@@ -142,9 +142,21 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
-    .comments-section { padding: 12px; background: #060606; }
+    /* Comments with replies */
+    .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; }
     .comment { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
-    .comment strong { color: #00ff88; }
+    .comment strong { color: #00ff88; cursor: pointer; }
+    .comment-actions { display: flex; gap: 12px; margin-top: 5px; font-size: 11px; }
+    .comment-actions span { color: #888; cursor: pointer; }
+    .comment-actions span:hover { color: #00ff88; }
+    .replies { margin-left: 30px; margin-top: 8px; padding-left: 10px; border-left: 2px solid #333; }
+    .reply { font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
+    .reply strong { color: #00ff88; font-size: 12px; }
+    .reply-actions { display: flex; gap: 12px; margin-top: 4px; font-size: 10px; color: #888; }
+    .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 30px; }
+    .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 12px; }
+    .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 11px; }
+    
     .comment-input { display: flex; gap: 8px; margin-top: 12px; }
     .comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
     .comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
@@ -174,7 +186,7 @@
     .loading { text-align: center; padding: 50px; color: #888; }
     
     .profile-header { text-align: center; padding: 30px 20px; }
-    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; position: relative; }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
     .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
     .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
@@ -494,63 +506,62 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENTS - FIXED
+// COMMENT LIKES
+// ============================================
+async function likeComment(commentId) {
+    if (!USER) { alert('Login to like comment'); return; }
+    await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
+    loadFeed();
+}
+
+// ============================================
+// COMMENT REPLIES
+// ============================================
+let activeReplyInput = null;
+
+function showReplyInput(commentId) {
+    if (activeReplyInput) {
+        document.getElementById(activeReplyInput).style.display = 'none';
+    }
+    const replyDiv = document.getElementById(`reply-input-${commentId}`);
+    if (replyDiv) {
+        replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+        activeReplyInput = `reply-input-${commentId}`;
+    }
+}
+
+async function addReply(commentId, postId) {
+    if (!USER) { alert('Login to reply'); openAuthModal(); return; }
+    const input = document.getElementById(`reply-text-${commentId}`);
+    const replyText = input.value.trim();
+    if (!replyText) return;
+    
+    await SB.from("comment_replies").insert({
+        comment_id: commentId,
+        user_id: USER.id,
+        text: replyText
+    });
+    input.value = '';
+    document.getElementById(`reply-input-${commentId}`).style.display = 'none';
+    loadFeed();
+}
+
+// ============================================
+// MAIN COMMENT FUNCTION
 // ============================================
 async function addComment(postId) {
     if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     const commentText = input.value.trim();
+    if (!commentText) return;
     
-    if (!commentText) {
-        alert('Write a comment first');
-        return;
-    }
-    
-    // Insert comment
-    const { error } = await SB.from("comments").insert({ 
-        post_id: postId, 
-        user_id: USER.id, 
+    await SB.from("comments").insert({
+        post_id: postId,
+        user_id: USER.id,
         text: commentText
     });
-    
-    if (error) {
-        console.error("Comment error:", error);
-        alert("Failed to post comment");
-        return;
-    }
-    
-    // Clear input
     input.value = '';
-    
-    // Refresh comments display for this post
-    await refreshComments(postId);
-    
-    // Update comment count
-    const { count } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-}
-
-async function refreshComments(postId) {
-    const { data: comments } = await SB
-        .from('comments')
-        .select('*')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: false });
-    
-    const container = document.getElementById(`comments-list-${postId}`);
-    if (!container) return;
-    
-    if (!comments || comments.length === 0) {
-        container.innerHTML = '<div class="comment">No comments yet</div>';
-        return;
-    }
-    
-    let html = '';
-    for (const c of comments) {
-        html += `<div class="comment"><strong>User</strong> ${c.text}</div>`;
-    }
-    container.innerHTML = html;
+    loadFeed();
 }
 
 function toggleComments(id) {
@@ -601,7 +612,7 @@ async function loadProfile() {
 }
 
 // ============================================
-// MAIN FEED (WITH WORKING COMMENTS)
+// MAIN FEED WITH COMMENT REPLIES
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
@@ -612,40 +623,27 @@ async function loadFeed() {
         .select("*")
         .order("id", { ascending: false });
     
-    if (error) {
-        feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
-        return;
-    }
-    
-    if (!posts || posts.length === 0) {
+    if (error || !posts || posts.length === 0) {
         feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
         return;
     }
     
     const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
-    
     let profiles = {};
     if (userIds.length > 0) {
-        const { data: profileData } = await SB
-            .from("profiles")
-            .select("id, username, avatar_url")
-            .in("id", userIds);
-        if (profileData) {
-            profileData.forEach(p => { profiles[p.id] = p; });
-        }
+        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
+        if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
     }
     
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
-        const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
         let displayName = 'Poik Poik';
         let avatarHtml = '';
-        
         if (p.is_ai) {
             displayName = 'Poik Poik';
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
@@ -661,11 +659,54 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
+        // Get comments with replies
+        const { data: comments } = await SB
+            .from("comments")
+            .select("*")
+            .eq("post_id", p.id)
+            .order("created_at", { ascending: false });
+        
+        // Get all replies for these comments
+        let replies = {};
+        if (comments && comments.length > 0) {
+            const commentIds = comments.map(c => c.id);
+            const { data: repliesData } = await SB
+                .from("comment_replies")
+                .select("*, profiles(username)")
+                .in("comment_id", commentIds)
+                .order("created_at", { ascending: true });
+            if (repliesData) {
+                repliesData.forEach(r => {
+                    if (!replies[r.comment_id]) replies[r.comment_id] = [];
+                    replies[r.comment_id].push(r);
+                });
+            }
+        }
+        
         // Build comments HTML
         let commentsHtml = '';
         if (comments && comments.length > 0) {
             for (const c of comments) {
-                commentsHtml += `<div class="comment"><strong>User</strong> ${c.text}</div>`;
+                const commentReplies = replies[c.id] || [];
+                let repliesHtml = '';
+                for (const r of commentReplies) {
+                    repliesHtml += `<div class="reply"><strong>${r.profiles?.username || 'User'}</strong> ${r.text}</div>`;
+                }
+                
+                commentsHtml += `
+                    <div class="comment">
+                        <strong onclick="showReplyInput(${c.id})">User</strong> ${c.text}
+                        <div class="comment-actions">
+                            <span onclick="likeComment(${c.id})">❤️ Like</span>
+                            <span onclick="showReplyInput(${c.id})">💬 Reply</span>
+                        </div>
+                        <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
+                            <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
+                            <button onclick="addReply(${c.id}, ${p.id})">Reply</button>
+                        </div>
+                        ${repliesHtml ? `<div class="replies">${repliesHtml}</div>` : ''}
+                    </div>
+                `;
             }
         } else {
             commentsHtml = '<div class="comment">No comments yet</div>';
@@ -673,10 +714,7 @@ async function loadFeed() {
         
         html += `<div class="post">
             <div class="post-header">
-                <div class="post-header-left">
-                    ${avatarHtml}
-                    <div class="post-username">${displayName}</div>
-                </div>
+                <div class="post-header-left">${avatarHtml}<div class="post-username">${displayName}</div></div>
                 ${isOwner ? `
                 <div class="post-privacy-menu">
                     <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button>
@@ -693,7 +731,7 @@ async function loadFeed() {
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
                 <div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span id="likes-${p.id}">${likeCount || 0}</span></div>
-                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${comments?.length || 0}</span></div>
+                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div>
                 <div class="action-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div>
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
