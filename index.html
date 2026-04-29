@@ -32,7 +32,22 @@
     .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
     .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
     .post-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
-    .post-avatar { width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    
+    .custom-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        border: 1px solid #00ff88;
+    }
+    .eyes { display: flex; gap: 8px; }
+    .eye { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; }
+    .scratch { position: absolute; top: 8px; right: 8px; width: 15px; height: 2px; background: #00ff88; transform: rotate(45deg); }
+    
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
@@ -49,10 +64,30 @@
     }
     @media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
     @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
+    
     .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-    .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
+    .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
     .action-icon span { font-size: 11px; color: #ddd; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
-    .action-icon:hover i { color: #ff4444; }
+    .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
+    
+    .share-modal {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #1a1a1a;
+        border-radius: 20px 20px 0 0;
+        padding: 20px;
+        z-index: 200;
+        animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
+    .share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
+    .share-option i { font-size: 30px; display: block; }
+    .share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
+    .share-option:hover { background: #333; }
     
     .bottom-nav {
         position: fixed;
@@ -104,7 +139,47 @@
     .profile-header { text-align: center; padding: 30px 20px; }
     .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
-    .saved-posts { padding: 20px; text-align: center; color: #888; }
+    
+    .auth-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+    }
+    .auth-box {
+        background: #111;
+        padding: 30px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 350px;
+        text-align: center;
+    }
+    .auth-box input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 10px;
+        color: white;
+    }
+    .auth-box button {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .login-btn { background: #00ff88; color: black; border: none; }
+    .signup-btn { background: #333; color: white; border: none; }
+    .cancel-btn { background: #222; color: white; border: none; }
 </style>
 </head>
 <body>
@@ -114,7 +189,7 @@
         <div class="logo">POIK POIK</div>
         <div class="header-icons">
             <i class="fas fa-plus" onclick="openUploadModal()"></i>
-            <i class="far fa-user-circle" onclick="toggleAuthModal()"></i>
+            <i class="far fa-user-circle" onclick="openAuthModal()"></i>
         </div>
     </div>
 </div>
@@ -145,95 +220,122 @@
     <button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
 </div>
 
+<div id="shareModal" class="share-modal">
+    <h3 style="text-align:center;">Share to</h3>
+    <div class="share-options">
+        <div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
+        <div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
+        <div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
+        <div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
+        <div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
+    </div>
+    <button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
+</div>
+
 <div id="imageModal" class="modal" onclick="closeModal()">
     <span class="close-modal" onclick="closeModal()">&times;</span>
     <img id="modalImage">
 </div>
 
-<div id="authModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; align-items:center; justify-content:center;">
-    <div style="background:#111; padding:30px; border-radius:20px; width:90%; max-width:350px; text-align:center;">
-        <h3>Join Poik Poik</h3>
-        <input type="email" id="authEmail" placeholder="Email" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
-        <input type="password" id="authPassword" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
-        <button id="authLoginBtn" style="width:100%; padding:12px; background:#00ff88; color:black; border:none; border-radius:10px; font-weight:bold;">Login</button>
-        <button id="authSignupBtn" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:10px; font-weight:bold; margin-top:10px;">Sign Up</button>
-        <button id="closeAuthBtn" style="width:100%; padding:12px; background:#222; color:white; border:none; border-radius:10px; margin-top:10px;">Cancel</button>
+<div id="authModal" class="auth-modal">
+    <div class="auth-box">
+        <h3 style="margin-bottom:20px;">Join Poik Poik</h3>
+        <input type="email" id="authEmail" placeholder="Email">
+        <input type="password" id="authPassword" placeholder="Password">
+        <button id="loginBtn" class="login-btn">Login</button>
+        <button id="signupBtn" class="signup-btn">Sign Up</button>
+        <button id="closeAuthBtn" class="cancel-btn">Cancel</button>
     </div>
 </div>
 
 <script>
-// SINGLE SUPABASE CLIENT - NO DUPLICATES
 const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const SKEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 const SB = window.supabase.createClient(SURL, SKEY);
 
 let USER = null;
 let CURRENT_TAB = 'feed';
-let SAVED_POSTS = JSON.parse(localStorage.getItem('saved_posts') || '[]');
+let CURRENT_SHARE_URL = '';
+let SHARE_COUNTS = JSON.parse(localStorage.getItem('share_counts') || '{}');
 
 // ============================================
-// AUTH MODAL
+// AUTH FUNCTIONS
 // ============================================
-function toggleAuthModal() {
-    const modal = document.getElementById('authModal');
-    modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
-}
+function openAuthModal() { document.getElementById('authModal').style.display = 'flex'; }
+function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
-document.getElementById('closeAuthBtn').onclick = () => {
-    document.getElementById('authModal').style.display = 'none';
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authPassword').value = '';
-};
+document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 
 // LOGIN
-document.getElementById('authLoginBtn').onclick = async () => {
+document.getElementById('loginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     const pass = document.getElementById('authPassword').value;
     if (!email || !pass) { alert('Enter email and password'); return; }
     const { data, error } = await SB.auth.signInWithPassword({ email: email.trim(), password: pass });
     if (error) { alert('Login failed: ' + error.message); }
-    else { alert('Welcome ' + data.user.email); document.getElementById('authModal').style.display = 'none'; window.location.reload(); }
+    else { alert('Welcome ' + data.user.email); closeAuthModal(); window.location.reload(); }
 };
 
-// SIGN UP
-document.getElementById('authSignupBtn').onclick = async () => {
+// SIGNUP - FIXED (No email confirmation required)
+document.getElementById('signupBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     const pass = document.getElementById('authPassword').value;
     if (!email || !pass) { alert('Enter email and password'); return; }
     if (pass.length < 6) { alert('Password must be at least 6 characters'); return; }
-    const { error } = await SB.auth.signUp({ email: email.trim(), password: pass, options: { emailRedirectTo: window.location.origin } });
-    if (error) { alert('Sign up failed: ' + error.message); }
-    else { alert('Account created! Check your email to confirm.'); document.getElementById('authModal').style.display = 'none'; }
+    
+    const { data, error } = await SB.auth.signUp({ 
+        email: email.trim(), 
+        password: pass, 
+        options: { emailRedirectTo: window.location.origin }
+    });
+    
+    if (error) { 
+        alert('Sign up failed: ' + error.message); 
+    } else if (data.user) {
+        alert('Account created! You can now login.');
+        closeAuthModal();
+        document.getElementById('authEmail').value = '';
+        document.getElementById('authPassword').value = '';
+    } else {
+        alert('Account created! You can now login.');
+        closeAuthModal();
+    }
 };
 
-// CHECK AUTH
 async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser();
     USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
-    if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); await ensureProfile(); }
+    if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
     else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
 }
 
-async function ensureProfile() {
-    if (!USER) return;
-    const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    if (!data) {
-        await SB.from("profiles").insert({ id: USER.id, username: "user_" + Math.floor(Math.random() * 10000) });
+// ============================================
+// SHARE FUNCTIONS
+// ============================================
+function openShareModal(imageUrl) {
+    CURRENT_SHARE_URL = imageUrl;
+    document.getElementById('shareModal').style.display = 'block';
+}
+function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
+
+function shareTo(platform) {
+    const url = encodeURIComponent(CURRENT_SHARE_URL);
+    let shareLink = '';
+    switch(platform) {
+        case 'facebook': shareLink = `https://www.facebook.com/sharer/sharer.php?u=${url}`; break;
+        case 'whatsapp': shareLink = `https://wa.me/?text=${url}`; break;
+        case 'twitter': shareLink = `https://twitter.com/intent/tweet?url=${url}`; break;
+        case 'instagram': alert('Instagram sharing: Save image first, then post manually.'); closeShareModal(); return;
     }
+    if (shareLink) window.open(shareLink, '_blank');
+    closeShareModal();
 }
 
-// ============================================
-// SAVE FUNCTION
-// ============================================
-function savePost(imageUrl, caption) {
-    if (!SAVED_POSTS.find(p => p.url === imageUrl)) {
-        SAVED_POSTS.push({ url: imageUrl, caption: caption, savedAt: new Date() });
-        localStorage.setItem('saved_posts', JSON.stringify(SAVED_POSTS));
-        alert('Saved to your collection!');
-    } else {
-        alert('Already saved!');
-    }
+function copyLink() {
+    navigator.clipboard.writeText(CURRENT_SHARE_URL);
+    alert('Link copied to clipboard!');
+    closeShareModal();
 }
 
 // ============================================
@@ -243,38 +345,28 @@ function openModal(img) { document.getElementById('modalImage').src = img; docum
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
 function openUploadModal() {
-    if (!USER) { alert('Please login first'); toggleAuthModal(); return; }
+    if (!USER) { alert('Please login first'); openAuthModal(); return; }
     document.getElementById('uploadModal').style.display = 'block';
 }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
 
-function switchTab(tab) {
-    CURRENT_TAB = tab;
-    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-    if (tab === 'feed') document.querySelector('.nav-item:first-child').classList.add('active');
-    if (tab === 'explore') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
-    if (tab === 'following') document.querySelector('.nav-item:last-child').classList.add('active');
-    if (tab === 'feed') loadFeed();
-    if (tab === 'explore') loadFeed();
-    if (tab === 'following') alert('Following feed coming soon');
-}
-
+function switchTab(tab) { CURRENT_TAB = tab; loadFeed(); }
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     if (page === 'home') { document.querySelector('.bottom-nav-item:first-child').classList.add('active'); switchTab('feed'); }
-    if (page === 'friends') { document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active'); alert('Friends coming soon'); }
-    if (page === 'inbox') { document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active'); alert('Inbox coming soon'); }
     if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
+    if (page === 'friends') alert('Friends coming soon');
+    if (page === 'inbox') alert('Inbox coming soon');
 }
 
 async function likePost(postId) {
-    if (!USER) { alert('Login to like'); toggleAuthModal(); return; }
+    if (!USER) { alert('Login to like'); openAuthModal(); return; }
     try { await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id }); loadFeed(); }
-    catch(e) { console.error('Like error:', e); }
+    catch(e) { console.error(e); }
 }
 
 async function addComment(postId) {
-    if (!USER) { alert('Login to comment'); toggleAuthModal(); return; }
+    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     if (input.value.trim()) {
         await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
@@ -283,8 +375,7 @@ async function addComment(postId) {
     }
 }
 
-function toggleComments(postId) { const section = document.getElementById(`comments-${postId}`); section.style.display = section.style.display === 'none' ? 'block' : 'none'; }
-function sharePost(url) { navigator.clipboard.writeText(url); alert('Image link copied!'); }
+function toggleComments(id) { const section = document.getElementById(`comments-${id}`); section.style.display = section.style.display === 'none' ? 'block' : 'none'; }
 
 async function uploadPost() {
     if (!USER) { alert('Login first'); return; }
@@ -299,13 +390,12 @@ async function uploadPost() {
 }
 
 async function loadProfile() {
-    if (!USER) { alert('Please login'); toggleAuthModal(); return; }
+    if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
-    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
     const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
-    const { count: postCount } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
-    let html = `<div class="profile-header"><div class="profile-avatar">👤</div><h3>${profile?.username || 'User'}</h3><p style="color:#888;">${profile?.bio || '✨ Fashion lover'}</p><div class="profile-stats"><div><strong>${postCount || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px;">Back to Feed</button></div>`;
+    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
+    let html = `<div class="profile-header"><div class="profile-avatar">👤</div><h3>${USER.email.split('@')[0]}</h3><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div></div><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px;">Back to Feed</button></div>`;
     for (const p of posts || []) { html += `<div class="post"><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')"><div class="post-caption">${p.caption || 'Fashion'}</div></div>`; }
     feedDiv.innerHTML = html;
 }
@@ -314,22 +404,18 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading...</div>';
     const { data, error } = await SB.from("posts").select("*").order("id", { ascending: false });
-    if (error || !data || data.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
+    if (error || !data || data.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet.</div>'; return; }
     let html = '';
     for (const p of data) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false }).limit(3);
-        html += `<div class="post"><div class="post-header"><div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div><div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')}</div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div><div class="post-actions-right"><div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span>${likeCount || 0}</span></div><div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div><div class="action-icon" onclick="sharePost('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div><div class="action-icon" onclick="savePost('${p.image_url}', '${p.caption}')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-${p.id}" style="display:none">${comments?.map(c => `<div class="comment">💬 ${c.text}</div>`).join('') || '<div>✨ No comments yet</div>'}<div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div></div></div>`;
+        html += `<div class="post"><div class="post-header"><div class="custom-avatar"><div class="eyes"><div class="eye"></div><div class="eye"></div></div><div class="scratch"></div></div><div class="post-username">${p.is_ai ? 'Poik Poik' : 'Member'}</div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div><div class="post-actions-right"><div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span>${likeCount || 0}</span></div><div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div><div class="action-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-share-alt"></i><span>${SHARE_COUNTS[p.id] || 0}</span></div><div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-${p.id}" style="display:none">${comments?.map(c => `<div class="comment">💬 ${c.text}</div>`).join('') || '<div>✨ No comments yet</div>'}<div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div></div></div>`;
     }
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// INIT
-// ============================================
 checkAuth();
 loadFeed();
-setInterval(() => { if (CURRENT_TAB === 'feed') loadFeed(); }, 120000);
 </script>
 </body>
 </html>
