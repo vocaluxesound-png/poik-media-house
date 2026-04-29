@@ -304,7 +304,6 @@
 <input type="file" id="avatarInput" accept="image/*">
 
 <script>
-// SINGLE SUPABASE CLIENT - NO DUPLICATES
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 const SB = window.supabase.createClient(API_URL, API_KEY);
@@ -380,11 +379,9 @@ async function checkAuth() {
 async function uploadAvatar(file) {
     if (!USER) { alert('Login first'); return; }
     const fileName = `${USER.id}_${Date.now()}.jpg`;
-    
     await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
     const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
     await SB.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", USER.id);
-    
     alert("Profile picture updated!");
     loadProfile();
     loadFeed();
@@ -505,7 +502,7 @@ async function addComment(postId) {
         const { data } = await SB.from('comments').select('*').eq('post_id', postId);
         const container = document.getElementById(`comments-list-${postId}`);
         const countSpan = document.getElementById(`comment-count-${postId}`);
-        if (container) container.innerHTML = data.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
+        if (container) container.innerHTML = data.map(c => `<div class="comment"><strong>${USERNAME || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
         if (countSpan) countSpan.innerText = data.length;
     }
 }
@@ -531,7 +528,7 @@ async function uploadPost() {
 }
 
 // ============================================
-// FEED & PROFILE
+// FEED (WITH USERNAME JOIN)
 // ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
@@ -561,9 +558,20 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    const { data, error } = await SB.from("posts").select("*").order("id", { ascending: false });
+    // JOIN with profiles table to get username
+    const { data, error } = await SB
+        .from("posts")
+        .select(`
+            *,
+            profiles (
+                username,
+                avatar_url
+            )
+        `)
+        .order("id", { ascending: false });
     
     console.log("Feed data:", data?.length || 0, "posts");
+    console.log("Sample post:", data?.[0]);
     
     if (error) {
         feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
@@ -583,11 +591,23 @@ async function loadFeed() {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
+        // Get username from profiles if available
+        let displayName = 'Poik Poik';
+        if (p.is_ai) {
+            displayName = 'Poik Poik';
+        } else if (p.profiles?.username) {
+            displayName = p.profiles.username;
+        } else if (p.user_id === USER?.id && USERNAME) {
+            displayName = USERNAME;
+        } else {
+            displayName = 'Member';
+        }
+        
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
                     <div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>
-                    <div class="post-username">${p.is_ai ? 'Poik Poik' : 'Member'}</div>
+                    <div class="post-username">${displayName}</div>
                 </div>
                 ${isOwner ? `
                 <div class="post-privacy-menu">
@@ -610,7 +630,7 @@ async function loadFeed() {
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div id="comments-list-${p.id}">${comments?.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}</div>
+                <div id="comments-list-${p.id}">${comments?.map(c => `<div class="comment"><strong>${displayName}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}</div>
                 <div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div>
             </div>
         </div>`;
