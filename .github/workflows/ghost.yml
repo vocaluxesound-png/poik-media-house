@@ -19,46 +19,51 @@ jobs:
           import requests, time, random, os, urllib.parse
           from supabase import create_client
 
-          url = os.environ["SUPABASE_URL"]
-          key = os.environ["SUPABASE_KEY"]
-          supabase = create_client(url, key)
+          supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-          # Fashion pools
-          subjects = ["female model", "male model", "fashion influencer", "royal figure"]
-          styles = ["haute couture gown", "arabic gold embroidery", "cyberpunk techwear", "minimalist suit", "streetwear drip"]
-          
+          subjects = ["female model", "male model", "fashion influencer", "runway model"]
+          styles = ["haute couture", "streetwear", "futuristic chrome", "luxury suit"]
+          poses = ["standing", "walking", "posing"]
+          lighting = ["studio lighting", "cinematic lighting", "soft light"]
+
           subject = random.choice(subjects)
           style = random.choice(styles)
-          
-          # Caption
+          pose = random.choice(poses)
+          light = random.choice(lighting)
+
           caption = f"{subject} in {style}"
-          
-          # Prompt with negative prompt to fix faces/hands
-          prompt = f"Ultra realistic full body fashion photo of {subject} wearing {style}, sharp focus, perfect anatomy, natural skin texture, professional 8K"
-          
-          negative = "deformed face, bad hands, extra fingers, missing fingers, distorted body, unrealistic, blurry, cartoon, CGI, 3D render, plastic skin, doll, mannequin"
-          
-          full_prompt = f"{prompt} --no {negative}"
-          
-          print(f"Generating: {caption}")
-          
-          encoded = urllib.parse.quote(full_prompt)
-          img = f"https://image.pollinations.ai/prompt/{encoded}?width=800&height=1000&nologo=true&seed={random.randint(1,999999)}"
+
+          prompt = f"""
+          RAW photo of {subject},
+          wearing {style},
+          full body, head to toe visible,
+          {pose},
+          {light},
+          realistic skin, perfect anatomy,
+          85mm lens, high detail
+          --no deformed, bad hands, extra fingers, blurry
+          """
+
+          encoded = urllib.parse.quote(prompt)
+          img = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&nologo=true"
 
           r = requests.get(img, timeout=60)
+
           if r.status_code == 200:
-              filename = f"post_{int(time.time())}_{random.randint(1,999)}.jpg"
-              supabase.storage.from_("post-images").upload(filename, r.content)
-              public = supabase.storage.from_("post-images").get_public_url(filename)
-              public_url = public["publicUrl"] if isinstance(public, dict) else public
-              
+              name = f"{int(time.time())}.jpg"
+              supabase.storage.from_("post-images").upload(
+                  path=name,
+                  file=r.content,
+                  file_options={"content-type": "image/jpeg"}
+              )
+              pub = supabase.storage.from_("post-images").get_public_url(name)["publicUrl"]
               supabase.table("posts").insert({
-                  "image_url": public_url,
+                  "image_url": pub,
                   "caption": caption,
                   "is_ai": True,
                   "likes": 0
               }).execute()
-              print(f"Posted: {caption}")
+              print("Posted")
           else:
-              print(f"Failed: {r.status_code}")
+              print("Failed:", r.status_code)
           EOF
