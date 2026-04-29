@@ -6,16 +6,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: black;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             padding-bottom: 70px;
         }
 
@@ -49,7 +45,6 @@
         .header-icons {
             display: flex;
             gap: 16px;
-            align-items: center;
         }
 
         .header-icons i {
@@ -63,11 +58,9 @@
             display: flex;
             justify-content: space-around;
             padding: 12px 16px;
-            border-bottom: 1px solid #222;
             position: sticky;
             top: 60px;
-            background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(10px);
+            background: transparent;
             z-index: 99;
         }
 
@@ -123,11 +116,6 @@
             font-size: 14px;
         }
 
-        .post-time {
-            font-size: 11px;
-            color: #888;
-        }
-
         .post-image {
             width: 100%;
             display: block;
@@ -137,6 +125,7 @@
         .post-caption {
             padding: 12px;
             font-size: 14px;
+            padding-right: 70px;
         }
 
         .post-actions-right {
@@ -171,17 +160,13 @@
         }
 
         .action-icon i {
-            font-size: 24px;
+            font-size: 22px;
             color: white;
         }
 
         .action-icon span {
             font-size: 11px;
             color: #aaa;
-        }
-
-        .action-icon:hover i {
-            color: #ff4444;
         }
 
         .bottom-nav {
@@ -360,9 +345,9 @@
     </div>
 
     <div class="top-nav">
+        <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
         <button class="nav-item" onclick="switchTab('explore')">Explore</button>
         <button class="nav-item" onclick="switchTab('following')">Following</button>
-        <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
     </div>
 
     <div class="feed" id="feed">
@@ -411,6 +396,7 @@
         window.SUPABASE_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
         window.client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
         window.currentTab = 'feed';
+        window.lastPostId = 0;
 
         function openModal(img) {
             document.getElementById('modalImage').src = img;
@@ -434,9 +420,9 @@
         function switchTab(tab) {
             window.currentTab = tab;
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-            if (tab === 'explore') document.querySelector('.nav-item:first-child').classList.add('active');
-            if (tab === 'following') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
-            if (tab === 'feed') document.querySelector('.nav-item:last-child').classList.add('active');
+            if (tab === 'feed') document.querySelector('.nav-item:first-child').classList.add('active');
+            if (tab === 'explore') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+            if (tab === 'following') document.querySelector('.nav-item:last-child').classList.add('active');
             loadFeed();
         }
 
@@ -449,7 +435,7 @@
             if (page === 'friends') document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
             if (page === 'inbox') document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
             if (page === 'profile') document.querySelector('.bottom-nav-item:last-child').classList.add('active');
-            if (page !== 'home') alert(page + ' page coming soon');
+            if (page !== 'home') alert(page + ' coming soon');
         }
 
         async function likePost(postId) {
@@ -503,6 +489,8 @@
                 return;
             }
 
+            if (data.length > 0) window.lastPostId = data[0].id;
+
             let html = '';
             for (const p of data) {
                 const { count: likeCount } = await window.client.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
@@ -512,10 +500,7 @@
                     <div class="post">
                         <div class="post-header">
                             <div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div>
-                            <div>
-                                <div class="post-username">${p.is_ai ? 'Poik Poik' : 'User'}</div>
-                                <div class="post-time">✨ ${p.is_ai ? 'AI Fashion' : 'Just now'}</div>
-                            </div>
+                            <div class="post-username">${p.is_ai ? 'Poik Poik' : 'User'}</div>
                         </div>
                         <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
                         <div class="post-caption">${p.caption || 'Fashion visual'}</div>
@@ -545,14 +530,21 @@
                             </div>
                         </div>
                     </div>
-                    <div style="height: 4px;"></div>
                 `;
             }
             feedDiv.innerHTML = html;
         }
 
         loadFeed();
-        setInterval(loadFeed, 30000);
+
+        // Silent check for new posts every 2 minutes (no black screen)
+        setInterval(async () => {
+            const { data } = await window.client.from("posts").select("id").order("id", { ascending: false }).limit(1);
+            if (data && data.length > 0 && data[0].id > window.lastPostId) {
+                window.lastPostId = data[0].id;
+                loadFeed();
+            }
+        }, 120000);
     </script>
 </body>
 </html>
