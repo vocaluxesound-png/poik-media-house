@@ -51,14 +51,7 @@
     .tri3 { height: 28px; }
     .tri4 { height: 18px; }
     
-    /* User Avatar Style */
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-    
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
@@ -500,18 +493,64 @@ async function likePost(postId) {
     if (span) span.innerText = count || 0;
 }
 
+// ============================================
+// COMMENTS - FIXED
+// ============================================
 async function addComment(postId) {
     if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
-    if (input.value.trim()) {
-        await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
-        input.value = '';
-        const { data } = await SB.from('comments').select('*').eq('post_id', postId);
-        const container = document.getElementById(`comments-list-${postId}`);
-        const countSpan = document.getElementById(`comment-count-${postId}`);
-        if (container) container.innerHTML = data.map(c => `<div class="comment"><strong>${USERNAME || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
-        if (countSpan) countSpan.innerText = data.length;
+    const commentText = input.value.trim();
+    
+    if (!commentText) {
+        alert('Write a comment first');
+        return;
     }
+    
+    // Insert comment
+    const { error } = await SB.from("comments").insert({ 
+        post_id: postId, 
+        user_id: USER.id, 
+        text: commentText
+    });
+    
+    if (error) {
+        console.error("Comment error:", error);
+        alert("Failed to post comment");
+        return;
+    }
+    
+    // Clear input
+    input.value = '';
+    
+    // Refresh comments display for this post
+    await refreshComments(postId);
+    
+    // Update comment count
+    const { count } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+    const countSpan = document.getElementById(`comment-count-${postId}`);
+    if (countSpan) countSpan.innerText = count || 0;
+}
+
+async function refreshComments(postId) {
+    const { data: comments } = await SB
+        .from('comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false });
+    
+    const container = document.getElementById(`comments-list-${postId}`);
+    if (!container) return;
+    
+    if (!comments || comments.length === 0) {
+        container.innerHTML = '<div class="comment">No comments yet</div>';
+        return;
+    }
+    
+    let html = '';
+    for (const c of comments) {
+        html += `<div class="comment"><strong>User</strong> ${c.text}</div>`;
+    }
+    container.innerHTML = html;
 }
 
 function toggleComments(id) {
@@ -535,7 +574,7 @@ async function uploadPost() {
 }
 
 // ============================================
-// FEED (WITH PROFILE PICTURES)
+// PROFILE PAGE
 // ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
@@ -561,6 +600,9 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
+// ============================================
+// MAIN FEED (WITH WORKING COMMENTS)
+// ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
@@ -619,6 +661,16 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
+        // Build comments HTML
+        let commentsHtml = '';
+        if (comments && comments.length > 0) {
+            for (const c of comments) {
+                commentsHtml += `<div class="comment"><strong>User</strong> ${c.text}</div>`;
+            }
+        } else {
+            commentsHtml = '<div class="comment">No comments yet</div>';
+        }
+        
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
@@ -646,13 +698,15 @@ async function loadFeed() {
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div id="comments-list-${p.id}">${comments?.map(c => `<div class="comment"><strong>${displayName}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}</div>
-                <div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div>
+                <div id="comments-list-${p.id}">${commentsHtml}</div>
+                <div class="comment-input">
+                    <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
+                    <button onclick="addComment(${p.id})">Post</button>
+                </div>
             </div>
         </div>`;
     }
     feedDiv.innerHTML = html;
-    console.log("Feed rendered with", posts.length, "posts");
 }
 
 // ============================================
