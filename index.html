@@ -34,7 +34,7 @@
     .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
     .post-header-left { display: flex; align-items: center; gap: 10px; }
     
-    /* M Logo */
+    /* M Logo (default when no avatar) */
     .m-logo {
         width: 40px;
         height: 40px;
@@ -51,6 +51,13 @@
     .tri2 { height: 24px; }
     .tri3 { height: 28px; }
     .tri4 { height: 18px; }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
     
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
@@ -74,21 +81,17 @@
     .action-icon span { font-size: 11px; color: #ddd; }
     .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
     
-    /* Privacy Badge - Clickable */
     .privacy-badge {
         font-size: 11px;
         padding: 4px 10px;
         border-radius: 20px;
         cursor: pointer;
         border: none;
-        transition: opacity 0.2s;
     }
-    .privacy-badge:hover { opacity: 0.8; }
     .privacy-public { background: #00ff88; color: black; }
     .privacy-friends { background: #ffaa00; color: black; }
     .privacy-private { background: #ff4444; color: white; }
     
-    /* Post Menu Dropdown */
     .post-privacy-menu { position: relative; }
     .post-menu-dropdown {
         display: none;
@@ -109,9 +112,7 @@
         font-size: 14px;
         color: white;
         border-bottom: 1px solid #333;
-        transition: background 0.2s;
     }
-    .post-menu-option:last-child { border-bottom: none; }
     .post-menu-option:hover { background: #333; }
     .delete-option { color: #ff4444; }
     .delete-option:hover { background: #ff4444; color: white; }
@@ -128,7 +129,6 @@
         z-index: 200;
         animation: slideUp 0.3s ease;
     }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
     .share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
     .share-option i { font-size: 30px; display: block; }
@@ -305,7 +305,7 @@
     .magic-btn { background: #00ff88; color: black; border: none; }
     .cancel-btn { background: #222; color: white; border: none; }
     
-    #profileUpload { display: none; }
+    #avatarInput { display: none; }
 </style>
 </head>
 <body>
@@ -389,7 +389,7 @@
     </div>
 </div>
 
-<input type="file" id="profileUpload" accept="image/*">
+<input type="file" id="avatarInput" accept="image/*">
 
 <script>
 const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
@@ -398,8 +398,6 @@ const SB = window.supabase.createClient(SURL, SKEY);
 let USER = null;
 let CURRENT_TAB = 'feed';
 let CURRENT_SHARE_URL = '';
-let currentUsername = '';
-let currentBio = '';
 
 // ============================================
 // AUTH
@@ -463,59 +461,88 @@ async function checkAuth() {
 // ============================================
 // PROFILE FUNCTIONS
 // ============================================
-async function uploadProfilePicture(file) {
-    if (!USER) return;
-    const fileExt = file.name.split('.').pop();
-    const fileName = `profile_${USER.id}.${fileExt}`;
+async function uploadAvatar(file) {
+    if (!USER) { alert('Login first'); return; }
     
-    try {
-        await SB.storage.from("avatars").remove([fileName]);
-    } catch(e) {}
+    const fileName = `${USER.id}_${Date.now()}.jpg`;
     
-    await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
-    const { data: urlData } = SB.storage.from("avatars").getPublicUrl(fileName);
-    await SB.from("profiles").upsert({ id: USER.id, avatar_url: urlData.publicUrl });
-    return urlData.publicUrl;
+    // Upload to storage
+    const { error: uploadError } = await SB.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+    
+    if (uploadError) {
+        alert("Upload failed: " + uploadError.message);
+        return;
+    }
+    
+    // Get public URL
+    const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
+    const avatarUrl = data.publicUrl;
+    
+    // Save to profiles table
+    const { error: updateError } = await SB
+        .from("profiles")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", USER.id);
+    
+    if (updateError) {
+        alert("Failed to update profile: " + updateError.message);
+        return;
+    }
+    
+    alert("Profile picture updated!");
+    loadProfile();
+    loadFeed();
 }
 
-document.getElementById('profileUpload').onchange = async (e) => {
+document.getElementById('avatarInput').onchange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-        await uploadProfilePicture(file);
-        alert('Profile picture updated!');
-        loadProfile();
+        await uploadAvatar(file);
     }
 };
 
-// Edit Profile Modal
-const editModal = document.getElementById('editProfileModal');
+async function saveProfile() {
+    if (!USER) { alert('Login first'); return; }
+    
+    const username = document.getElementById("editUsername").value;
+    const bio = document.getElementById("editBio").value;
+    
+    const { error } = await SB
+        .from("profiles")
+        .upsert({
+            id: USER.id,
+            username: username,
+            bio: bio
+        });
+    
+    if (error) {
+        alert("Error: " + error.message);
+        return;
+    }
+    
+    alert("Profile updated!");
+    document.getElementById('editProfileModal').style.display = 'none';
+    loadProfile();
+    loadFeed();
+}
 
+// Edit Profile Modal
 function openEditProfile() {
     document.getElementById('editUsername').value = currentUsername || '';
     document.getElementById('editBio').value = currentBio || '';
-    editModal.style.display = 'flex';
+    document.getElementById('editProfileModal').style.display = 'flex';
 }
 
 document.getElementById('closeEditModal').onclick = () => {
-    editModal.style.display = 'none';
+    document.getElementById('editProfileModal').style.display = 'none';
 };
 
-document.getElementById('saveProfileBtn').onclick = async () => {
-    const newUsername = document.getElementById('editUsername').value;
-    const newBio = document.getElementById('editBio').value;
-    
-    if (newUsername) {
-        await SB.from("profiles").upsert({ id: USER.id, username: newUsername, bio: newBio });
-        currentUsername = newUsername;
-        currentBio = newBio;
-    } else {
-        await SB.from("profiles").upsert({ id: USER.id, bio: newBio });
-        currentBio = newBio;
-    }
-    editModal.style.display = 'none';
-    alert('Profile updated!');
-    loadProfile();
-};
+document.getElementById('saveProfileBtn').onclick = saveProfile;
+
+let currentUsername = '';
+let currentBio = '';
 
 // ============================================
 // POST PRIVACY & DELETE MENU
@@ -523,7 +550,6 @@ document.getElementById('saveProfileBtn').onclick = async () => {
 function togglePostMenu(postId) {
     const menu = document.getElementById(`post-menu-${postId}`);
     if (menu.style.display === 'none') {
-        // Close all other menus first
         document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
         menu.style.display = 'block';
     } else {
@@ -533,8 +559,6 @@ function togglePostMenu(postId) {
 
 async function changePostPrivacy(postId, newPrivacy) {
     await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
-    const privacyText = newPrivacy === 'public' ? 'Public' : (newPrivacy === 'friends' ? 'Friends' : 'Only Me');
-    alert(`Privacy changed to ${privacyText}`);
     document.getElementById(`post-menu-${postId}`).style.display = 'none';
     loadFeed();
     if (CURRENT_TAB === 'profile') loadProfile();
@@ -549,7 +573,6 @@ async function deletePost(postId) {
     }
 }
 
-// Close menu when clicking outside
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.post-privacy-menu')) {
         document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
@@ -672,24 +695,49 @@ async function loadProfile() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    let { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    if (!profile) {
+    const { data: profile, error } = await SB
+        .from("profiles")
+        .select("*")
+        .eq("id", USER.id)
+        .single();
+    
+    if (error || !profile) {
+        // Create profile if not exists
         const username = USER.email.split('@')[0];
         await SB.from("profiles").insert({ id: USER.id, username: username, bio: '' });
-        profile = { username: username, bio: '', avatar_url: null };
+        currentUsername = username;
+        currentBio = '';
+    } else {
+        currentUsername = profile.username || USER.email.split('@')[0];
+        currentBio = profile.bio || '';
     }
     
-    currentUsername = profile.username || USER.email.split('@')[0];
-    currentBio = profile.bio || '';
+    const { data: posts } = await SB
+        .from("posts")
+        .select("*")
+        .eq("user_id", USER.id)
+        .order("id", { ascending: false });
     
-    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
-    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
+    const { count } = await SB
+        .from("posts")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", USER.id);
     
-    let avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}">` : '<div class="avatar-placeholder">👤</div>';
+    // Get profile again for avatar
+    const { data: updatedProfile } = await SB
+        .from("profiles")
+        .select("*")
+        .eq("id", USER.id)
+        .single();
+    
+    const avatarUrl = updatedProfile?.avatar_url;
+    let avatarHtml = avatarUrl 
+        ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">` 
+        : '👤';
     
     let html = `
         <div class="profile-header">
-            <div class="profile-avatar" onclick="document.getElementById('profileUpload').click()">
+            <div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">
                 ${avatarHtml}
             </div>
             <h3>${currentUsername}</h3>
@@ -740,11 +788,22 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading...</div>';
     
-    let query = SB.from("posts").select("*").order("id", { ascending: false });
+    let query = SB
+        .from("posts")
+        .select(`
+            *,
+            profiles (
+                username,
+                avatar_url
+            )
+        `)
+        .order("id", { ascending: false });
+    
     if (!USER) query = query.eq('privacy', 'public');
     else query = query.or(`privacy.eq.public,user_id.eq.${USER.id}`);
     
     const { data, error } = await query;
+    
     if (error || !data || data.length === 0) { 
         feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; 
         return; 
@@ -757,17 +816,32 @@ async function loadFeed() {
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let displayName = p.is_ai ? 'Poik Poik' : (p.user_id ? (p.user_id === USER?.id ? currentUsername : 'Member') : 'Poik Poik');
+        let displayName = p.is_ai ? 'Poik Poik' : (p.profiles?.username || (p.user_id ? 'Member' : 'Poik Poik'));
+        
+        // Avatar: user avatar if exists, otherwise M logo
+        let avatarHtml = '';
+        if (p.is_ai) {
+            avatarHtml = `<div class="m-logo">
+                            <div class="tri tri1"></div>
+                            <div class="tri tri2"></div>
+                            <div class="tri tri3"></div>
+                            <div class="tri tri4"></div>
+                          </div>`;
+        } else if (p.profiles?.avatar_url) {
+            avatarHtml = `<img src="${p.profiles.avatar_url}" class="user-avatar">`;
+        } else {
+            avatarHtml = `<div class="m-logo">
+                            <div class="tri tri1"></div>
+                            <div class="tri tri2"></div>
+                            <div class="tri tri3"></div>
+                            <div class="tri tri4"></div>
+                          </div>`;
+        }
         
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
-                    <div class="m-logo">
-                        <div class="tri tri1"></div>
-                        <div class="tri tri2"></div>
-                        <div class="tri tri3"></div>
-                        <div class="tri tri4"></div>
-                    </div>
+                    ${avatarHtml}
                     <div class="post-username">${displayName}</div>
                 </div>
                 ${isOwner ? `
