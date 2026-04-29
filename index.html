@@ -502,10 +502,9 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENTS - WORKING
+// COMMENTS - FIXED VERSION
 // ============================================
 async function addComment(postId) {
-    // Get fresh user
     const { data: { user } } = await SB.auth.getUser();
 
     if (!user) {
@@ -522,9 +521,6 @@ async function addComment(postId) {
         return;
     }
 
-    console.log("Posting comment:", commentText);
-
-    // Insert with 'text' column (not 'content')
     const { data, error } = await SB
         .from("comments")
         .insert({
@@ -540,15 +536,9 @@ async function addComment(postId) {
         return;
     }
 
-    console.log("Comment inserted:", data);
-
-    // Clear input
     input.value = '';
-
-    // Reload comments
     await loadComments(postId);
     
-    // Update comment count
     const { count } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId);
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
@@ -558,42 +548,45 @@ async function loadComments(postId) {
     const container = document.getElementById(`comments-list-${postId}`);
     if (!container) return;
 
-    const { data, error } = await SB
-        .from("comments")
-        .select("*, profiles(username, avatar_url)")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: false });
+    try {
+        const { data, error } = await SB
+            .from("comments")
+            .select("*")
+            .eq("post_id", postId)
+            .order("created_at", { ascending: false });
 
-    if (error) {
-        console.error(error);
+        if (error) {
+            console.error("Load comments error:", error);
+            container.innerHTML = '<div class="comment">Error loading comments</div>';
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="comment">No comments yet</div>';
+            return;
+        }
+
+        let html = "";
+        for (const c of data) {
+            html += `
+                <div class="comment">
+                    <strong>User</strong> ${c.text || c.content || ''}
+                    <div class="comment-actions">
+                        <span onclick="likeComment(${c.id})">❤️ Like</span>
+                        <span onclick="showReplyInput(${c.id})">💬 Reply</span>
+                    </div>
+                    <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
+                        <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
+                        <button onclick="addReply(${c.id}, ${postId})">Reply</button>
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    } catch (err) {
+        console.error("Load comments exception:", err);
         container.innerHTML = '<div class="comment">Error loading comments</div>';
-        return;
     }
-
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div class="comment">No comments yet</div>';
-        return;
-    }
-
-    let html = "";
-    for (const c of data) {
-        const commenterName = c.profiles?.username || 'User';
-        const commentText = c.text || c.content || '';
-        html += `
-            <div class="comment">
-                <strong>${commenterName}</strong> ${commentText}
-                <div class="comment-actions">
-                    <span onclick="likeComment(${c.id})">❤️ Like</span>
-                    <span onclick="showReplyInput(${c.id})">💬 Reply</span>
-                </div>
-                <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
-                    <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
-                    <button onclick="addReply(${c.id}, ${postId})">Reply</button>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
 }
 
 function toggleComments(id) {
