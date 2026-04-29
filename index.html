@@ -142,7 +142,6 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
-    /* Comments with replies */
     .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; }
     .comment { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
     .comment strong { color: #00ff88; cursor: pointer; }
@@ -322,6 +321,7 @@ const SB = window.supabase.createClient(API_URL, API_KEY);
 let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
+let USER_PROFILE = null;
 
 // ============================================
 // AUTH
@@ -375,11 +375,18 @@ async function checkAuth() {
     if (user) { 
         userIcon.classList.remove('far'); 
         userIcon.classList.add('fas'); 
+        if (!USER_PROFILE) await loadUserProfile();
     } else { 
         userIcon.classList.remove('fas'); 
         userIcon.classList.add('far'); 
     }
     return user;
+}
+
+async function loadUserProfile() {
+    if (!USER) return;
+    const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    USER_PROFILE = data;
 }
 
 // ============================================
@@ -391,6 +398,7 @@ async function uploadAvatar(file) {
     await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
     const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
     await SB.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", USER.id);
+    USER_PROFILE.avatar_url = data.publicUrl;
     alert("Profile picture updated!");
     loadProfile();
     loadFeed();
@@ -405,6 +413,8 @@ async function saveProfile() {
     const username = document.getElementById("editUsername").value;
     const bio = document.getElementById("editBio").value;
     await SB.from("profiles").upsert({ id: USER.id, username: username, bio: bio });
+    USER_PROFILE.username = username;
+    USER_PROFILE.bio = bio;
     alert("Profile updated!");
     document.getElementById('editProfileModal').style.display = 'none';
     loadProfile();
@@ -412,8 +422,8 @@ async function saveProfile() {
 }
 
 function openEditProfile() {
-    document.getElementById('editUsername').value = USER?.user_metadata?.username || '';
-    document.getElementById('editBio').value = USER?.user_metadata?.bio || '';
+    document.getElementById('editUsername').value = USER_PROFILE?.username || '';
+    document.getElementById('editBio').value = USER_PROFILE?.bio || '';
     document.getElementById('editProfileModal').style.display = 'flex';
 }
 
@@ -503,16 +513,35 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENT FUNCTIONS
+// COMMENT FUNCTIONS - FIXED
 // ============================================
 async function addComment(postId) {
     if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     const text = input.value.trim();
-    if (!text) return;
+    if (!text) {
+        alert('Write a comment first');
+        return;
+    }
     
-    await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: text });
+    console.log("Adding comment to post:", postId, "Text:", text);
+    
+    const { data, error } = await SB.from("comments").insert({ 
+        post_id: postId, 
+        user_id: USER.id, 
+        text: text 
+    }).select();
+    
+    if (error) {
+        console.error("Comment error:", error);
+        alert("Failed to post comment: " + error.message);
+        return;
+    }
+    
+    console.log("Comment added:", data);
     input.value = '';
+    
+    // Refresh the feed to show the new comment
     loadFeed();
 }
 
@@ -530,7 +559,10 @@ async function likeComment(commentId) {
 let activeReplyInput = null;
 
 function showReplyInput(commentId) {
-    if (activeReplyInput) document.getElementById(activeReplyInput).style.display = 'none';
+    if (activeReplyInput) {
+        const prev = document.getElementById(activeReplyInput);
+        if (prev) prev.style.display = 'none';
+    }
     const replyDiv = document.getElementById(`reply-input-${commentId}`);
     if (replyDiv) {
         replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
@@ -584,13 +616,35 @@ async function loadProfile() {
     for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
+        
+        // Use profile picture for user's own posts
+        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        
+        html += `<div class="post">
+            <div class="post-header">
+                <div class="post-header-left">
+                    ${avatarDisplay}
+                    <div class="post-username">${profile?.username || 'User'}</div>
+                </div>
+                <div class="post-privacy-menu">
+                    <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button>
+                    <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;">
+                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div>
+                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div>
+                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div>
+                        <div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div>
+                    </div>
+                </div>
+            </div>
+            <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
+            <div class="post-caption">${p.caption || 'Fashion visual'}</div>
+        </div>`;
     }
     feedDiv.innerHTML = html;
 }
 
 // ============================================
-// LOAD FEED WITH COMMENTS & REPLIES
+// LOAD FEED WITH COMMENTS & REPLIES & PROFILE PICTURES
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
@@ -602,11 +656,18 @@ async function loadFeed() {
         return;
     }
     
+    // Get all user IDs (excluding AI posts) and fetch their profiles
     const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
     let profiles = {};
     if (userIds.length > 0) {
         const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
         if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
+    }
+    
+    // Get current user's profile
+    if (USER && !profiles[USER.id]) {
+        const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+        if (data) profiles[USER.id] = data;
     }
     
     let html = '';
@@ -616,21 +677,27 @@ async function loadFeed() {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
+        // Determine display name and avatar
         let displayName = 'Poik Poik';
         let avatarHtml = '';
+        
         if (p.is_ai) {
             displayName = 'Poik Poik';
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         } else if (p.user_id && profiles[p.user_id]) {
             displayName = profiles[p.user_id].username || 'Member';
-            avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+            if (profiles[p.user_id].avatar_url) {
+                avatarHtml = `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+            }
         } else {
             displayName = 'Member';
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
         // Get comments
-        const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id).order("created_at", { ascending: false });
+        const { data: comments } = await SB.from("comments").select("*, profiles(username)").eq("post_id", p.id).order("created_at", { ascending: false });
         
         // Get replies for comments
         let replies = {};
@@ -655,7 +722,7 @@ async function loadFeed() {
                 }
                 commentsHtml += `
                     <div class="comment">
-                        <strong onclick="showReplyInput(${c.id})">User</strong> ${c.text}
+                        <strong onclick="showReplyInput(${c.id})">${c.profiles?.username || 'User'}</strong> ${c.text}
                         <div class="comment-actions">
                             <span onclick="likeComment(${c.id})">❤️ Like</span>
                             <span onclick="showReplyInput(${c.id})">💬 Reply</span>
