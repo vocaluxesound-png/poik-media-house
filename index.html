@@ -433,8 +433,8 @@
             <h3>Join Poik Poik</h3>
             <input type="email" id="authEmail" placeholder="Email" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
             <input type="password" id="authPassword" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
-            <button id="authLoginBtn" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:10px; font-weight:bold;">Login</button>
-            <button id="authSignupBtn" style="width:100%; padding:12px; background:#00ff88; color:black; border:none; border-radius:10px; font-weight:bold; margin-top:10px;">Sign Up</button>
+            <button id="authLoginBtn" style="width:100%; padding:12px; background:#00ff88; color:black; border:none; border-radius:10px; font-weight:bold;">Login</button>
+            <button id="authSignupBtn" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:10px; font-weight:bold; margin-top:10px;">Sign Up</button>
             <button id="closeAuthBtn" style="width:100%; padding:12px; background:#222; color:white; border:none; border-radius:10px; margin-top:10px;">Cancel</button>
         </div>
     </div>
@@ -447,7 +447,45 @@
         window.currentTab = 'feed';
         window.lastPostId = 0;
 
-        // Auth Modal Elements
+        // ============================================
+        // PASSWORD RESET HANDLER
+        // ============================================
+        async function handlePasswordReset() {
+            const hash = window.location.hash;
+            if (hash && hash.includes('access_token')) {
+                const params = new URLSearchParams(hash.substring(1));
+                const access_token = params.get('access_token');
+                const refresh_token = params.get('refresh_token');
+                
+                if (access_token) {
+                    const { error } = await window.client.auth.setSession({
+                        access_token: access_token,
+                        refresh_token: refresh_token
+                    });
+                    
+                    if (!error) {
+                        const newPassword = prompt('Enter your new password (min 6 characters):');
+                        if (newPassword && newPassword.length >= 6) {
+                            const { error: updateError } = await window.client.auth.updateUser({
+                                password: newPassword
+                            });
+                            if (updateError) {
+                                alert('Error: ' + updateError.message);
+                            } else {
+                                alert('Password updated! Please login.');
+                                window.location.href = '/';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        handlePasswordReset();
+        
+        // ============================================
+        // AUTH MODAL
+        // ============================================
         const authModal = document.getElementById('authModal');
         
         function showAuthModal() {
@@ -460,22 +498,46 @@
             document.getElementById('authPassword').value = '';
         };
         
-        // Login
+        // LOGIN
         document.getElementById('authLoginBtn').onclick = async () => {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
-            if (!email || !password) { alert('Enter email and password'); return; }
-            const { error } = await window.client.auth.signInWithPassword({ email, password });
-            if (error) { alert('Login failed: ' + error.message); }
-            else { authModal.style.display = 'none'; location.reload(); }
+            
+            if (!email || !password) {
+                alert('Enter email and password');
+                return;
+            }
+            
+            const { data, error } = await window.client.auth.signInWithPassword({ 
+                email: email, 
+                password: password 
+            });
+            
+            if (error) {
+                alert('Login failed: ' + error.message);
+            } else {
+                alert('Logged in successfully!');
+                authModal.style.display = 'none';
+                document.getElementById('authEmail').value = '';
+                document.getElementById('authPassword').value = '';
+                window.currentUser = data.user;
+                location.reload();
+            }
         };
         
-        // Sign Up with redirect
+        // SIGN UP
         document.getElementById('authSignupBtn').onclick = async () => {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
-            if (!email || !password) { alert('Enter email and password'); return; }
-            if (password.length < 6) { alert('Password must be at least 6 characters'); return; }
+            
+            if (!email || !password) {
+                alert('Enter email and password');
+                return;
+            }
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
             
             const { error } = await window.client.auth.signUp({ 
                 email, 
@@ -485,11 +547,15 @@
                 }
             });
             
-            if (error) { alert('Sign up failed: ' + error.message); }
-            else { alert('Account created! Please check your email to confirm.'); authModal.style.display = 'none'; }
+            if (error) {
+                alert('Sign up failed: ' + error.message);
+            } else {
+                alert('Account created! Check your email to confirm.');
+                authModal.style.display = 'none';
+            }
         };
         
-        // Check auth status
+        // CHECK AUTH
         async function checkAuth() {
             const { data: { user } } = await window.client.auth.getUser();
             window.currentUser = user;
@@ -497,9 +563,11 @@
             if (user) {
                 userIcon.classList.remove('far');
                 userIcon.classList.add('fas');
+                console.log('Logged in as:', user.email);
             } else {
                 userIcon.classList.remove('fas');
                 userIcon.classList.add('far');
+                console.log('Not logged in');
             }
         }
         
@@ -513,7 +581,11 @@
         }
 
         function openUploadModal() {
-            if (!window.currentUser) { alert('Please login first'); showAuthModal(); return; }
+            if (!window.currentUser) { 
+                alert('Please login first'); 
+                showAuthModal(); 
+                return; 
+            }
             document.getElementById('uploadModal').style.display = 'block';
         }
 
@@ -540,21 +612,35 @@
             }
             if (page === 'friends') document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
             if (page === 'inbox') document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
-            if (page === 'profile') document.querySelector('.bottom-nav-item:last-child').classList.add('active');
-            if (page !== 'home') alert(page + ' coming soon');
+            if (page === 'profile') {
+                document.querySelector('.bottom-nav-item:last-child').classList.add('active');
+                alert('Profile page coming soon');
+            }
         }
 
         async function likePost(postId) {
-            if (!window.currentUser) { alert('Login to like'); showAuthModal(); return; }
-            await window.client.rpc("toggle_like", {
-                post_id_input: postId,
-                user_id_input: window.currentUser.id
-            });
-            loadFeed();
+            if (!window.currentUser) { 
+                alert('Login to like'); 
+                showAuthModal(); 
+                return; 
+            }
+            try {
+                await window.client.rpc("toggle_like", {
+                    post_id_input: postId,
+                    user_id_input: window.currentUser.id
+                });
+                loadFeed();
+            } catch(e) {
+                console.error('Like error:', e);
+            }
         }
 
         async function addComment(postId) {
-            if (!window.currentUser) { alert('Login to comment'); showAuthModal(); return; }
+            if (!window.currentUser) { 
+                alert('Login to comment'); 
+                showAuthModal(); 
+                return; 
+            }
             const input = document.getElementById(`comment-input-${postId}`);
             if (input.value.trim()) {
                 await window.client.from("comments").insert({ 
@@ -573,10 +659,16 @@
         }
 
         async function uploadPost() {
-            if (!window.currentUser) { alert('Login first'); return; }
+            if (!window.currentUser) { 
+                alert('Login first'); 
+                return; 
+            }
             const file = document.getElementById("uploadFile").files[0];
             const caption = document.getElementById("uploadCaption").value;
-            if (!file) { alert("Select an image"); return; }
+            if (!file) { 
+                alert("Select an image"); 
+                return; 
+            }
             const fileName = `${window.currentUser.id}_${Date.now()}.jpg`;
             await window.client.storage.from("post-images").upload(fileName, file);
             const { data: urlData } = window.client.storage.from("post-images").getPublicUrl(fileName);
@@ -596,8 +688,10 @@
             const feedDiv = document.getElementById("feed");
             feedDiv.innerHTML = '<div class="loading">Loading...</div>';
 
-            let query = window.client.from("posts").select("*").order("id", { ascending: false });
-            const { data, error } = await query;
+            const { data, error } = await window.client
+                .from("posts")
+                .select("*")
+                .order("id", { ascending: false });
 
             if (error || !data || data.length === 0) {
                 feedDiv.innerHTML = '<div class="loading">No posts yet</div>';
