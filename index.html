@@ -34,7 +34,7 @@
     .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
     .post-header-left { display: flex; align-items: center; gap: 10px; }
     
-    /* M Logo - 4 green triangles forming M */
+    /* M Logo */
     .m-logo {
         width: 40px;
         height: 40px;
@@ -78,7 +78,6 @@
     .action-icon span { font-size: 11px; color: #ddd; }
     .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
     
-    /* Privacy Badge */
     .privacy-badge {
         font-size: 10px;
         padding: 2px 8px;
@@ -190,11 +189,65 @@
         font-size: 40px;
         cursor: pointer;
         overflow: hidden;
+        position: relative;
     }
     .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-avatar .avatar-placeholder { font-size: 40px; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
     .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
     .edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
+    
+    /* Edit Profile Modal */
+    .edit-profile-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        z-index: 300;
+        align-items: center;
+        justify-content: center;
+    }
+    .edit-profile-box {
+        background: #111;
+        padding: 30px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 350px;
+        text-align: center;
+    }
+    .edit-profile-box input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 10px;
+        color: white;
+    }
+    .edit-profile-box textarea {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 10px;
+        color: white;
+        resize: none;
+        font-family: inherit;
+    }
+    .edit-profile-box button {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .save-profile-btn { background: #00ff88; color: black; border: none; }
+    .cancel-edit-btn { background: #222; color: white; border: none; }
     
     .auth-modal {
         display: none;
@@ -237,7 +290,6 @@
     .logout-btn { background: #ff4444; color: white; border: none; }
     .cancel-btn { background: #222; color: white; border: none; }
     
-    /* Profile upload input hidden */
     #profileUpload { display: none; }
 </style>
 </head>
@@ -281,7 +333,7 @@
     <select id="uploadPrivacy" class="privacy-select">
         <option value="public">🌍 Public</option>
         <option value="friends">👥 Friends Only</option>
-        <option value="private">🔒 Private</option>
+        <option value="private">🔒 Only Me</option>
     </select>
     <button onclick="uploadPost()">Post</button>
     <button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
@@ -314,6 +366,17 @@
     </div>
 </div>
 
+<!-- Edit Profile Modal -->
+<div id="editProfileModal" class="edit-profile-modal">
+    <div class="edit-profile-box">
+        <h3 style="margin-bottom:20px;">Edit Profile</h3>
+        <input type="text" id="editUsername" placeholder="Username">
+        <textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
+        <button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
+        <button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
+    </div>
+</div>
+
 <input type="file" id="profileUpload" accept="image/*">
 
 <script>
@@ -325,7 +388,7 @@ let CURRENT_TAB = 'feed';
 let CURRENT_SHARE_URL = '';
 
 // ============================================
-// AUTH - MAGIC LINK
+// AUTH
 // ============================================
 function openAuthModal() { 
     if (USER) return;
@@ -384,11 +447,12 @@ async function checkAuth() {
 }
 
 // ============================================
-// PROFILE PICTURE UPLOAD
+// PROFILE FUNCTIONS
 // ============================================
 async function uploadProfilePicture(file) {
     if (!USER) return;
-    const fileName = `profile_${USER.id}.jpg`;
+    const fileExt = file.name.split('.').pop();
+    const fileName = `profile_${USER.id}.${fileExt}`;
     await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
     const { data: urlData } = SB.storage.from("avatars").getPublicUrl(fileName);
     await SB.from("profiles").upsert({ id: USER.id, avatar_url: urlData.publicUrl });
@@ -403,6 +467,39 @@ document.getElementById('profileUpload').onchange = async (e) => {
         loadProfile();
     }
 };
+
+// Edit Profile Modal
+const editModal = document.getElementById('editProfileModal');
+
+function openEditProfile() {
+    document.getElementById('editUsername').value = currentUsername || '';
+    document.getElementById('editBio').value = currentBio || '';
+    editModal.style.display = 'flex';
+}
+
+document.getElementById('closeEditModal').onclick = () => {
+    editModal.style.display = 'none';
+};
+
+document.getElementById('saveProfileBtn').onclick = async () => {
+    const newUsername = document.getElementById('editUsername').value;
+    const newBio = document.getElementById('editBio').value;
+    
+    if (newUsername) {
+        await SB.from("profiles").upsert({ id: USER.id, username: newUsername, bio: newBio });
+        currentUsername = newUsername;
+        currentBio = newBio;
+    } else {
+        await SB.from("profiles").upsert({ id: USER.id, bio: newBio });
+        currentBio = newBio;
+    }
+    editModal.style.display = 'none';
+    alert('Profile updated!');
+    loadProfile();
+};
+
+let currentUsername = '';
+let currentBio = '';
 
 // ============================================
 // SHARE FUNCTIONS
@@ -464,12 +561,9 @@ async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     try { 
         await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id }); 
-        // Update just the like count without full reload
         const { count } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
         const likeSpan = document.getElementById(`likes-${postId}`);
         if (likeSpan) likeSpan.innerText = count || 0;
-        const likeIcon = document.querySelector(`#like-icon-${postId}`);
-        if (likeIcon) likeIcon.style.color = '#ff4444';
     } catch(e) { console.error(e); }
 }
 
@@ -479,12 +573,11 @@ async function addComment(postId) {
     if (input.value.trim()) {
         await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
         input.value = '';
-        // Reload just the comments section
         const { data: comments } = await SB.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
         const commentsDiv = document.getElementById(`comments-list-${postId}`);
         const countSpan = document.getElementById(`comment-count-${postId}`);
         if (commentsDiv) {
-            commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
+            commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>${currentUsername || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
         }
         if (countSpan) countSpan.innerText = comments.length;
     }
@@ -530,30 +623,41 @@ async function loadProfile() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    let { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    if (!profile) {
+        // Create profile if not exists
+        const username = USER.email.split('@')[0];
+        await SB.from("profiles").insert({ id: USER.id, username: username, bio: '' });
+        profile = { username: username, bio: '', avatar_url: null };
+    }
+    
+    currentUsername = profile.username || USER.email.split('@')[0];
+    currentBio = profile.bio || '';
+    
     const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
     const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
     
-    let avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
+    let avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}">` : '<div class="avatar-placeholder">👤</div>';
     
     let html = `
         <div class="profile-header">
             <div class="profile-avatar" onclick="document.getElementById('profileUpload').click()">
                 ${avatarHtml}
             </div>
-            <h3>${USER.email.split('@')[0]}</h3>
-            <div class="profile-bio">${profile?.bio || '✨ Fashion lover'}</div>
+            <h3>${currentUsername}</h3>
+            <div class="profile-bio">${currentBio || 'No bio yet'}</div>
             <div class="profile-stats">
                 <div><strong>${count || 0}</strong><br>posts</div>
                 <div><strong>0</strong><br>followers</div>
                 <div><strong>0</strong><br>following</div>
             </div>
-            <button class="edit-profile-btn" onclick="editProfile()">Edit Profile</button>
+            <button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button>
             <button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button>
         </div>`;
     
     for (const p of posts || []) { 
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
@@ -563,7 +667,7 @@ async function loadProfile() {
                         <div class="tri tri3"></div>
                         <div class="tri tri4"></div>
                     </div>
-                    <div class="post-username">${p.is_ai ? 'Poik Poik' : USER.email.split('@')[0]} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${p.privacy || 'public'}</span></div>
+                    <div class="post-username">${currentUsername} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${privacyText}</span></div>
                 </div>
                 <button class="delete-btn" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i></button>
             </div>
@@ -572,14 +676,6 @@ async function loadProfile() {
         </div>`;
     }
     feedDiv.innerHTML = html;
-}
-
-async function editProfile() {
-    const newBio = prompt('Enter your bio:', '✨ Fashion lover');
-    if (newBio !== null) {
-        await SB.from("profiles").upsert({ id: USER.id, bio: newBio });
-        loadProfile();
-    }
 }
 
 async function loadFeed() {
@@ -602,6 +698,8 @@ async function loadFeed() {
         const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
+        let displayName = p.is_ai ? 'Poik Poik' : (p.user_id ? (p.user_id === USER?.id ? currentUsername : 'Member') : 'Poik Poik');
         
         html += `<div class="post">
             <div class="post-header">
@@ -612,7 +710,7 @@ async function loadFeed() {
                         <div class="tri tri3"></div>
                         <div class="tri tri4"></div>
                     </div>
-                    <div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${p.privacy || 'public'}</span></div>
+                    <div class="post-username">${displayName} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${privacyText}</span></div>
                 </div>
                 ${isOwner ? `<button class="delete-btn" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i></button>` : ''}
             </div>
@@ -620,7 +718,7 @@ async function loadFeed() {
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
                 <div class="action-icon" onclick="likePost(${p.id})">
-                    <i class="far fa-heart" id="like-icon-${p.id}"></i>
+                    <i class="far fa-heart"></i>
                     <span id="likes-${p.id}">${likeCount || 0}</span>
                 </div>
                 <div class="action-icon" onclick="toggleComments(${p.id})">
@@ -638,7 +736,7 @@ async function loadFeed() {
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
                 <div id="comments-list-${p.id}">
-                    ${comments?.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}
+                    ${comments?.map(c => `<div class="comment"><strong>${currentUsername || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}
                 </div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
@@ -650,7 +748,7 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
-// Also create avatars bucket in Supabase
+// Create avatars bucket
 async function initStorage() {
     try {
         await SB.storage.createBucket('avatars', { public: true });
