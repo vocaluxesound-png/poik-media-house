@@ -66,7 +66,7 @@
     @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
     
     .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-    .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
+    .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
     .action-icon span { font-size: 11px; color: #ddd; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
     .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
     
@@ -177,8 +177,7 @@
         cursor: pointer;
         margin-top: 10px;
     }
-    .login-btn { background: #00ff88; color: black; border: none; }
-    .signup-btn { background: #333; color: white; border: none; }
+    .magic-btn { background: #00ff88; color: black; border: none; }
     .cancel-btn { background: #222; color: white; border: none; }
 </style>
 </head>
@@ -240,10 +239,9 @@
 <div id="authModal" class="auth-modal">
     <div class="auth-box">
         <h3 style="margin-bottom:20px;">Join Poik Poik</h3>
+        <p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a magic login link</p>
         <input type="email" id="authEmail" placeholder="Email">
-        <input type="password" id="authPassword" placeholder="Password">
-        <button id="loginBtn" class="login-btn">Login</button>
-        <button id="signupBtn" class="signup-btn">Sign Up</button>
+        <button id="magicLoginBtn" class="magic-btn">Send Magic Link</button>
         <button id="closeAuthBtn" class="cancel-btn">Cancel</button>
     </div>
 </div>
@@ -252,62 +250,71 @@
 const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const SKEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 const SB = window.supabase.createClient(SURL, SKEY);
-
 let USER = null;
 let CURRENT_TAB = 'feed';
 let CURRENT_SHARE_URL = '';
 let SHARE_COUNTS = JSON.parse(localStorage.getItem('share_counts') || '{}');
 
 // ============================================
-// AUTH FUNCTIONS
+// AUTH - MAGIC LINK (NO PASSWORD, NO CONFIRMATION ISSUES)
 // ============================================
 function openAuthModal() { document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 
-// LOGIN
-document.getElementById('loginBtn').onclick = async () => {
+document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
-    const pass = document.getElementById('authPassword').value;
-    if (!email || !pass) { alert('Enter email and password'); return; }
-    const { data, error } = await SB.auth.signInWithPassword({ email: email.trim(), password: pass });
-    if (error) { alert('Login failed: ' + error.message); }
-    else { alert('Welcome ' + data.user.email); closeAuthModal(); window.location.reload(); }
-};
-
-// SIGNUP - FIXED (No email confirmation required)
-document.getElementById('signupBtn').onclick = async () => {
-    const email = document.getElementById('authEmail').value;
-    const pass = document.getElementById('authPassword').value;
-    if (!email || !pass) { alert('Enter email and password'); return; }
-    if (pass.length < 6) { alert('Password must be at least 6 characters'); return; }
+    if (!email) { alert('Enter your email'); return; }
     
-    const { data, error } = await SB.auth.signUp({ 
-        email: email.trim(), 
-        password: pass, 
-        options: { emailRedirectTo: window.location.origin }
+    const { error } = await SB.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+            emailRedirectTo: window.location.origin
+        }
     });
     
     if (error) { 
-        alert('Sign up failed: ' + error.message); 
-    } else if (data.user) {
-        alert('Account created! You can now login.');
+        alert('Error: ' + error.message); 
+    } else { 
+        alert('Magic link sent to ' + email + '! Check your email to login.');
         closeAuthModal();
         document.getElementById('authEmail').value = '';
-        document.getElementById('authPassword').value = '';
-    } else {
-        alert('Account created! You can now login.');
-        closeAuthModal();
     }
 };
+
+// Handle magic link redirect
+async function handleMagicLink() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        
+        if (access_token) {
+            const { error } = await SB.auth.setSession({
+                access_token: access_token,
+                refresh_token: refresh_token
+            });
+            if (!error) {
+                alert('Logged in successfully!');
+                window.location.href = window.location.pathname;
+            }
+        }
+    }
+}
 
 async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser();
     USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
-    if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
-    else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
+    if (user) { 
+        userIcon.classList.remove('far'); 
+        userIcon.classList.add('fas'); 
+    } else { 
+        userIcon.classList.remove('fas'); 
+        userIcon.classList.add('far'); 
+    }
 }
 
 // ============================================
@@ -414,6 +421,7 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
+handleMagicLink();
 checkAuth();
 loadFeed();
 </script>
