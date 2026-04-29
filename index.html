@@ -144,7 +144,7 @@
     
     .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; }
     .comment { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
-    .comment strong { color: #00ff88; cursor: pointer; }
+    .comment strong { color: #00ff88; }
     .comment-actions { display: flex; gap: 12px; margin-top: 5px; font-size: 11px; }
     .comment-actions span { color: #888; cursor: pointer; }
     .comment-actions span:hover { color: #00ff88; }
@@ -321,7 +321,6 @@ const SB = window.supabase.createClient(API_URL, API_KEY);
 let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
-let USER_PROFILE = null;
 
 // ============================================
 // AUTH
@@ -375,18 +374,11 @@ async function checkAuth() {
     if (user) { 
         userIcon.classList.remove('far'); 
         userIcon.classList.add('fas'); 
-        if (!USER_PROFILE) await loadUserProfile();
     } else { 
         userIcon.classList.remove('fas'); 
         userIcon.classList.add('far'); 
     }
     return user;
-}
-
-async function loadUserProfile() {
-    if (!USER) return;
-    const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    USER_PROFILE = data;
 }
 
 // ============================================
@@ -398,7 +390,6 @@ async function uploadAvatar(file) {
     await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
     const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
     await SB.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", USER.id);
-    USER_PROFILE.avatar_url = data.publicUrl;
     alert("Profile picture updated!");
     loadProfile();
     loadFeed();
@@ -413,8 +404,6 @@ async function saveProfile() {
     const username = document.getElementById("editUsername").value;
     const bio = document.getElementById("editBio").value;
     await SB.from("profiles").upsert({ id: USER.id, username: username, bio: bio });
-    USER_PROFILE.username = username;
-    USER_PROFILE.bio = bio;
     alert("Profile updated!");
     document.getElementById('editProfileModal').style.display = 'none';
     loadProfile();
@@ -422,8 +411,8 @@ async function saveProfile() {
 }
 
 function openEditProfile() {
-    document.getElementById('editUsername').value = USER_PROFILE?.username || '';
-    document.getElementById('editBio').value = USER_PROFILE?.bio || '';
+    document.getElementById('editUsername').value = USER?.user_metadata?.username || '';
+    document.getElementById('editBio').value = USER?.user_metadata?.bio || '';
     document.getElementById('editProfileModal').style.display = 'flex';
 }
 
@@ -513,47 +502,111 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENT FUNCTIONS - FIXED
+// COMMENTS - WORKING VERSION
 // ============================================
 async function addComment(postId) {
-    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
+    // Get fresh user - don't use cached USER
+    const { data: { user } } = await SB.auth.getUser();
+
+    if (!user) {
+        alert('Login to comment');
+        openAuthModal();
+        return;
+    }
+
     const input = document.getElementById(`comment-input-${postId}`);
     const text = input.value.trim();
+
     if (!text) {
         alert('Write a comment first');
         return;
     }
-    
-    console.log("Adding comment to post:", postId, "Text:", text);
-    
-    const { data, error } = await SB.from("comments").insert({ 
-        post_id: postId, 
-        user_id: USER.id, 
-        text: text 
-    }).select();
-    
+
+    console.log("Posting comment:", text);
+
+    const { data, error } = await SB
+        .from("comments")
+        .insert({
+            post_id: postId,
+            user_id: user.id,
+            text: text
+        })
+        .select();
+
     if (error) {
         console.error("Comment error:", error);
-        alert("Failed to post comment: " + error.message);
+        alert("Failed: " + error.message);
         return;
     }
-    
-    console.log("Comment added:", data);
+
+    console.log("Comment inserted:", data);
+
+    // Clear input
     input.value = '';
+
+    // Reload comments for this post only
+    await loadComments(postId);
     
-    // Refresh the feed to show the new comment
-    loadFeed();
+    // Update comment count
+    const { count } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+    const countSpan = document.getElementById(`comment-count-${postId}`);
+    if (countSpan) countSpan.innerText = count || 0;
+}
+
+async function loadComments(postId) {
+    const container = document.getElementById(`comments-list-${postId}`);
+    if (!container) return;
+
+    const { data, error } = await SB
+        .from("comments")
+        .select("*, profiles(username, avatar_url)")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        container.innerHTML = '<div class="comment">No comments yet</div>';
+        return;
+    }
+
+    let html = "";
+    for (const c of data) {
+        const commenterName = c.profiles?.username || 'User';
+        html += `
+            <div class="comment">
+                <strong>${commenterName}</strong> ${c.text}
+                <div class="comment-actions">
+                    <span onclick="likeComment(${c.id})">❤️ Like</span>
+                    <span onclick="showReplyInput(${c.id})">💬 Reply</span>
+                </div>
+                <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
+                    <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
+                    <button onclick="addReply(${c.id}, ${postId})">Reply</button>
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
 }
 
 function toggleComments(id) {
     const section = document.getElementById(`comments-${id}`);
-    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    if (section) {
+        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        if (section.style.display === 'block') {
+            // Load comments when opened
+            loadComments(id);
+        }
+    }
 }
 
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like comment'); openAuthModal(); return; }
     await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
-    loadFeed();
 }
 
 let activeReplyInput = null;
@@ -579,7 +632,7 @@ async function addReply(commentId, postId) {
     await SB.from("comment_replies").insert({ comment_id: commentId, user_id: USER.id, text: text });
     input.value = '';
     document.getElementById(`reply-input-${commentId}`).style.display = 'none';
-    loadFeed();
+    loadComments(postId);
 }
 
 async function uploadPost() {
@@ -617,7 +670,6 @@ async function loadProfile() {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
-        // Use profile picture for user's own posts
         let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         
         html += `<div class="post">
@@ -644,7 +696,7 @@ async function loadProfile() {
 }
 
 // ============================================
-// LOAD FEED WITH COMMENTS & REPLIES & PROFILE PICTURES
+// LOAD FEED
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
@@ -656,7 +708,6 @@ async function loadFeed() {
         return;
     }
     
-    // Get all user IDs (excluding AI posts) and fetch their profiles
     const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
     let profiles = {};
     if (userIds.length > 0) {
@@ -664,20 +715,14 @@ async function loadFeed() {
         if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
     }
     
-    // Get current user's profile
-    if (USER && !profiles[USER.id]) {
-        const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-        if (data) profiles[USER.id] = data;
-    }
-    
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
+        const { count: commentCount } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
-        // Determine display name and avatar
         let displayName = 'Poik Poik';
         let avatarHtml = '';
         
@@ -696,52 +741,12 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
-        // Get comments
-        const { data: comments } = await SB.from("comments").select("*, profiles(username)").eq("post_id", p.id).order("created_at", { ascending: false });
-        
-        // Get replies for comments
-        let replies = {};
-        if (comments && comments.length > 0) {
-            const commentIds = comments.map(c => c.id);
-            const { data: repliesData } = await SB.from("comment_replies").select("*, profiles(username)").in("comment_id", commentIds).order("created_at", { ascending: true });
-            if (repliesData) {
-                repliesData.forEach(r => {
-                    if (!replies[r.comment_id]) replies[r.comment_id] = [];
-                    replies[r.comment_id].push(r);
-                });
-            }
-        }
-        
-        let commentsHtml = '';
-        if (comments && comments.length > 0) {
-            for (const c of comments) {
-                const commentReplies = replies[c.id] || [];
-                let repliesHtml = '';
-                for (const r of commentReplies) {
-                    repliesHtml += `<div class="reply"><strong>${r.profiles?.username || 'User'}</strong> ${r.text}</div>`;
-                }
-                commentsHtml += `
-                    <div class="comment">
-                        <strong onclick="showReplyInput(${c.id})">${c.profiles?.username || 'User'}</strong> ${c.text}
-                        <div class="comment-actions">
-                            <span onclick="likeComment(${c.id})">❤️ Like</span>
-                            <span onclick="showReplyInput(${c.id})">💬 Reply</span>
-                        </div>
-                        <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
-                            <button onclick="addReply(${c.id}, ${p.id})">Reply</button>
-                        </div>
-                        ${repliesHtml ? `<div class="replies">${repliesHtml}</div>` : ''}
-                    </div>
-                `;
-            }
-        } else {
-            commentsHtml = '<div class="comment">No comments yet</div>';
-        }
-        
         html += `<div class="post">
             <div class="post-header">
-                <div class="post-header-left">${avatarHtml}<div class="post-username">${displayName}</div></div>
+                <div class="post-header-left">
+                    ${avatarHtml}
+                    <div class="post-username">${displayName}</div>
+                </div>
                 ${isOwner ? `
                 <div class="post-privacy-menu">
                     <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button>
@@ -758,12 +763,12 @@ async function loadFeed() {
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
                 <div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span id="likes-${p.id}">${likeCount || 0}</span></div>
-                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div>
+                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${commentCount || 0}</span></div>
                 <div class="action-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div>
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div id="comments-list-${p.id}">${commentsHtml}</div>
+                <div id="comments-list-${p.id}">Loading comments...</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="addComment(${p.id})">Post</button>
