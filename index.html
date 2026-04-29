@@ -104,6 +104,7 @@
     .profile-header { text-align: center; padding: 30px 20px; }
     .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
+    .saved-posts { padding: 20px; text-align: center; color: #888; }
 </style>
 </head>
 <body>
@@ -162,15 +163,16 @@
 
 <script>
 // SINGLE SUPABASE CLIENT - NO DUPLICATES
-const MY_SUPABASE_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
-const MY_SUPABASE_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const MY_CLIENT = window.supabase.createClient(MY_SUPABASE_URL, MY_SUPABASE_KEY);
+const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
+const SKEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+const SB = window.supabase.createClient(SURL, SKEY);
 
-let MY_USER = null;
-let MY_CURRENT_TAB = 'feed';
+let USER = null;
+let CURRENT_TAB = 'feed';
+let SAVED_POSTS = JSON.parse(localStorage.getItem('saved_posts') || '[]');
 
 // ============================================
-// AUTH
+// AUTH MODAL
 // ============================================
 function toggleAuthModal() {
     const modal = document.getElementById('authModal');
@@ -183,39 +185,55 @@ document.getElementById('closeAuthBtn').onclick = () => {
     document.getElementById('authPassword').value = '';
 };
 
+// LOGIN
 document.getElementById('authLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    if (!email || !password) { alert('Enter email and password'); return; }
-    const { data, error } = await MY_CLIENT.auth.signInWithPassword({ email: email.trim(), password: password });
+    const pass = document.getElementById('authPassword').value;
+    if (!email || !pass) { alert('Enter email and password'); return; }
+    const { data, error } = await SB.auth.signInWithPassword({ email: email.trim(), password: pass });
     if (error) { alert('Login failed: ' + error.message); }
-    else { alert('Welcome!'); document.getElementById('authModal').style.display = 'none'; MY_USER = data.user; await ensureProfile(); location.reload(); }
+    else { alert('Welcome ' + data.user.email); document.getElementById('authModal').style.display = 'none'; window.location.reload(); }
 };
 
+// SIGN UP
 document.getElementById('authSignupBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    if (!email || !password) { alert('Enter email and password'); return; }
-    if (password.length < 6) { alert('Password must be at least 6 characters'); return; }
-    const { error } = await MY_CLIENT.auth.signUp({ email: email.trim(), password: password, options: { emailRedirectTo: window.location.origin } });
+    const pass = document.getElementById('authPassword').value;
+    if (!email || !pass) { alert('Enter email and password'); return; }
+    if (pass.length < 6) { alert('Password must be at least 6 characters'); return; }
+    const { error } = await SB.auth.signUp({ email: email.trim(), password: pass, options: { emailRedirectTo: window.location.origin } });
     if (error) { alert('Sign up failed: ' + error.message); }
     else { alert('Account created! Check your email to confirm.'); document.getElementById('authModal').style.display = 'none'; }
 };
 
-async function ensureProfile() {
-    if (!MY_USER) return;
-    const { data } = await MY_CLIENT.from("profiles").select("*").eq("id", MY_USER.id).single();
-    if (!data) {
-        await MY_CLIENT.from("profiles").insert({ id: MY_USER.id, username: "user_" + Math.floor(Math.random() * 10000) });
-    }
-}
-
+// CHECK AUTH
 async function checkAuth() {
-    const { data: { user } } = await MY_CLIENT.auth.getUser();
-    MY_USER = user;
+    const { data: { user } } = await SB.auth.getUser();
+    USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); await ensureProfile(); }
     else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
+}
+
+async function ensureProfile() {
+    if (!USER) return;
+    const { data } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    if (!data) {
+        await SB.from("profiles").insert({ id: USER.id, username: "user_" + Math.floor(Math.random() * 10000) });
+    }
+}
+
+// ============================================
+// SAVE FUNCTION
+// ============================================
+function savePost(imageUrl, caption) {
+    if (!SAVED_POSTS.find(p => p.url === imageUrl)) {
+        SAVED_POSTS.push({ url: imageUrl, caption: caption, savedAt: new Date() });
+        localStorage.setItem('saved_posts', JSON.stringify(SAVED_POSTS));
+        alert('Saved to your collection!');
+    } else {
+        alert('Already saved!');
+    }
 }
 
 // ============================================
@@ -225,18 +243,20 @@ function openModal(img) { document.getElementById('modalImage').src = img; docum
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
 function openUploadModal() {
-    if (!MY_USER) { alert('Please login first'); toggleAuthModal(); return; }
+    if (!USER) { alert('Please login first'); toggleAuthModal(); return; }
     document.getElementById('uploadModal').style.display = 'block';
 }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
 
 function switchTab(tab) {
-    MY_CURRENT_TAB = tab;
+    CURRENT_TAB = tab;
     document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
     if (tab === 'feed') document.querySelector('.nav-item:first-child').classList.add('active');
     if (tab === 'explore') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
     if (tab === 'following') document.querySelector('.nav-item:last-child').classList.add('active');
-    loadFeed();
+    if (tab === 'feed') loadFeed();
+    if (tab === 'explore') loadFeed();
+    if (tab === 'following') alert('Following feed coming soon');
 }
 
 function bottomNav(page) {
@@ -248,16 +268,16 @@ function bottomNav(page) {
 }
 
 async function likePost(postId) {
-    if (!MY_USER) { alert('Login to like'); toggleAuthModal(); return; }
-    try { await MY_CLIENT.rpc("toggle_like", { post_id_input: postId, user_id_input: MY_USER.id }); loadFeed(); }
+    if (!USER) { alert('Login to like'); toggleAuthModal(); return; }
+    try { await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id }); loadFeed(); }
     catch(e) { console.error('Like error:', e); }
 }
 
 async function addComment(postId) {
-    if (!MY_USER) { alert('Login to comment'); toggleAuthModal(); return; }
+    if (!USER) { alert('Login to comment'); toggleAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     if (input.value.trim()) {
-        await MY_CLIENT.from("comments").insert({ post_id: postId, user_id: MY_USER.id, text: input.value });
+        await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
         input.value = '';
         loadFeed();
     }
@@ -267,24 +287,24 @@ function toggleComments(postId) { const section = document.getElementById(`comme
 function sharePost(url) { navigator.clipboard.writeText(url); alert('Image link copied!'); }
 
 async function uploadPost() {
-    if (!MY_USER) { alert('Login first'); return; }
+    if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
     const caption = document.getElementById("uploadCaption").value;
     if (!file) { alert("Select an image"); return; }
-    const fileName = `${MY_USER.id}_${Date.now()}.jpg`;
-    await MY_CLIENT.storage.from("post-images").upload(fileName, file);
-    const { data: urlData } = MY_CLIENT.storage.from("post-images").getPublicUrl(fileName);
-    await MY_CLIENT.from("posts").insert({ image_url: urlData.publicUrl, caption: caption, user_id: MY_USER.id, is_ai: false, likes: 0 });
+    const fileName = `${USER.id}_${Date.now()}.jpg`;
+    await SB.storage.from("post-images").upload(fileName, file);
+    const { data: urlData } = SB.storage.from("post-images").getPublicUrl(fileName);
+    await SB.from("posts").insert({ image_url: urlData.publicUrl, caption: caption, user_id: USER.id, is_ai: false, likes: 0 });
     alert("Posted!"); closeUploadModal(); loadFeed();
 }
 
 async function loadProfile() {
-    if (!MY_USER) { alert('Please login'); toggleAuthModal(); return; }
+    if (!USER) { alert('Please login'); toggleAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
-    const { data: profile } = await MY_CLIENT.from("profiles").select("*").eq("id", MY_USER.id).single();
-    const { data: posts } = await MY_CLIENT.from("posts").select("*").eq("user_id", MY_USER.id).order("id", { ascending: false });
-    const { count: postCount } = await MY_CLIENT.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", MY_USER.id);
+    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
+    const { count: postCount } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
     let html = `<div class="profile-header"><div class="profile-avatar">👤</div><h3>${profile?.username || 'User'}</h3><p style="color:#888;">${profile?.bio || '✨ Fashion lover'}</p><div class="profile-stats"><div><strong>${postCount || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px;">Back to Feed</button></div>`;
     for (const p of posts || []) { html += `<div class="post"><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')"><div class="post-caption">${p.caption || 'Fashion'}</div></div>`; }
     feedDiv.innerHTML = html;
@@ -293,13 +313,13 @@ async function loadProfile() {
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading...</div>';
-    const { data, error } = await MY_CLIENT.from("posts").select("*").order("id", { ascending: false });
+    const { data, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     if (error || !data || data.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
     let html = '';
     for (const p of data) {
-        const { count: likeCount } = await MY_CLIENT.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
-        const { data: comments } = await MY_CLIENT.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false }).limit(3);
-        html += `<div class="post"><div class="post-header"><div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div><div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')}</div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div><div class="post-actions-right"><div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span>${likeCount || 0}</span></div><div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div><div class="action-icon" onclick="sharePost('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div><div class="action-icon" onclick="alert('Saved')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-${p.id}" style="display:none">${comments?.map(c => `<div class="comment">💬 ${c.text}</div>`).join('') || '<div>✨ No comments yet</div>'}<div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div></div></div>`;
+        const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
+        const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false }).limit(3);
+        html += `<div class="post"><div class="post-header"><div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div><div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')}</div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div><div class="post-actions-right"><div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span>${likeCount || 0}</span></div><div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span>${comments?.length || 0}</span></div><div class="action-icon" onclick="sharePost('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div><div class="action-icon" onclick="savePost('${p.image_url}', '${p.caption}')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-${p.id}" style="display:none">${comments?.map(c => `<div class="comment">💬 ${c.text}</div>`).join('') || '<div>✨ No comments yet</div>'}<div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div></div></div>`;
     }
     feedDiv.innerHTML = html;
 }
@@ -309,7 +329,7 @@ async function loadFeed() {
 // ============================================
 checkAuth();
 loadFeed();
-setInterval(() => { if (MY_CURRENT_TAB === 'feed') loadFeed(); }, 120000);
+setInterval(() => { if (CURRENT_TAB === 'feed') loadFeed(); }, 120000);
 </script>
 </body>
 </html>
