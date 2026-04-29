@@ -51,6 +51,14 @@
     .tri3 { height: 28px; }
     .tri4 { height: 18px; }
     
+    /* User Avatar Style */
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
@@ -527,7 +535,7 @@ async function uploadPost() {
 }
 
 // ============================================
-// FEED (No Join - Separate Profile Fetch)
+// FEED (WITH PROFILE PICTURES)
 // ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
@@ -557,7 +565,6 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // First get all posts
     const { data: posts, error } = await SB
         .from("posts")
         .select("*")
@@ -573,10 +580,8 @@ async function loadFeed() {
         return;
     }
     
-    // Get all unique user IDs from posts (excluding AI posts)
     const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
     
-    // Fetch profiles for those users
     let profiles = {};
     if (userIds.length > 0) {
         const { data: profileData } = await SB
@@ -596,22 +601,28 @@ async function loadFeed() {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
-        // Get username from profiles map
         let displayName = 'Poik Poik';
+        let avatarHtml = '';
+        
         if (p.is_ai) {
             displayName = 'Poik Poik';
-        } else if (p.user_id && profiles[p.user_id]?.username) {
-            displayName = profiles[p.user_id].username;
-        } else if (p.user_id === USER?.id && USERNAME) {
-            displayName = USERNAME;
+            avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        } else if (p.user_id && profiles[p.user_id]) {
+            displayName = profiles[p.user_id].username || 'Member';
+            if (profiles[p.user_id].avatar_url) {
+                avatarHtml = `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">`;
+            } else {
+                avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+            }
         } else {
             displayName = 'Member';
+            avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
-                    <div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>
+                    ${avatarHtml}
                     <div class="post-username">${displayName}</div>
                 </div>
                 ${isOwner ? `
