@@ -31,10 +31,9 @@
     
     .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
     .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
-    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
     .post-header-left { display: flex; align-items: center; gap: 10px; }
     
-    /* M Logo (default when no avatar) */
     .m-logo {
         width: 40px;
         height: 40px;
@@ -52,13 +51,7 @@
     .tri3 { height: 28px; }
     .tri4 { height: 18px; }
     
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-    
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
@@ -106,13 +99,7 @@
         border: 1px solid #333;
         overflow: hidden;
     }
-    .post-menu-option {
-        padding: 12px 16px;
-        cursor: pointer;
-        font-size: 14px;
-        color: white;
-        border-bottom: 1px solid #333;
-    }
+    .post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
     .post-menu-option:hover { background: #333; }
     .delete-option { color: #ff4444; }
     .delete-option:hover { background: #ff4444; color: white; }
@@ -180,35 +167,14 @@
         max-width: 350px;
         text-align: center;
     }
-    .upload-modal .privacy-select {
-        width: 100%;
-        padding: 10px;
-        margin: 8px 0;
-        border-radius: 10px;
-        background: #333;
-        color: white;
-        border: none;
-    }
+    .upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
     .upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
     .upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
     
     .loading { text-align: center; padding: 50px; color: #888; }
     
     .profile-header { text-align: center; padding: 30px 20px; }
-    .profile-avatar { 
-        width: 80px; 
-        height: 80px; 
-        border-radius: 50%; 
-        background: #333; 
-        margin: 0 auto 15px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 40px;
-        cursor: pointer;
-        overflow: hidden;
-        position: relative;
-    }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; position: relative; }
     .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
     .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
@@ -226,42 +192,10 @@
         align-items: center;
         justify-content: center;
     }
-    .edit-profile-box {
-        background: #111;
-        padding: 30px;
-        border-radius: 20px;
-        width: 90%;
-        max-width: 350px;
-        text-align: center;
-    }
-    .edit-profile-box input {
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-        background: #222;
-        border: 1px solid #333;
-        border-radius: 10px;
-        color: white;
-    }
-    .edit-profile-box textarea {
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-        background: #222;
-        border: 1px solid #333;
-        border-radius: 10px;
-        color: white;
-        resize: none;
-        font-family: inherit;
-    }
-    .edit-profile-box button {
-        width: 100%;
-        padding: 12px;
-        border-radius: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 10px;
-    }
+    .edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+    .edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+    .edit-profile-box textarea { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; resize: none; font-family: inherit; }
+    .edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .save-profile-btn { background: #00ff88; color: black; border: none; }
     .cancel-edit-btn { background: #222; color: white; border: none; }
     
@@ -277,31 +211,9 @@
         align-items: center;
         justify-content: center;
     }
-    .auth-box {
-        background: #111;
-        padding: 30px;
-        border-radius: 20px;
-        width: 90%;
-        max-width: 350px;
-        text-align: center;
-    }
-    .auth-box input {
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-        background: #222;
-        border: 1px solid #333;
-        border-radius: 10px;
-        color: white;
-    }
-    .auth-box button {
-        width: 100%;
-        padding: 12px;
-        border-radius: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 10px;
-    }
+    .auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+    .auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+    .auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .magic-btn { background: #00ff88; color: black; border: none; }
     .cancel-btn { background: #222; color: white; border: none; }
     
@@ -392,18 +304,22 @@
 <input type="file" id="avatarInput" accept="image/*">
 
 <script>
-const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
-const SKEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const SB = window.supabase.createClient(SURL, SKEY);
-let USER = null;
+// SINGLE SUPABASE CLIENT - NO DUPLICATES
+const POIK_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
+const POIK_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+const POIK_CLIENT = window.supabase.createClient(POIK_URL, POIK_KEY);
+
+let CURRENT_USER = null;
 let CURRENT_TAB = 'feed';
 let CURRENT_SHARE_URL = '';
+let CURRENT_USERNAME = '';
+let CURRENT_BIO = '';
 
 // ============================================
 // AUTH
 // ============================================
 function openAuthModal() { 
-    if (USER) return;
+    if (CURRENT_USER) return;
     document.getElementById('authModal').style.display = 'flex'; 
 }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
@@ -413,7 +329,7 @@ document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
-    const { error } = await SB.auth.signInWithOtp({
+    const { error } = await POIK_CLIENT.auth.signInWithOtp({
         email: email.trim(),
         options: { emailRedirectTo: window.location.origin }
     });
@@ -426,8 +342,8 @@ document.getElementById('magicLoginBtn').onclick = async () => {
 };
 
 async function logout() {
-    await SB.auth.signOut();
-    USER = null;
+    await POIK_CLIENT.auth.signOut();
+    CURRENT_USER = null;
     location.reload();
 }
 
@@ -438,15 +354,15 @@ async function handleMagicLink() {
         const access_token = params.get('access_token');
         const refresh_token = params.get('refresh_token');
         if (access_token) {
-            await SB.auth.setSession({ access_token, refresh_token });
+            await POIK_CLIENT.auth.setSession({ access_token, refresh_token });
             window.location.href = window.location.pathname;
         }
     }
 }
 
 async function checkAuth() {
-    const { data: { user } } = await SB.auth.getUser();
-    USER = user;
+    const { data: { user } } = await POIK_CLIENT.auth.getUser();
+    CURRENT_USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
         userIcon.classList.remove('far'); 
@@ -462,12 +378,11 @@ async function checkAuth() {
 // PROFILE FUNCTIONS
 // ============================================
 async function uploadAvatar(file) {
-    if (!USER) { alert('Login first'); return; }
+    if (!CURRENT_USER) { alert('Login first'); return; }
     
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
+    const fileName = `${CURRENT_USER.id}_${Date.now()}.jpg`;
     
-    // Upload to storage
-    const { error: uploadError } = await SB.storage
+    const { error: uploadError } = await POIK_CLIENT.storage
         .from("avatars")
         .upload(fileName, file, { upsert: true });
     
@@ -476,15 +391,13 @@ async function uploadAvatar(file) {
         return;
     }
     
-    // Get public URL
-    const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
+    const { data } = POIK_CLIENT.storage.from("avatars").getPublicUrl(fileName);
     const avatarUrl = data.publicUrl;
     
-    // Save to profiles table
-    const { error: updateError } = await SB
+    const { error: updateError } = await POIK_CLIENT
         .from("profiles")
         .update({ avatar_url: avatarUrl })
-        .eq("id", USER.id);
+        .eq("id", CURRENT_USER.id);
     
     if (updateError) {
         alert("Failed to update profile: " + updateError.message);
@@ -498,24 +411,18 @@ async function uploadAvatar(file) {
 
 document.getElementById('avatarInput').onchange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-        await uploadAvatar(file);
-    }
+    if (file) await uploadAvatar(file);
 };
 
 async function saveProfile() {
-    if (!USER) { alert('Login first'); return; }
+    if (!CURRENT_USER) { alert('Login first'); return; }
     
     const username = document.getElementById("editUsername").value;
     const bio = document.getElementById("editBio").value;
     
-    const { error } = await SB
+    const { error } = await POIK_CLIENT
         .from("profiles")
-        .upsert({
-            id: USER.id,
-            username: username,
-            bio: bio
-        });
+        .upsert({ id: CURRENT_USER.id, username: username, bio: bio });
     
     if (error) {
         alert("Error: " + error.message);
@@ -528,24 +435,19 @@ async function saveProfile() {
     loadFeed();
 }
 
-// Edit Profile Modal
 function openEditProfile() {
-    document.getElementById('editUsername').value = currentUsername || '';
-    document.getElementById('editBio').value = currentBio || '';
+    document.getElementById('editUsername').value = CURRENT_USERNAME || '';
+    document.getElementById('editBio').value = CURRENT_BIO || '';
     document.getElementById('editProfileModal').style.display = 'flex';
 }
 
 document.getElementById('closeEditModal').onclick = () => {
     document.getElementById('editProfileModal').style.display = 'none';
 };
-
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
-let currentUsername = '';
-let currentBio = '';
-
 // ============================================
-// POST PRIVACY & DELETE MENU
+// POST MENU FUNCTIONS
 // ============================================
 function togglePostMenu(postId) {
     const menu = document.getElementById(`post-menu-${postId}`);
@@ -558,7 +460,7 @@ function togglePostMenu(postId) {
 }
 
 async function changePostPrivacy(postId, newPrivacy) {
-    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    await POIK_CLIENT.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
     document.getElementById(`post-menu-${postId}`).style.display = 'none';
     loadFeed();
     if (CURRENT_TAB === 'profile') loadProfile();
@@ -566,7 +468,7 @@ async function changePostPrivacy(postId, newPrivacy) {
 
 async function deletePost(postId) {
     if (confirm('Delete this post?')) {
-        await SB.from("posts").delete().eq("id", postId);
+        await POIK_CLIENT.from("posts").delete().eq("id", postId);
         document.getElementById(`post-menu-${postId}`).style.display = 'none';
         loadFeed();
         if (CURRENT_TAB === 'profile') loadProfile();
@@ -575,9 +477,7 @@ async function deletePost(postId) {
 
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.post-privacy-menu')) {
-        document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
-            menu.style.display = 'none';
-        });
+        document.querySelectorAll('.post-menu-dropdown').forEach(menu => menu.style.display = 'none');
     }
 });
 
@@ -616,7 +516,7 @@ function openModal(img) { document.getElementById('modalImage').src = img; docum
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
 function openUploadModal() {
-    if (!USER) { alert('Please login first'); openAuthModal(); return; }
+    if (!CURRENT_USER) { alert('Please login first'); openAuthModal(); return; }
     document.getElementById('uploadModal').style.display = 'block';
 }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
@@ -638,27 +538,25 @@ function bottomNav(page) {
 }
 
 async function likePost(postId) {
-    if (!USER) { alert('Login to like'); openAuthModal(); return; }
+    if (!CURRENT_USER) { alert('Login to like'); openAuthModal(); return; }
     try { 
-        await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id }); 
-        const { count } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+        await POIK_CLIENT.rpc("toggle_like", { post_id_input: postId, user_id_input: CURRENT_USER.id }); 
+        const { count } = await POIK_CLIENT.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
         const likeSpan = document.getElementById(`likes-${postId}`);
         if (likeSpan) likeSpan.innerText = count || 0;
     } catch(e) { console.error(e); }
 }
 
 async function addComment(postId) {
-    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
+    if (!CURRENT_USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     if (input.value.trim()) {
-        await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
+        await POIK_CLIENT.from("comments").insert({ post_id: postId, user_id: CURRENT_USER.id, text: input.value });
         input.value = '';
-        const { data: comments } = await SB.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
+        const { data: comments } = await POIK_CLIENT.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
         const commentsDiv = document.getElementById(`comments-list-${postId}`);
         const countSpan = document.getElementById(`comment-count-${postId}`);
-        if (commentsDiv) {
-            commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>${currentUsername || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
-        }
+        if (commentsDiv) commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>${CURRENT_USERNAME || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
         if (countSpan) countSpan.innerText = comments.length;
     }
 }
@@ -669,18 +567,18 @@ function toggleComments(id) {
 }
 
 async function uploadPost() {
-    if (!USER) { alert('Login first'); return; }
+    if (!CURRENT_USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
     const caption = document.getElementById("uploadCaption").value;
     const privacy = document.getElementById("uploadPrivacy").value;
     if (!file) { alert("Select an image"); return; }
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data: urlData } = SB.storage.from("post-images").getPublicUrl(fileName);
-    await SB.from("posts").insert({ 
+    const fileName = `${CURRENT_USER.id}_${Date.now()}.jpg`;
+    await POIK_CLIENT.storage.from("post-images").upload(fileName, file);
+    const { data: urlData } = POIK_CLIENT.storage.from("post-images").getPublicUrl(fileName);
+    await POIK_CLIENT.from("posts").insert({ 
         image_url: urlData.publicUrl, 
         caption: caption, 
-        user_id: USER.id, 
+        user_id: CURRENT_USER.id, 
         privacy: privacy,
         is_ai: false, 
         likes: 0 
@@ -691,62 +589,45 @@ async function uploadPost() {
 }
 
 async function loadProfile() {
-    if (!USER) { alert('Please login'); openAuthModal(); return; }
+    if (!CURRENT_USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    const { data: profile, error } = await SB
+    const { data: profile } = await POIK_CLIENT
         .from("profiles")
         .select("*")
-        .eq("id", USER.id)
+        .eq("id", CURRENT_USER.id)
         .single();
     
-    if (error || !profile) {
-        // Create profile if not exists
-        const username = USER.email.split('@')[0];
-        await SB.from("profiles").insert({ id: USER.id, username: username, bio: '' });
-        currentUsername = username;
-        currentBio = '';
+    if (profile) {
+        CURRENT_USERNAME = profile.username || CURRENT_USER.email.split('@')[0];
+        CURRENT_BIO = profile.bio || '';
     } else {
-        currentUsername = profile.username || USER.email.split('@')[0];
-        currentBio = profile.bio || '';
+        CURRENT_USERNAME = CURRENT_USER.email.split('@')[0];
+        CURRENT_BIO = '';
+        await POIK_CLIENT.from("profiles").insert({ id: CURRENT_USER.id, username: CURRENT_USERNAME, bio: '' });
     }
     
-    const { data: posts } = await SB
+    const { data: posts } = await POIK_CLIENT
         .from("posts")
         .select("*")
-        .eq("user_id", USER.id)
+        .eq("user_id", CURRENT_USER.id)
         .order("id", { ascending: false });
     
-    const { count } = await SB
+    const { count } = await POIK_CLIENT
         .from("posts")
         .select("*", { count: 'exact', head: true })
-        .eq("user_id", USER.id);
+        .eq("user_id", CURRENT_USER.id);
     
-    // Get profile again for avatar
-    const { data: updatedProfile } = await SB
-        .from("profiles")
-        .select("*")
-        .eq("id", USER.id)
-        .single();
-    
-    const avatarUrl = updatedProfile?.avatar_url;
-    let avatarHtml = avatarUrl 
-        ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">` 
-        : '👤';
+    const avatarUrl = profile?.avatar_url;
+    let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">` : '👤';
     
     let html = `
         <div class="profile-header">
-            <div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">
-                ${avatarHtml}
-            </div>
-            <h3>${currentUsername}</h3>
-            <div class="profile-bio">${currentBio || 'No bio yet'}</div>
-            <div class="profile-stats">
-                <div><strong>${count || 0}</strong><br>posts</div>
-                <div><strong>0</strong><br>followers</div>
-                <div><strong>0</strong><br>following</div>
-            </div>
+            <div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div>
+            <h3>${CURRENT_USERNAME}</h3>
+            <div class="profile-bio">${CURRENT_BIO || 'No bio yet'}</div>
+            <div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div>
             <button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button>
             <button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button>
         </div>`;
@@ -754,101 +635,51 @@ async function loadProfile() {
     for (const p of posts || []) { 
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        html += `<div class="post">
-            <div class="post-header">
-                <div class="post-header-left">
-                    <div class="m-logo">
-                        <div class="tri tri1"></div>
-                        <div class="tri tri2"></div>
-                        <div class="tri tri3"></div>
-                        <div class="tri tri4"></div>
-                    </div>
-                    <div class="post-username">${currentUsername}</div>
-                </div>
-                <div class="post-privacy-menu">
-                    <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">
-                        ${privacyIcon} ${privacyText}
-                    </button>
-                    <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;">
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div>
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div>
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div>
-                        <div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div>
-                    </div>
-                </div>
-            </div>
-            <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
-            <div class="post-caption">${p.caption || 'Fashion visual'}</div>
-        </div>`;
+        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${CURRENT_USERNAME}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
     }
     feedDiv.innerHTML = html;
 }
 
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
-    feedDiv.innerHTML = '<div class="loading">Loading...</div>';
+    feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    let query = SB
+    const { data, error } = await POIK_CLIENT
         .from("posts")
-        .select(`
-            *,
-            profiles (
-                username,
-                avatar_url
-            )
-        `)
+        .select("*")
         .order("id", { ascending: false });
     
-    if (!USER) query = query.eq('privacy', 'public');
-    else query = query.or(`privacy.eq.public,user_id.eq.${USER.id}`);
+    console.log("Feed data:", data);
+    console.log("Feed error:", error);
     
-    const { data, error } = await query;
+    if (error) {
+        feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+        return;
+    }
     
-    if (error || !data || data.length === 0) { 
-        feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; 
-        return; 
+    if (!data || data.length === 0) {
+        feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
+        return;
     }
     
     let html = '';
     for (const p of data) {
-        const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
-        const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
-        const isOwner = USER && USER.id === p.user_id;
+        const { count: likeCount } = await POIK_CLIENT.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
+        const { data: comments } = await POIK_CLIENT.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
+        const isOwner = CURRENT_USER && CURRENT_USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let displayName = p.is_ai ? 'Poik Poik' : (p.profiles?.username || (p.user_id ? 'Member' : 'Poik Poik'));
-        
-        // Avatar: user avatar if exists, otherwise M logo
-        let avatarHtml = '';
-        if (p.is_ai) {
-            avatarHtml = `<div class="m-logo">
-                            <div class="tri tri1"></div>
-                            <div class="tri tri2"></div>
-                            <div class="tri tri3"></div>
-                            <div class="tri tri4"></div>
-                          </div>`;
-        } else if (p.profiles?.avatar_url) {
-            avatarHtml = `<img src="${p.profiles.avatar_url}" class="user-avatar">`;
-        } else {
-            avatarHtml = `<div class="m-logo">
-                            <div class="tri tri1"></div>
-                            <div class="tri tri2"></div>
-                            <div class="tri tri3"></div>
-                            <div class="tri tri4"></div>
-                          </div>`;
-        }
+        let displayName = p.is_ai ? 'Poik Poik' : (p.user_id === CURRENT_USER?.id ? CURRENT_USERNAME : (p.user_id ? 'Member' : 'Poik Poik'));
         
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
-                    ${avatarHtml}
+                    <div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>
                     <div class="post-username">${displayName}</div>
                 </div>
                 ${isOwner ? `
                 <div class="post-privacy-menu">
-                    <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">
-                        ${privacyIcon} ${privacyText}
-                    </button>
+                    <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button>
                     <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;">
                         <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div>
                         <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div>
@@ -861,40 +692,26 @@ async function loadFeed() {
             <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
-                <div class="action-icon" onclick="likePost(${p.id})">
-                    <i class="far fa-heart"></i>
-                    <span id="likes-${p.id}">${likeCount || 0}</span>
-                </div>
-                <div class="action-icon" onclick="toggleComments(${p.id})">
-                    <i class="far fa-comment-dots"></i>
-                    <span id="comment-count-${p.id}">${comments?.length || 0}</span>
-                </div>
-                <div class="action-icon" onclick="openShareModal('${p.image_url}')">
-                    <i class="fas fa-share-alt"></i>
-                    <span>Share</span>
-                </div>
-                <div class="action-icon" onclick="alert('Saved!')">
-                    <i class="far fa-bookmark"></i>
-                    <span>Save</span>
-                </div>
+                <div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span id="likes-${p.id}">${likeCount || 0}</span></div>
+                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${comments?.length || 0}</span></div>
+                <div class="action-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div>
+                <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div id="comments-list-${p.id}">
-                    ${comments?.map(c => `<div class="comment"><strong>${currentUsername || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}
-                </div>
-                <div class="comment-input">
-                    <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                    <button onclick="addComment(${p.id})">Post</button>
-                </div>
+                <div id="comments-list-${p.id}">${comments?.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}</div>
+                <div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div>
             </div>
         </div>`;
     }
     feedDiv.innerHTML = html;
 }
 
+// ============================================
+// INIT
+// ============================================
 async function initStorage() {
     try {
-        await SB.storage.createBucket('avatars', { public: true });
+        await POIK_CLIENT.storage.createBucket('avatars', { public: true });
     } catch(e) { console.log('Bucket exists'); }
 }
 
