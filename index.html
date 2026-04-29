@@ -502,10 +502,10 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENTS - WORKING VERSION
+// COMMENTS - WORKING
 // ============================================
 async function addComment(postId) {
-    // Get fresh user - don't use cached USER
+    // Get fresh user
     const { data: { user } } = await SB.auth.getUser();
 
     if (!user) {
@@ -515,21 +515,22 @@ async function addComment(postId) {
     }
 
     const input = document.getElementById(`comment-input-${postId}`);
-    const text = input.value.trim();
+    const commentText = input.value.trim();
 
-    if (!text) {
+    if (!commentText) {
         alert('Write a comment first');
         return;
     }
 
-    console.log("Posting comment:", text);
+    console.log("Posting comment:", commentText);
 
+    // Insert with 'text' column (not 'content')
     const { data, error } = await SB
         .from("comments")
         .insert({
             post_id: postId,
             user_id: user.id,
-            text: text
+            text: commentText
         })
         .select();
 
@@ -544,7 +545,7 @@ async function addComment(postId) {
     // Clear input
     input.value = '';
 
-    // Reload comments for this post only
+    // Reload comments
     await loadComments(postId);
     
     // Update comment count
@@ -565,6 +566,7 @@ async function loadComments(postId) {
 
     if (error) {
         console.error(error);
+        container.innerHTML = '<div class="comment">Error loading comments</div>';
         return;
     }
 
@@ -576,9 +578,10 @@ async function loadComments(postId) {
     let html = "";
     for (const c of data) {
         const commenterName = c.profiles?.username || 'User';
+        const commentText = c.text || c.content || '';
         html += `
             <div class="comment">
-                <strong>${commenterName}</strong> ${c.text}
+                <strong>${commenterName}</strong> ${commentText}
                 <div class="comment-actions">
                     <span onclick="likeComment(${c.id})">❤️ Like</span>
                     <span onclick="showReplyInput(${c.id})">💬 Reply</span>
@@ -596,9 +599,9 @@ async function loadComments(postId) {
 function toggleComments(id) {
     const section = document.getElementById(`comments-${id}`);
     if (section) {
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-        if (section.style.display === 'block') {
-            // Load comments when opened
+        const isHidden = section.style.display === 'none';
+        section.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
             loadComments(id);
         }
     }
