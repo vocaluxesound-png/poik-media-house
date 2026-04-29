@@ -427,7 +427,7 @@
         <img id="modalImage">
     </div>
 
-    <!-- Auth Modal with Email/Password -->
+    <!-- Auth Modal -->
     <div id="authModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; align-items:center; justify-content:center;">
         <div style="background:#111; padding:30px; border-radius:20px; width:90%; max-width:350px; text-align:center;">
             <h3>Join Poik Poik</h3>
@@ -470,13 +470,21 @@
             else { authModal.style.display = 'none'; location.reload(); }
         };
         
-        // Sign Up
+        // Sign Up with redirect
         document.getElementById('authSignupBtn').onclick = async () => {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
             if (!email || !password) { alert('Enter email and password'); return; }
             if (password.length < 6) { alert('Password must be at least 6 characters'); return; }
-            const { error } = await window.client.auth.signUp({ email, password });
+            
+            const { error } = await window.client.auth.signUp({ 
+                email, 
+                password,
+                options: {
+                    emailRedirectTo: 'https://poik-media-house.onrender.com'
+                }
+            });
+            
             if (error) { alert('Sign up failed: ' + error.message); }
             else { alert('Account created! Please check your email to confirm.'); authModal.style.display = 'none'; }
         };
