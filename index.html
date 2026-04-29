@@ -53,7 +53,6 @@
             color: #ccc;
         }
 
-        /* Top Navigation */
         .top-nav {
             max-width: 600px;
             margin: 0 auto;
@@ -86,7 +85,6 @@
             color: white;
         }
 
-        /* Smaller green underline */
         .nav-item.active::after {
             content: '';
             position: absolute;
@@ -103,14 +101,13 @@
             max-width: 600px;
             margin: 0 auto;
             padding-bottom: 20px;
-            overflow-x: visible;
         }
 
         .post {
             background: #0a0a0a;
             margin-bottom: 20px;
             border-radius: 16px;
-            overflow: visible;
+            overflow: hidden;
             position: relative;
         }
 
@@ -154,10 +151,10 @@
             background: #0a0a0a;
         }
 
-        /* Action buttons - visible on both mobile and desktop */
+        /* Action buttons - inside image container, small gap from edge */
         .post-actions-right {
             position: absolute;
-            right: 8px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             display: flex;
@@ -166,27 +163,17 @@
             z-index: 10;
         }
 
-        /* Mobile adjustment */
         @media (max-width: 640px) {
             .post-actions-right {
-                right: 8px;
+                right: 10px;
                 gap: 14px;
             }
         }
 
-        /* Desktop adjustment - buttons fully visible */
-        @media (min-width: 641px) and (max-width: 768px) {
+        @media (min-width: 641px) {
             .post-actions-right {
-                right: 12px;
-                gap: 16px;
-            }
-        }
-
-        /* For larger screens */
-        @media (min-width: 769px) {
-            .post-actions-right {
-                right: -10px;
-                gap: 20px;
+                right: 16px;
+                gap: 18px;
             }
         }
 
@@ -201,11 +188,13 @@
         .action-icon i {
             font-size: 24px;
             color: white;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
 
         .action-icon span {
             font-size: 11px;
-            color: #aaa;
+            color: #ddd;
+            text-shadow: 0 0 3px rgba(0,0,0,0.5);
         }
 
         .action-icon:hover i {
@@ -584,7 +573,6 @@
 
         loadFeed();
 
-        // Silent check for new posts every 2 minutes
         setInterval(async () => {
             const { data } = await window.client.from("posts").select("id").order("id", { ascending: false }).limit(1);
             if (data && data.length > 0 && data[0].id > window.lastPostId) {
