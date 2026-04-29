@@ -1,4 +1,4 @@
-name: AI Ghost
+name: AI Ghost (Stable)
 
 on:
   schedule:
@@ -8,6 +8,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Run Ghost
         env:
@@ -15,55 +16,100 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           pip install requests supabase
+
           python << EOF
           import requests, time, random, os, urllib.parse
           from supabase import create_client
 
-          supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+          print("🚀 START")
 
-          subjects = ["female model", "male model", "fashion influencer", "runway model"]
-          styles = ["haute couture", "streetwear", "futuristic chrome", "luxury suit"]
-          poses = ["standing", "walking", "posing"]
-          lighting = ["studio lighting", "cinematic lighting", "soft light"]
+          try:
+              url = os.environ["SUPABASE_URL"]
+              key = os.environ["SUPABASE_KEY"]
 
-          subject = random.choice(subjects)
-          style = random.choice(styles)
-          pose = random.choice(poses)
-          light = random.choice(lighting)
+              print("🔗 Connecting to Supabase...")
+              supabase = create_client(url, key)
+              print("✅ Connected")
 
-          caption = f"{subject} in {style}"
+              # =========================
+              # PROMPT
+              # =========================
+              subject = random.choice(["female model", "male model"])
+              style = random.choice(["haute couture", "streetwear", "luxury suit"])
 
-          prompt = f"""
-          RAW photo of {subject},
-          wearing {style},
-          full body, head to toe visible,
-          {pose},
-          {light},
-          realistic skin, perfect anatomy,
-          85mm lens, high detail
-          --no deformed, bad hands, extra fingers, blurry
-          """
+              prompt = f"""
+              RAW photo of a real human {subject},
+              wearing {style},
+              full body, head to toe visible,
+              perfect anatomy, realistic skin,
+              clean hands, five fingers,
+              85mm lens, studio lighting,
+              not CGI, ultra realistic
+              """
 
-          encoded = urllib.parse.quote(prompt)
-          img = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&nologo=true"
+              encoded = urllib.parse.quote(prompt)
 
-          r = requests.get(img, timeout=60)
+              img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792"
 
-          if r.status_code == 200:
-              name = f"{int(time.time())}.jpg"
-              supabase.storage.from_("post-images").upload(
-                  path=name,
-                  file=r.content,
-                  file_options={"content-type": "image/jpeg"}
-              )
-              pub = supabase.storage.from_("post-images").get_public_url(name)["publicUrl"]
-              supabase.table("posts").insert({
-                  "image_url": pub,
-                  "caption": caption,
-                  "is_ai": True,
-                  "likes": 0
-              }).execute()
-              print("Posted")
-          else:
-              print("Failed:", r.status_code)
+              print("🌐 Fetching image...")
+              try:
+                  r = requests.get(img_url, timeout=60)
+                  print("STATUS:", r.status_code)
+              except Exception as e:
+                  print("❌ IMAGE REQUEST FAILED:", e)
+                  exit(0)
+
+              if r.status_code != 200:
+                  print("❌ BAD RESPONSE")
+                  exit(0)
+
+              # =========================
+              # UPLOAD
+              # =========================
+              filename = f"{int(time.time())}.jpg"
+
+              print("⬆️ Uploading...")
+              try:
+                  supabase.storage.from_("post-images").upload(
+                      path=filename,
+                      file=r.content,
+                      file_options={"content-type": "image/jpeg"}
+                  )
+                  print("✅ Upload success")
+              except Exception as e:
+                  print("❌ UPLOAD FAILED:", e)
+                  exit(0)
+
+              # =========================
+              # GET URL
+              # =========================
+              try:
+                  public = supabase.storage.from_("post-images").get_public_url(filename)
+                  public_url = public["publicUrl"] if isinstance(public, dict) else public
+                  print("🌍 URL:", public_url)
+              except Exception as e:
+                  print("❌ URL ERROR:", e)
+                  exit(0)
+
+              # =========================
+              # INSERT
+              # =========================
+              print("📦 Inserting post...")
+              try:
+                  supabase.table("posts").insert({
+                      "image_url": public_url,
+                      "caption": f"{subject} in {style}",
+                      "is_ai": True,
+                      "likes": 0
+                  }).execute()
+                  print("✅ INSERT SUCCESS")
+              except Exception as e:
+                  print("❌ INSERT FAILED:", e)
+                  exit(0)
+
+              print("🎉 DONE")
+
+          except Exception as e:
+              print("🔥 FATAL ERROR:", e)
+              exit(0)
           EOF
