@@ -51,7 +51,6 @@
     .tri3 { height: 28px; }
     .tri4 { height: 18px; }
     
-    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
@@ -528,7 +527,7 @@ async function uploadPost() {
 }
 
 // ============================================
-// FEED (WITH USERNAME JOIN)
+// FEED (No Join - Separate Profile Fetch)
 // ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
@@ -558,45 +557,51 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // JOIN with profiles table to get username
-    const { data, error } = await SB
+    // First get all posts
+    const { data: posts, error } = await SB
         .from("posts")
-        .select(`
-            *,
-            profiles (
-                username,
-                avatar_url
-            )
-        `)
+        .select("*")
         .order("id", { ascending: false });
-    
-    console.log("Feed data:", data?.length || 0, "posts");
-    console.log("Sample post:", data?.[0]);
     
     if (error) {
         feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
         return;
     }
     
-    if (!data || data.length === 0) {
+    if (!posts || posts.length === 0) {
         feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
         return;
     }
     
+    // Get all unique user IDs from posts (excluding AI posts)
+    const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
+    
+    // Fetch profiles for those users
+    let profiles = {};
+    if (userIds.length > 0) {
+        const { data: profileData } = await SB
+            .from("profiles")
+            .select("id, username, avatar_url")
+            .in("id", userIds);
+        if (profileData) {
+            profileData.forEach(p => { profiles[p.id] = p; });
+        }
+    }
+    
     let html = '';
-    for (const p of data) {
+    for (const p of posts) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         
-        // Get username from profiles if available
+        // Get username from profiles map
         let displayName = 'Poik Poik';
         if (p.is_ai) {
             displayName = 'Poik Poik';
-        } else if (p.profiles?.username) {
-            displayName = p.profiles.username;
+        } else if (p.user_id && profiles[p.user_id]?.username) {
+            displayName = profiles[p.user_id].username;
         } else if (p.user_id === USER?.id && USERNAME) {
             displayName = USERNAME;
         } else {
@@ -636,7 +641,7 @@ async function loadFeed() {
         </div>`;
     }
     feedDiv.innerHTML = html;
-    console.log("Feed rendered with", data.length, "posts");
+    console.log("Feed rendered with", posts.length, "posts");
 }
 
 // ============================================
