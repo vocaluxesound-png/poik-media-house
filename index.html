@@ -152,7 +152,6 @@
     .replies { margin-left: 30px; margin-top: 8px; padding-left: 10px; border-left: 2px solid #333; }
     .reply { font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
     .reply strong { color: #00ff88; font-size: 12px; }
-    .reply-actions { display: flex; gap: 12px; margin-top: 4px; font-size: 10px; color: #888; }
     .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 30px; }
     .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 12px; }
     .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 11px; }
@@ -323,8 +322,6 @@ const SB = window.supabase.createClient(API_URL, API_KEY);
 let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
-let USERNAME = '';
-let BIO = '';
 
 // ============================================
 // AUTH
@@ -389,7 +386,7 @@ async function checkAuth() {
 // PROFILE
 // ============================================
 async function uploadAvatar(file) {
-    if (!USER) { alert('Login first'); return; }
+    if (!USER) return;
     const fileName = `${USER.id}_${Date.now()}.jpg`;
     await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
     const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
@@ -415,8 +412,8 @@ async function saveProfile() {
 }
 
 function openEditProfile() {
-    document.getElementById('editUsername').value = USERNAME || '';
-    document.getElementById('editBio').value = BIO || '';
+    document.getElementById('editUsername').value = USER?.user_metadata?.username || '';
+    document.getElementById('editBio').value = USER?.user_metadata?.bio || '';
     document.getElementById('editProfileModal').style.display = 'flex';
 }
 
@@ -506,23 +503,34 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENT LIKES
+// COMMENT FUNCTIONS
 // ============================================
+async function addComment(postId) {
+    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
+    const input = document.getElementById(`comment-input-${postId}`);
+    const text = input.value.trim();
+    if (!text) return;
+    
+    await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: text });
+    input.value = '';
+    loadFeed();
+}
+
+function toggleComments(id) {
+    const section = document.getElementById(`comments-${id}`);
+    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
 async function likeComment(commentId) {
-    if (!USER) { alert('Login to like comment'); return; }
+    if (!USER) { alert('Login to like comment'); openAuthModal(); return; }
     await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
     loadFeed();
 }
 
-// ============================================
-// COMMENT REPLIES
-// ============================================
 let activeReplyInput = null;
 
 function showReplyInput(commentId) {
-    if (activeReplyInput) {
-        document.getElementById(activeReplyInput).style.display = 'none';
-    }
+    if (activeReplyInput) document.getElementById(activeReplyInput).style.display = 'none';
     const replyDiv = document.getElementById(`reply-input-${commentId}`);
     if (replyDiv) {
         replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
@@ -533,40 +541,13 @@ function showReplyInput(commentId) {
 async function addReply(commentId, postId) {
     if (!USER) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-text-${commentId}`);
-    const replyText = input.value.trim();
-    if (!replyText) return;
+    const text = input.value.trim();
+    if (!text) return;
     
-    await SB.from("comment_replies").insert({
-        comment_id: commentId,
-        user_id: USER.id,
-        text: replyText
-    });
+    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: USER.id, text: text });
     input.value = '';
     document.getElementById(`reply-input-${commentId}`).style.display = 'none';
     loadFeed();
-}
-
-// ============================================
-// MAIN COMMENT FUNCTION
-// ============================================
-async function addComment(postId) {
-    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
-    const input = document.getElementById(`comment-input-${postId}`);
-    const commentText = input.value.trim();
-    if (!commentText) return;
-    
-    await SB.from("comments").insert({
-        post_id: postId,
-        user_id: USER.id,
-        text: commentText
-    });
-    input.value = '';
-    loadFeed();
-}
-
-function toggleComments(id) {
-    const section = document.getElementById(`comments-${id}`);
-    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
 }
 
 async function uploadPost() {
@@ -585,7 +566,7 @@ async function uploadPost() {
 }
 
 // ============================================
-// PROFILE PAGE
+// LOAD PROFILE
 // ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
@@ -593,36 +574,29 @@ async function loadProfile() {
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
     const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    USERNAME = profile?.username || USER.email.split('@')[0];
-    BIO = profile?.bio || '';
-    
     const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
     const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
     
     const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
     
-    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${USERNAME}</h3><div class="profile-bio">${BIO || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
+    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${profile?.username || USER.email.split('@')[0]}</h3><div class="profile-bio">${profile?.bio || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
     
     for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${USERNAME}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
+        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
     }
     feedDiv.innerHTML = html;
 }
 
 // ============================================
-// MAIN FEED WITH COMMENT REPLIES
+// LOAD FEED WITH COMMENTS & REPLIES
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    const { data: posts, error } = await SB
-        .from("posts")
-        .select("*")
-        .order("id", { ascending: false });
-    
+    const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     if (error || !posts || posts.length === 0) {
         feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
         return;
@@ -649,32 +623,20 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         } else if (p.user_id && profiles[p.user_id]) {
             displayName = profiles[p.user_id].username || 'Member';
-            if (profiles[p.user_id].avatar_url) {
-                avatarHtml = `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">`;
-            } else {
-                avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
-            }
+            avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         } else {
             displayName = 'Member';
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
-        // Get comments with replies
-        const { data: comments } = await SB
-            .from("comments")
-            .select("*")
-            .eq("post_id", p.id)
-            .order("created_at", { ascending: false });
+        // Get comments
+        const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id).order("created_at", { ascending: false });
         
-        // Get all replies for these comments
+        // Get replies for comments
         let replies = {};
         if (comments && comments.length > 0) {
             const commentIds = comments.map(c => c.id);
-            const { data: repliesData } = await SB
-                .from("comment_replies")
-                .select("*, profiles(username)")
-                .in("comment_id", commentIds)
-                .order("created_at", { ascending: true });
+            const { data: repliesData } = await SB.from("comment_replies").select("*, profiles(username)").in("comment_id", commentIds).order("created_at", { ascending: true });
             if (repliesData) {
                 repliesData.forEach(r => {
                     if (!replies[r.comment_id]) replies[r.comment_id] = [];
@@ -683,7 +645,6 @@ async function loadFeed() {
             }
         }
         
-        // Build comments HTML
         let commentsHtml = '';
         if (comments && comments.length > 0) {
             for (const c of comments) {
@@ -692,7 +653,6 @@ async function loadFeed() {
                 for (const r of commentReplies) {
                     repliesHtml += `<div class="reply"><strong>${r.profiles?.username || 'User'}</strong> ${r.text}</div>`;
                 }
-                
                 commentsHtml += `
                     <div class="comment">
                         <strong onclick="showReplyInput(${c.id})">User</strong> ${c.text}
