@@ -5,105 +5,170 @@
     <title>Poik Poik</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background:black; color:white; font-family:system-ui; margin:0; }
-        .logo { text-align:center; font-size:28px; font-weight:bold; padding:20px; }
-        .feed { max-width:600px; margin:auto; }
-        .post { background:#111; margin-bottom:20px; border-radius:16px; overflow:hidden; }
-        .post img { width:100%; }
-        .caption { padding:10px; }
-        .actions { display:flex; justify-content:space-between; padding:10px; }
-        button { background:#222; color:white; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
-        input { width:70%; padding:5px; }
+        body {
+            background: black;
+            color: white;
+            font-family: system-ui;
+            margin: 0;
+            padding: 20px;
+        }
+        .logo {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .toolbar {
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .toolbar button {
+            background: #222;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .toolbar input {
+            background: #222;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 20px;
+        }
+        .feed {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .post {
+            background: #111;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .post img {
+            width: 100%;
+            display: block;
+        }
+        .caption {
+            padding: 12px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="logo">
-        <span style="color:#00ff88;">POIK</span><span>POIK</span>
+        <span style="color:#00ff88;">POIK</span><span style="color:white;">POIK</span>
     </div>
-    <div style="text-align:center">
+
+    <div class="toolbar">
         <button onclick="login()">Login</button>
         <button onclick="logout()">Logout</button>
-        <input type="file" id="uploadFile">
+        <input type="file" id="uploadFile" accept="image/*">
         <button onclick="upload()">Upload</button>
     </div>
-    <div id="feed" class="feed">Loading...</div>
+
+    <div id="feed" class="feed">
+        <div class="loading">Loading...</div>
+    </div>
 
     <script>
-        const supabase = window.supabase.createClient(
-            "https://xxnuhisweolpibzthjcc.supabase.co",
-            "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P"
-        );
+        // GLOBAL VARIABLES - accessible from console
+        window.SUPABASE_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
+        window.SUPABASE_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 
-        async function load(){
-            const { data, error } = await supabase.from("posts").select("*").order("id",{ascending:false});
+        // GLOBAL CLIENT - accessible from console
+        window.client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+
+        async function load() {
             const feed = document.getElementById("feed");
-            if(error){ feed.innerHTML="Error"; return; }
-            if(!data || data.length===0){ feed.innerHTML="No posts"; return; }
-            let html="";
-            data.forEach(p=>{
-                html+=`
-                    <div class="post">
-                        <img src="${p.image_url}" onerror="this.remove()">
-                        <div class="actions">
-                            <button onclick="like(${p.id})">❤️</button>
-                            <button onclick="share('${p.image_url}')">🔗</button>
-                            <button onclick="del(${p.id})">🗑️</button>
+            feed.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const { data, error } = await window.client
+                    .from("posts")
+                    .select("*")
+                    .order("id", { ascending: false });
+
+                console.log("DATA:", data);
+                console.log("ERROR:", error);
+
+                if (error) {
+                    feed.innerHTML = "Error loading posts";
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    feed.innerHTML = "No posts yet. AI Ghost is creating...";
+                    return;
+                }
+
+                let html = "";
+                for (let i = 0; i < data.length; i++) {
+                    const p = data[i];
+                    html += `
+                        <div class="post">
+                            <img src="${p.image_url}" loading="lazy" onerror="this.remove()">
+                            <div class="caption">${p.caption || "Fashion"}</div>
                         </div>
-                        <div class="caption">${p.caption||""}</div>
-                        <div>
-                            <input id="c${p.id}" placeholder="comment...">
-                            <button onclick="comment(${p.id})">Send</button>
-                        </div>
-                    </div>
-                `;
-            });
-            feed.innerHTML=html;
+                    `;
+                }
+                feed.innerHTML = html;
+
+            } catch (e) {
+                feed.innerHTML = "Crash: " + e.message;
+            }
         }
+
+        async function login() {
+            const email = prompt("Enter your email:");
+            if (email) {
+                await window.client.auth.signInWithOtp({ email });
+                alert("Check your email for login link!");
+            }
+        }
+
+        async function logout() {
+            await window.client.auth.signOut();
+            alert("Logged out");
+        }
+
+        async function upload() {
+            const file = document.getElementById("uploadFile").files[0];
+            if (!file) {
+                alert("Select a file first");
+                return;
+            }
+            const fileName = `${Date.now()}_${file.name}`;
+            const { error } = await window.client.storage.from("post-images").upload(fileName, file);
+            if (error) {
+                alert("Upload failed: " + error.message);
+                return;
+            }
+            const { data: urlData } = window.client.storage.from("post-images").getPublicUrl(fileName);
+            await window.client.from("posts").insert({
+                image_url: urlData.publicUrl,
+                caption: "User upload",
+                is_ai: false,
+                likes: 0
+            });
+            alert("Uploaded!");
+            load();
+        }
+
+        // Load immediately
         load();
-
-        async function like(id){
-            await supabase.from("likes").insert({post_id:id});
-            alert("Liked");
-        }
-
-        async function comment(id){
-            const text=document.getElementById("c"+id).value;
-            await supabase.from("comments").insert({post_id:id,text});
-            alert("Comment added");
-        }
-
-        async function del(id){
-            await supabase.from("posts").delete().eq("id",id);
-            load();
-        }
-
-        function share(url){
-            navigator.clipboard.writeText(url);
-            alert("Copied!");
-        }
-
-        async function login(){
-            await supabase.auth.signInWithOtp({email:prompt("Email")});
-        }
-
-        async function logout(){
-            await supabase.auth.signOut();
-        }
-
-        async function upload(){
-            const file=document.getElementById("uploadFile").files[0];
-            if(!file) return;
-            const name=Date.now()+"_"+file.name;
-            await supabase.storage.from("post-images").upload(name,file);
-            const pub=supabase.storage.from("post-images").get_public_url(name);
-            await supabase.from("posts").insert({
-                image_url: pub.publicUrl,
-                caption: "User upload"
-            });
-            load();
-        }
-
-        setInterval(load,15000);
     </script>
 </body>
 </html>
