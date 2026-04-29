@@ -305,21 +305,21 @@
 
 <script>
 // SINGLE SUPABASE CLIENT - NO DUPLICATES
-const POIK_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
-const POIK_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const POIK_CLIENT = window.supabase.createClient(POIK_URL, POIK_KEY);
+const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
+const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+const SB = window.supabase.createClient(API_URL, API_KEY);
 
-let CURRENT_USER = null;
+let USER = null;
 let CURRENT_TAB = 'feed';
-let CURRENT_SHARE_URL = '';
-let CURRENT_USERNAME = '';
-let CURRENT_BIO = '';
+let SHARE_URL = '';
+let USERNAME = '';
+let BIO = '';
 
 // ============================================
 // AUTH
 // ============================================
 function openAuthModal() { 
-    if (CURRENT_USER) return;
+    if (USER) return;
     document.getElementById('authModal').style.display = 'flex'; 
 }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
@@ -329,7 +329,7 @@ document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
-    const { error } = await POIK_CLIENT.auth.signInWithOtp({
+    const { error } = await SB.auth.signInWithOtp({
         email: email.trim(),
         options: { emailRedirectTo: window.location.origin }
     });
@@ -342,8 +342,8 @@ document.getElementById('magicLoginBtn').onclick = async () => {
 };
 
 async function logout() {
-    await POIK_CLIENT.auth.signOut();
-    CURRENT_USER = null;
+    await SB.auth.signOut();
+    USER = null;
     location.reload();
 }
 
@@ -354,15 +354,15 @@ async function handleMagicLink() {
         const access_token = params.get('access_token');
         const refresh_token = params.get('refresh_token');
         if (access_token) {
-            await POIK_CLIENT.auth.setSession({ access_token, refresh_token });
+            await SB.auth.setSession({ access_token, refresh_token });
             window.location.href = window.location.pathname;
         }
     }
 }
 
 async function checkAuth() {
-    const { data: { user } } = await POIK_CLIENT.auth.getUser();
-    CURRENT_USER = user;
+    const { data: { user } } = await SB.auth.getUser();
+    USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
         userIcon.classList.remove('far'); 
@@ -375,34 +375,15 @@ async function checkAuth() {
 }
 
 // ============================================
-// PROFILE FUNCTIONS
+// PROFILE
 // ============================================
 async function uploadAvatar(file) {
-    if (!CURRENT_USER) { alert('Login first'); return; }
+    if (!USER) { alert('Login first'); return; }
+    const fileName = `${USER.id}_${Date.now()}.jpg`;
     
-    const fileName = `${CURRENT_USER.id}_${Date.now()}.jpg`;
-    
-    const { error: uploadError } = await POIK_CLIENT.storage
-        .from("avatars")
-        .upload(fileName, file, { upsert: true });
-    
-    if (uploadError) {
-        alert("Upload failed: " + uploadError.message);
-        return;
-    }
-    
-    const { data } = POIK_CLIENT.storage.from("avatars").getPublicUrl(fileName);
-    const avatarUrl = data.publicUrl;
-    
-    const { error: updateError } = await POIK_CLIENT
-        .from("profiles")
-        .update({ avatar_url: avatarUrl })
-        .eq("id", CURRENT_USER.id);
-    
-    if (updateError) {
-        alert("Failed to update profile: " + updateError.message);
-        return;
-    }
+    await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
+    const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
+    await SB.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", USER.id);
     
     alert("Profile picture updated!");
     loadProfile();
@@ -410,25 +391,14 @@ async function uploadAvatar(file) {
 }
 
 document.getElementById('avatarInput').onchange = async (e) => {
-    const file = e.target.files[0];
-    if (file) await uploadAvatar(file);
+    if (e.target.files[0]) await uploadAvatar(e.target.files[0]);
 };
 
 async function saveProfile() {
-    if (!CURRENT_USER) { alert('Login first'); return; }
-    
+    if (!USER) return;
     const username = document.getElementById("editUsername").value;
     const bio = document.getElementById("editBio").value;
-    
-    const { error } = await POIK_CLIENT
-        .from("profiles")
-        .upsert({ id: CURRENT_USER.id, username: username, bio: bio });
-    
-    if (error) {
-        alert("Error: " + error.message);
-        return;
-    }
-    
+    await SB.from("profiles").upsert({ id: USER.id, username: username, bio: bio });
     alert("Profile updated!");
     document.getElementById('editProfileModal').style.display = 'none';
     loadProfile();
@@ -436,87 +406,76 @@ async function saveProfile() {
 }
 
 function openEditProfile() {
-    document.getElementById('editUsername').value = CURRENT_USERNAME || '';
-    document.getElementById('editBio').value = CURRENT_BIO || '';
+    document.getElementById('editUsername').value = USERNAME || '';
+    document.getElementById('editBio').value = BIO || '';
     document.getElementById('editProfileModal').style.display = 'flex';
 }
 
-document.getElementById('closeEditModal').onclick = () => {
-    document.getElementById('editProfileModal').style.display = 'none';
-};
+document.getElementById('closeEditModal').onclick = () => document.getElementById('editProfileModal').style.display = 'none';
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
 // ============================================
-// POST MENU FUNCTIONS
+// POST MENU
 // ============================================
 function togglePostMenu(postId) {
     const menu = document.getElementById(`post-menu-${postId}`);
-    if (menu.style.display === 'none') {
-        document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
-        menu.style.display = 'block';
-    } else {
-        menu.style.display = 'none';
-    }
+    document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
 async function changePostPrivacy(postId, newPrivacy) {
-    await POIK_CLIENT.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
-    document.getElementById(`post-menu-${postId}`).style.display = 'none';
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
     loadFeed();
-    if (CURRENT_TAB === 'profile') loadProfile();
 }
 
 async function deletePost(postId) {
     if (confirm('Delete this post?')) {
-        await POIK_CLIENT.from("posts").delete().eq("id", postId);
-        document.getElementById(`post-menu-${postId}`).style.display = 'none';
+        await SB.from("posts").delete().eq("id", postId);
         loadFeed();
         if (CURRENT_TAB === 'profile') loadProfile();
     }
 }
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', (e) => {
     if (!e.target.closest('.post-privacy-menu')) {
-        document.querySelectorAll('.post-menu-dropdown').forEach(menu => menu.style.display = 'none');
+        document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
     }
 });
 
 // ============================================
-// SHARE FUNCTIONS
+// SHARE
 // ============================================
-function openShareModal(imageUrl) {
-    CURRENT_SHARE_URL = imageUrl;
+function openShareModal(url) {
+    SHARE_URL = url;
     document.getElementById('shareModal').style.display = 'block';
 }
 function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
 
 function shareTo(platform) {
-    const url = encodeURIComponent(CURRENT_SHARE_URL);
-    let shareLink = '';
-    switch(platform) {
-        case 'facebook': shareLink = `https://www.facebook.com/sharer/sharer.php?u=${url}`; break;
-        case 'whatsapp': shareLink = `https://wa.me/?text=${url}`; break;
-        case 'twitter': shareLink = `https://twitter.com/intent/tweet?url=${url}`; break;
-        case 'instagram': alert('Save image first, then post manually.'); closeShareModal(); return;
-    }
-    if (shareLink) window.open(shareLink, '_blank');
+    const url = encodeURIComponent(SHARE_URL);
+    let link = '';
+    if (platform === 'facebook') link = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    if (platform === 'whatsapp') link = `https://wa.me/?text=${url}`;
+    if (platform === 'twitter') link = `https://twitter.com/intent/tweet?url=${url}`;
+    if (platform === 'instagram') { alert('Save image first, then post manually.'); closeShareModal(); return; }
+    if (link) window.open(link, '_blank');
     closeShareModal();
 }
 
 function copyLink() {
-    navigator.clipboard.writeText(CURRENT_SHARE_URL);
+    navigator.clipboard.writeText(SHARE_URL);
     alert('Link copied!');
     closeShareModal();
 }
 
 // ============================================
-// UI FUNCTIONS
+// UI
 // ============================================
 function openModal(img) { document.getElementById('modalImage').src = img; document.getElementById('imageModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
 function openUploadModal() {
-    if (!CURRENT_USER) { alert('Please login first'); openAuthModal(); return; }
+    if (!USER) { alert('Please login first'); openAuthModal(); return; }
     document.getElementById('uploadModal').style.display = 'block';
 }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
@@ -525,117 +484,75 @@ function switchTab(tab) { CURRENT_TAB = tab; loadFeed(); }
 
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    if (page === 'home') { 
-        document.querySelector('.bottom-nav-item:first-child').classList.add('active'); 
-        switchTab('feed'); 
-    }
-    if (page === 'profile') { 
-        document.querySelector('.bottom-nav-item:last-child').classList.add('active'); 
-        loadProfile(); 
-    }
-    if (page === 'friends') alert('Friends coming soon');
-    if (page === 'inbox') alert('Inbox coming soon');
+    if (page === 'home') { document.querySelector('.bottom-nav-item:first-child').classList.add('active'); switchTab('feed'); }
+    if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
 }
 
 async function likePost(postId) {
-    if (!CURRENT_USER) { alert('Login to like'); openAuthModal(); return; }
-    try { 
-        await POIK_CLIENT.rpc("toggle_like", { post_id_input: postId, user_id_input: CURRENT_USER.id }); 
-        const { count } = await POIK_CLIENT.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
-        const likeSpan = document.getElementById(`likes-${postId}`);
-        if (likeSpan) likeSpan.innerText = count || 0;
-    } catch(e) { console.error(e); }
+    if (!USER) { alert('Login to like'); openAuthModal(); return; }
+    await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id });
+    const { count } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+    const span = document.getElementById(`likes-${postId}`);
+    if (span) span.innerText = count || 0;
 }
 
 async function addComment(postId) {
-    if (!CURRENT_USER) { alert('Login to comment'); openAuthModal(); return; }
+    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     if (input.value.trim()) {
-        await POIK_CLIENT.from("comments").insert({ post_id: postId, user_id: CURRENT_USER.id, text: input.value });
+        await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
         input.value = '';
-        const { data: comments } = await POIK_CLIENT.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
-        const commentsDiv = document.getElementById(`comments-list-${postId}`);
+        const { data } = await SB.from('comments').select('*').eq('post_id', postId);
+        const container = document.getElementById(`comments-list-${postId}`);
         const countSpan = document.getElementById(`comment-count-${postId}`);
-        if (commentsDiv) commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>${CURRENT_USERNAME || 'User'}</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
-        if (countSpan) countSpan.innerText = comments.length;
+        if (container) container.innerHTML = data.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
+        if (countSpan) countSpan.innerText = data.length;
     }
 }
 
-function toggleComments(id) { 
-    const section = document.getElementById(`comments-${id}`); 
-    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none'; 
+function toggleComments(id) {
+    const section = document.getElementById(`comments-${id}`);
+    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
 }
 
 async function uploadPost() {
-    if (!CURRENT_USER) { alert('Login first'); return; }
+    if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
     const caption = document.getElementById("uploadCaption").value;
     const privacy = document.getElementById("uploadPrivacy").value;
     if (!file) { alert("Select an image"); return; }
-    const fileName = `${CURRENT_USER.id}_${Date.now()}.jpg`;
-    await POIK_CLIENT.storage.from("post-images").upload(fileName, file);
-    const { data: urlData } = POIK_CLIENT.storage.from("post-images").getPublicUrl(fileName);
-    await POIK_CLIENT.from("posts").insert({ 
-        image_url: urlData.publicUrl, 
-        caption: caption, 
-        user_id: CURRENT_USER.id, 
-        privacy: privacy,
-        is_ai: false, 
-        likes: 0 
-    });
-    alert("Posted!"); 
-    closeUploadModal(); 
+    const fileName = `${USER.id}_${Date.now()}.jpg`;
+    await SB.storage.from("post-images").upload(fileName, file);
+    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
+    await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
+    alert("Posted!");
+    closeUploadModal();
     loadFeed();
 }
 
+// ============================================
+// FEED & PROFILE
+// ============================================
 async function loadProfile() {
-    if (!CURRENT_USER) { alert('Please login'); openAuthModal(); return; }
+    if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    const { data: profile } = await POIK_CLIENT
-        .from("profiles")
-        .select("*")
-        .eq("id", CURRENT_USER.id)
-        .single();
+    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    USERNAME = profile?.username || USER.email.split('@')[0];
+    BIO = profile?.bio || '';
     
-    if (profile) {
-        CURRENT_USERNAME = profile.username || CURRENT_USER.email.split('@')[0];
-        CURRENT_BIO = profile.bio || '';
-    } else {
-        CURRENT_USERNAME = CURRENT_USER.email.split('@')[0];
-        CURRENT_BIO = '';
-        await POIK_CLIENT.from("profiles").insert({ id: CURRENT_USER.id, username: CURRENT_USERNAME, bio: '' });
-    }
+    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
+    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
     
-    const { data: posts } = await POIK_CLIENT
-        .from("posts")
-        .select("*")
-        .eq("user_id", CURRENT_USER.id)
-        .order("id", { ascending: false });
+    const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
     
-    const { count } = await POIK_CLIENT
-        .from("posts")
-        .select("*", { count: 'exact', head: true })
-        .eq("user_id", CURRENT_USER.id);
+    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${USERNAME}</h3><div class="profile-bio">${BIO || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
     
-    const avatarUrl = profile?.avatar_url;
-    let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">` : '👤';
-    
-    let html = `
-        <div class="profile-header">
-            <div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div>
-            <h3>${CURRENT_USERNAME}</h3>
-            <div class="profile-bio">${CURRENT_BIO || 'No bio yet'}</div>
-            <div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div>
-            <button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button>
-            <button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button>
-        </div>`;
-    
-    for (const p of posts || []) { 
+    for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${CURRENT_USERNAME}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
+        html += `<div class="post"><div class="post-header"><div class="post-header-left"><div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div><div class="post-username">${USERNAME}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
     }
     feedDiv.innerHTML = html;
 }
@@ -644,13 +561,9 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    const { data, error } = await POIK_CLIENT
-        .from("posts")
-        .select("*")
-        .order("id", { ascending: false });
+    const { data, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     
-    console.log("Feed data:", data);
-    console.log("Feed error:", error);
+    console.log("Feed data:", data?.length || 0, "posts");
     
     if (error) {
         feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
@@ -664,18 +577,17 @@ async function loadFeed() {
     
     let html = '';
     for (const p of data) {
-        const { count: likeCount } = await POIK_CLIENT.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
-        const { data: comments } = await POIK_CLIENT.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
-        const isOwner = CURRENT_USER && CURRENT_USER.id === p.user_id;
+        const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
+        const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
+        const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let displayName = p.is_ai ? 'Poik Poik' : (p.user_id === CURRENT_USER?.id ? CURRENT_USERNAME : (p.user_id ? 'Member' : 'Poik Poik'));
         
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
                     <div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>
-                    <div class="post-username">${displayName}</div>
+                    <div class="post-username">${p.is_ai ? 'Poik Poik' : 'Member'}</div>
                 </div>
                 ${isOwner ? `
                 <div class="post-privacy-menu">
@@ -704,15 +616,14 @@ async function loadFeed() {
         </div>`;
     }
     feedDiv.innerHTML = html;
+    console.log("Feed rendered with", data.length, "posts");
 }
 
 // ============================================
 // INIT
 // ============================================
 async function initStorage() {
-    try {
-        await POIK_CLIENT.storage.createBucket('avatars', { public: true });
-    } catch(e) { console.log('Bucket exists'); }
+    try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {}
 }
 
 initStorage();
