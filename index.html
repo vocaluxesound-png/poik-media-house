@@ -151,7 +151,6 @@
             background: #0a0a0a;
         }
 
-        /* Action buttons - inside image container, small gap from edge */
         .post-actions-right {
             position: absolute;
             right: 12px;
@@ -257,6 +256,7 @@
             align-items: center;
             justify-content: center;
             margin-top: -20px;
+            cursor: pointer;
         }
 
         .plus-circle i {
@@ -375,7 +375,7 @@
             <div class="logo">POIK POIK</div>
             <div class="header-icons">
                 <i class="fas fa-plus" onclick="openUploadModal()"></i>
-                <i class="far fa-user-circle" onclick="alert('Profile coming soon')"></i>
+                <i class="far fa-user-circle" onclick="showAuthModal()"></i>
             </div>
         </div>
     </div>
@@ -427,13 +427,74 @@
         <img id="modalImage">
     </div>
 
+    <!-- Auth Modal with Email/Password -->
+    <div id="authModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; align-items:center; justify-content:center;">
+        <div style="background:#111; padding:30px; border-radius:20px; width:90%; max-width:350px; text-align:center;">
+            <h3>Join Poik Poik</h3>
+            <input type="email" id="authEmail" placeholder="Email" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
+            <input type="password" id="authPassword" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; background:#222; border:1px solid #333; border-radius:10px; color:white;">
+            <button id="authLoginBtn" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:10px; font-weight:bold;">Login</button>
+            <button id="authSignupBtn" style="width:100%; padding:12px; background:#00ff88; color:black; border:none; border-radius:10px; font-weight:bold; margin-top:10px;">Sign Up</button>
+            <button id="closeAuthBtn" style="width:100%; padding:12px; background:#222; color:white; border:none; border-radius:10px; margin-top:10px;">Cancel</button>
+        </div>
+    </div>
+
     <script>
         window.SUPABASE_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
         window.SUPABASE_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
         window.client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+        window.currentUser = null;
         window.currentTab = 'feed';
         window.lastPostId = 0;
 
+        // Auth Modal Elements
+        const authModal = document.getElementById('authModal');
+        
+        function showAuthModal() {
+            authModal.style.display = 'flex';
+        }
+        
+        document.getElementById('closeAuthBtn').onclick = () => {
+            authModal.style.display = 'none';
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+        };
+        
+        // Login
+        document.getElementById('authLoginBtn').onclick = async () => {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) { alert('Enter email and password'); return; }
+            const { error } = await window.client.auth.signInWithPassword({ email, password });
+            if (error) { alert('Login failed: ' + error.message); }
+            else { authModal.style.display = 'none'; location.reload(); }
+        };
+        
+        // Sign Up
+        document.getElementById('authSignupBtn').onclick = async () => {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) { alert('Enter email and password'); return; }
+            if (password.length < 6) { alert('Password must be at least 6 characters'); return; }
+            const { error } = await window.client.auth.signUp({ email, password });
+            if (error) { alert('Sign up failed: ' + error.message); }
+            else { alert('Account created! Please check your email to confirm.'); authModal.style.display = 'none'; }
+        };
+        
+        // Check auth status
+        async function checkAuth() {
+            const { data: { user } } = await window.client.auth.getUser();
+            window.currentUser = user;
+            const userIcon = document.querySelector('.fa-user-circle');
+            if (user) {
+                userIcon.classList.remove('far');
+                userIcon.classList.add('fas');
+            } else {
+                userIcon.classList.remove('fas');
+                userIcon.classList.add('far');
+            }
+        }
+        
         function openModal(img) {
             document.getElementById('modalImage').src = img;
             document.getElementById('imageModal').style.display = 'flex';
@@ -444,6 +505,7 @@
         }
 
         function openUploadModal() {
+            if (!window.currentUser) { alert('Please login first'); showAuthModal(); return; }
             document.getElementById('uploadModal').style.display = 'block';
         }
 
@@ -475,14 +537,23 @@
         }
 
         async function likePost(postId) {
-            await window.client.from("likes").insert({ post_id: postId });
+            if (!window.currentUser) { alert('Login to like'); showAuthModal(); return; }
+            await window.client.rpc("toggle_like", {
+                post_id_input: postId,
+                user_id_input: window.currentUser.id
+            });
             loadFeed();
         }
 
         async function addComment(postId) {
+            if (!window.currentUser) { alert('Login to comment'); showAuthModal(); return; }
             const input = document.getElementById(`comment-input-${postId}`);
             if (input.value.trim()) {
-                await window.client.from("comments").insert({ post_id: postId, text: input.value });
+                await window.client.from("comments").insert({ 
+                    post_id: postId, 
+                    user_id: window.currentUser.id, 
+                    text: input.value 
+                });
                 input.value = '';
                 loadFeed();
             }
@@ -494,15 +565,17 @@
         }
 
         async function uploadPost() {
+            if (!window.currentUser) { alert('Login first'); return; }
             const file = document.getElementById("uploadFile").files[0];
             const caption = document.getElementById("uploadCaption").value;
             if (!file) { alert("Select an image"); return; }
-            const fileName = `${Date.now()}_${file.name}`;
+            const fileName = `${window.currentUser.id}_${Date.now()}.jpg`;
             await window.client.storage.from("post-images").upload(fileName, file);
             const { data: urlData } = window.client.storage.from("post-images").getPublicUrl(fileName);
             await window.client.from("posts").insert({
                 image_url: urlData.publicUrl,
                 caption: caption,
+                user_id: window.currentUser.id,
                 is_ai: false,
                 likes: 0
             });
@@ -515,10 +588,8 @@
             const feedDiv = document.getElementById("feed");
             feedDiv.innerHTML = '<div class="loading">Loading...</div>';
 
-            const { data, error } = await window.client
-                .from("posts")
-                .select("*")
-                .order("id", { ascending: false });
+            let query = window.client.from("posts").select("*").order("id", { ascending: false });
+            const { data, error } = await query;
 
             if (error || !data || data.length === 0) {
                 feedDiv.innerHTML = '<div class="loading">No posts yet</div>';
@@ -535,8 +606,8 @@
                 html += `
                     <div class="post">
                         <div class="post-header">
-                            <div class="post-avatar">${p.is_ai ? '🤖' : '👤'}</div>
-                            <div class="post-username">${p.is_ai ? 'Poik Poik' : 'User'}</div>
+                            <div class="post-avatar">${p.is_ai ? '🤖' : (p.user_id ? '👤' : '🤖')}</div>
+                            <div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')}</div>
                         </div>
                         <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
                         <div class="post-caption">${p.caption || 'Fashion visual'}</div>
@@ -571,6 +642,7 @@
             feedDiv.innerHTML = html;
         }
 
+        checkAuth();
         loadFeed();
 
         setInterval(async () => {
