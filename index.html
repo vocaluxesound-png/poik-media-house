@@ -53,7 +53,7 @@
             color: #ccc;
         }
 
-        /* Top Navigation - Lighter text color */
+        /* Top Navigation */
         .top-nav {
             max-width: 600px;
             margin: 0 auto;
@@ -75,6 +75,7 @@
             padding: 8px 16px;
             cursor: pointer;
             transition: all 0.2s;
+            position: relative;
         }
 
         .nav-item:hover {
@@ -83,7 +84,19 @@
 
         .nav-item.active {
             color: white;
-            border-bottom: 2px solid #00ff88;
+        }
+
+        /* Smaller green underline - centered and shorter */
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 2px;
+            background-color: #00ff88;
+            border-radius: 2px;
         }
 
         .feed {
@@ -140,10 +153,10 @@
             background: #0a0a0a;
         }
 
-        /* Centered action buttons */
+        /* Action buttons - visible on both mobile and desktop */
         .post-actions-right {
             position: absolute;
-            right: 8px;
+            right: 16px;
             top: 50%;
             transform: translateY(-50%);
             display: flex;
@@ -152,16 +165,21 @@
             z-index: 10;
         }
 
-        @media (max-width: 768px) {
+        /* Desktop adjustment - keep buttons visible */
+        @media (min-width: 768px) {
             .post-actions-right {
-                right: 12px;
-                gap: 16px;
+                right: 20px;
+                gap: 24px;
             }
         }
 
+        /* For very large screens, keep relative to the feed */
         @media (min-width: 1200px) {
+            .feed {
+                position: relative;
+            }
             .post-actions-right {
-                right: calc(50% - 300px - 60px);
+                right: -20px;
             }
         }
 
@@ -174,7 +192,7 @@
         }
 
         .action-icon i {
-            font-size: 22px;
+            font-size: 24px;
             color: white;
         }
 
