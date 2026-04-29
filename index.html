@@ -509,7 +509,7 @@
             }
             
             const { data, error } = await window.client.auth.signInWithPassword({ 
-                email: email, 
+                email: email.trim(), 
                 password: password 
             });
             
@@ -525,7 +525,7 @@
             }
         };
         
-        // SIGN UP
+        // SIGN UP (One-time verification only)
         document.getElementById('authSignupBtn').onclick = async () => {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
@@ -540,8 +540,8 @@
             }
             
             const { error } = await window.client.auth.signUp({ 
-                email, 
-                password,
+                email: email.trim(), 
+                password: password,
                 options: {
                     emailRedirectTo: 'https://poik-media-house.onrender.com'
                 }
@@ -550,12 +550,14 @@
             if (error) {
                 alert('Sign up failed: ' + error.message);
             } else {
-                alert('Account created! Check your email to confirm.');
+                alert('Verification email sent! Please check your inbox and confirm your email. You only need to do this once.');
                 authModal.style.display = 'none';
+                document.getElementById('authEmail').value = '';
+                document.getElementById('authPassword').value = '';
             }
         };
         
-        // CHECK AUTH
+        // CHECK AUTH STATUS
         async function checkAuth() {
             const { data: { user } } = await window.client.auth.getUser();
             window.currentUser = user;
@@ -569,8 +571,12 @@
                 userIcon.classList.add('far');
                 console.log('Not logged in');
             }
+            return user;
         }
         
+        // ============================================
+        // FEED FUNCTIONS
+        // ============================================
         function openModal(img) {
             document.getElementById('modalImage').src = img;
             document.getElementById('imageModal').style.display = 'flex';
@@ -614,7 +620,12 @@
             if (page === 'inbox') document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
             if (page === 'profile') {
                 document.querySelector('.bottom-nav-item:last-child').classList.add('active');
-                alert('Profile page coming soon');
+                if (!window.currentUser) {
+                    alert('Please login to view profile');
+                    showAuthModal();
+                } else {
+                    alert('Profile page coming soon');
+                }
             }
         }
 
@@ -738,22 +749,4 @@
                                 <button onclick="addComment(${p.id})">Post</button>
                             </div>
                         </div>
-                    </div>
-                `;
-            }
-            feedDiv.innerHTML = html;
-        }
-
-        checkAuth();
-        loadFeed();
-
-        setInterval(async () => {
-            const { data } = await window.client.from("posts").select("id").order("id", { ascending: false }).limit(1);
-            if (data && data.length > 0 && data[0].id > window.lastPostId) {
-                window.lastPostId = data[0].id;
-                loadFeed();
-            }
-        }, 120000);
-    </script>
-</body>
-</html>
+                    </div
