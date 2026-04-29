@@ -20,7 +20,7 @@
     }
     .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .header-icons { display: flex; gap: 16px; }
+    .header-icons { display: flex; gap: 16px; align-items: center; }
     .header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
     
     .top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
@@ -31,34 +31,30 @@
     
     .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
     .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
-    .post-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
+    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .post-header-left { display: flex; align-items: center; gap: 10px; }
     
-    /* Monster Drink Style Scratch - 3 lines vertical */
-    .monster-avatar {
+    /* M Logo - 4 green triangles forming M */
+    .m-logo {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: #111;
+        background: black;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: center;
-        position: relative;
-        border: 1px solid #00ff88;
+        gap: 2px;
+        padding: 5px 3px;
+        border-radius: 8px;
     }
-    .monster-scratch {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: flex;
-        gap: 3px;
-    }
-    .scratch-line {
-        width: 3px;
-        height: 18px;
+    .tri {
+        width: 7px;
         background: #00ff88;
-        border-radius: 2px;
+        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
     }
+    .tri1 { height: 14px; }
+    .tri2 { height: 24px; }
+    .tri3 { height: 28px; }
+    .tri4 { height: 18px; }
     
     .post-username { font-weight: 600; font-size: 14px; }
     .post-image { width: 100%; display: block; cursor: pointer; }
@@ -81,6 +77,27 @@
     .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
     .action-icon span { font-size: 11px; color: #ddd; }
     .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
+    
+    /* Privacy Badge */
+    .privacy-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-left: 8px;
+    }
+    .privacy-public { background: #00ff88; color: black; }
+    .privacy-friends { background: #ffaa00; color: black; }
+    .privacy-private { background: #ff4444; color: white; }
+    
+    .delete-btn {
+        background: none;
+        border: none;
+        color: #ff4444;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+    .delete-btn:hover { color: #ff8888; }
     
     .share-modal {
         display: none;
@@ -122,10 +139,10 @@
     .plus-circle i { color: black; font-size: 24px; }
     
     .comments-section { padding: 12px; background: #060606; }
-    .comment { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
+    .comment { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
     .comment strong { color: #00ff88; }
-    .comment-input { display: flex; gap: 8px; margin-top: 10px; }
-    .comment-input input { flex: 1; padding: 8px; border-radius: 20px; border: none; background: #222; color: white; }
+    .comment-input { display: flex; gap: 8px; margin-top: 12px; }
+    .comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
     .comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
     
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
@@ -146,12 +163,38 @@
         max-width: 350px;
         text-align: center;
     }
+    .upload-modal .privacy-select {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border-radius: 10px;
+        background: #333;
+        color: white;
+        border: none;
+    }
     .upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
     .upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
+    
     .loading { text-align: center; padding: 50px; color: #888; }
+    
     .profile-header { text-align: center; padding: 30px 20px; }
-    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; position: relative; }
+    .profile-avatar { 
+        width: 80px; 
+        height: 80px; 
+        border-radius: 50%; 
+        background: #333; 
+        margin: 0 auto 15px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 40px;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
+    .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
+    .edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
     
     .auth-modal {
         display: none;
@@ -191,7 +234,11 @@
         margin-top: 10px;
     }
     .magic-btn { background: #00ff88; color: black; border: none; }
+    .logout-btn { background: #ff4444; color: white; border: none; }
     .cancel-btn { background: #222; color: white; border: none; }
+    
+    /* Profile upload input hidden */
+    #profileUpload { display: none; }
 </style>
 </head>
 <body>
@@ -201,7 +248,10 @@
         <div class="logo">POIK POIK</div>
         <div class="header-icons">
             <i class="fas fa-plus" onclick="openUploadModal()"></i>
-            <i class="far fa-user-circle" onclick="openAuthModal()"></i>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444;" title="Logout"></i>
+                <i class="far fa-user-circle" onclick="openAuthModal()"></i>
+            </div>
         </div>
     </div>
 </div>
@@ -228,6 +278,11 @@
     <h3>Upload</h3>
     <input type="file" id="uploadFile" accept="image/*">
     <input type="text" id="uploadCaption" placeholder="Caption...">
+    <select id="uploadPrivacy" class="privacy-select">
+        <option value="public">🌍 Public</option>
+        <option value="friends">👥 Friends Only</option>
+        <option value="private">🔒 Private</option>
+    </select>
     <button onclick="uploadPost()">Post</button>
     <button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
 </div>
@@ -259,6 +314,8 @@
     </div>
 </div>
 
+<input type="file" id="profileUpload" accept="image/*">
+
 <script>
 const SURL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const SKEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
@@ -270,7 +327,10 @@ let CURRENT_SHARE_URL = '';
 // ============================================
 // AUTH - MAGIC LINK
 // ============================================
-function openAuthModal() { document.getElementById('authModal').style.display = 'flex'; }
+function openAuthModal() { 
+    if (USER) return;
+    document.getElementById('authModal').style.display = 'flex'; 
+}
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
@@ -278,22 +338,23 @@ document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
-    
     const { error } = await SB.auth.signInWithOtp({
         email: email.trim(),
-        options: {
-            emailRedirectTo: window.location.origin
-        }
+        options: { emailRedirectTo: window.location.origin }
     });
-    
-    if (error) { 
-        alert('Error: ' + error.message); 
-    } else { 
-        alert('Magic link sent to ' + email + '! Check your email to login.');
-        closeAuthModal();
+    if (error) { alert('Error: ' + error.message); } 
+    else { 
+        alert('Magic link sent! Check your email.'); 
+        closeAuthModal(); 
         document.getElementById('authEmail').value = '';
     }
 };
+
+async function logout() {
+    await SB.auth.signOut();
+    USER = null;
+    location.reload();
+}
 
 async function handleMagicLink() {
     const hash = window.location.hash;
@@ -301,16 +362,9 @@ async function handleMagicLink() {
         const params = new URLSearchParams(hash.substring(1));
         const access_token = params.get('access_token');
         const refresh_token = params.get('refresh_token');
-        
         if (access_token) {
-            const { error } = await SB.auth.setSession({
-                access_token: access_token,
-                refresh_token: refresh_token
-            });
-            if (!error) {
-                alert('Logged in successfully!');
-                window.location.href = window.location.pathname;
-            }
+            await SB.auth.setSession({ access_token, refresh_token });
+            window.location.href = window.location.pathname;
         }
     }
 }
@@ -328,6 +382,27 @@ async function checkAuth() {
     }
     return user;
 }
+
+// ============================================
+// PROFILE PICTURE UPLOAD
+// ============================================
+async function uploadProfilePicture(file) {
+    if (!USER) return;
+    const fileName = `profile_${USER.id}.jpg`;
+    await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
+    const { data: urlData } = SB.storage.from("avatars").getPublicUrl(fileName);
+    await SB.from("profiles").upsert({ id: USER.id, avatar_url: urlData.publicUrl });
+    return urlData.publicUrl;
+}
+
+document.getElementById('profileUpload').onchange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        await uploadProfilePicture(file);
+        alert('Profile picture updated!');
+        loadProfile();
+    }
+};
 
 // ============================================
 // SHARE FUNCTIONS
@@ -389,7 +464,12 @@ async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     try { 
         await SB.rpc("toggle_like", { post_id_input: postId, user_id_input: USER.id }); 
-        loadFeed(); 
+        // Update just the like count without full reload
+        const { count } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+        const likeSpan = document.getElementById(`likes-${postId}`);
+        if (likeSpan) likeSpan.innerText = count || 0;
+        const likeIcon = document.querySelector(`#like-icon-${postId}`);
+        if (likeIcon) likeIcon.style.color = '#ff4444';
     } catch(e) { console.error(e); }
 }
 
@@ -399,24 +479,47 @@ async function addComment(postId) {
     if (input.value.trim()) {
         await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: input.value });
         input.value = '';
-        loadFeed();
+        // Reload just the comments section
+        const { data: comments } = await SB.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
+        const commentsDiv = document.getElementById(`comments-list-${postId}`);
+        const countSpan = document.getElementById(`comment-count-${postId}`);
+        if (commentsDiv) {
+            commentsDiv.innerHTML = comments.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>';
+        }
+        if (countSpan) countSpan.innerText = comments.length;
     }
 }
 
 function toggleComments(id) { 
     const section = document.getElementById(`comments-${id}`); 
-    section.style.display = section.style.display === 'none' ? 'block' : 'none'; 
+    if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none'; 
+}
+
+async function deletePost(postId) {
+    if (!USER) { alert('Login first'); return; }
+    if (confirm('Delete this post?')) {
+        await SB.from("posts").delete().eq("id", postId);
+        loadFeed();
+    }
 }
 
 async function uploadPost() {
     if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
     const caption = document.getElementById("uploadCaption").value;
+    const privacy = document.getElementById("uploadPrivacy").value;
     if (!file) { alert("Select an image"); return; }
     const fileName = `${USER.id}_${Date.now()}.jpg`;
     await SB.storage.from("post-images").upload(fileName, file);
     const { data: urlData } = SB.storage.from("post-images").getPublicUrl(fileName);
-    await SB.from("posts").insert({ image_url: urlData.publicUrl, caption: caption, user_id: USER.id, is_ai: false, likes: 0 });
+    await SB.from("posts").insert({ 
+        image_url: urlData.publicUrl, 
+        caption: caption, 
+        user_id: USER.id, 
+        privacy: privacy,
+        is_ai: false, 
+        likes: 0 
+    });
     alert("Posted!"); 
     closeUploadModal(); 
     loadFeed();
@@ -426,49 +529,103 @@ async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
+    
+    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
     const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
     const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
-    let html = `<div class="profile-header"><div class="profile-avatar">👤</div><h3>${USER.email.split('@')[0]}</h3><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div></div><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px;">Back to Feed</button></div>`;
+    
+    let avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
+    
+    let html = `
+        <div class="profile-header">
+            <div class="profile-avatar" onclick="document.getElementById('profileUpload').click()">
+                ${avatarHtml}
+            </div>
+            <h3>${USER.email.split('@')[0]}</h3>
+            <div class="profile-bio">${profile?.bio || '✨ Fashion lover'}</div>
+            <div class="profile-stats">
+                <div><strong>${count || 0}</strong><br>posts</div>
+                <div><strong>0</strong><br>followers</div>
+                <div><strong>0</strong><br>following</div>
+            </div>
+            <button class="edit-profile-btn" onclick="editProfile()">Edit Profile</button>
+            <button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button>
+        </div>`;
+    
     for (const p of posts || []) { 
-        html += `<div class="post"><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')"><div class="post-caption">${p.caption || 'Fashion'}</div></div>`; 
+        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+        html += `<div class="post">
+            <div class="post-header">
+                <div class="post-header-left">
+                    <div class="m-logo">
+                        <div class="tri tri1"></div>
+                        <div class="tri tri2"></div>
+                        <div class="tri tri3"></div>
+                        <div class="tri tri4"></div>
+                    </div>
+                    <div class="post-username">${p.is_ai ? 'Poik Poik' : USER.email.split('@')[0]} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${p.privacy || 'public'}</span></div>
+                </div>
+                <button class="delete-btn" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i></button>
+            </div>
+            <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
+            <div class="post-caption">${p.caption || 'Fashion visual'}</div>
+        </div>`;
     }
     feedDiv.innerHTML = html;
+}
+
+async function editProfile() {
+    const newBio = prompt('Enter your bio:', '✨ Fashion lover');
+    if (newBio !== null) {
+        await SB.from("profiles").upsert({ id: USER.id, bio: newBio });
+        loadProfile();
+    }
 }
 
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading...</div>';
-    const { data, error } = await SB.from("posts").select("*").order("id", { ascending: false });
+    
+    let query = SB.from("posts").select("*").order("id", { ascending: false });
+    if (!USER) query = query.eq('privacy', 'public');
+    else query = query.or(`privacy.eq.public,user_id.eq.${USER.id}`);
+    
+    const { data, error } = await query;
     if (error || !data || data.length === 0) { 
         feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; 
         return; 
     }
+    
     let html = '';
     for (const p of data) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const { data: comments } = await SB.from('comments').select('*').eq('post_id', p.id).order('created_at', { ascending: false });
+        const isOwner = USER && USER.id === p.user_id;
+        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         
         html += `<div class="post">
             <div class="post-header">
-                <div class="monster-avatar">
-                    <div class="monster-scratch">
-                        <div class="scratch-line"></div>
-                        <div class="scratch-line"></div>
-                        <div class="scratch-line"></div>
+                <div class="post-header-left">
+                    <div class="m-logo">
+                        <div class="tri tri1"></div>
+                        <div class="tri tri2"></div>
+                        <div class="tri tri3"></div>
+                        <div class="tri tri4"></div>
                     </div>
+                    <div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')} <span class="privacy-badge privacy-${p.privacy || 'public'}">${privacyIcon} ${p.privacy || 'public'}</span></div>
                 </div>
-                <div class="post-username">${p.is_ai ? 'Poik Poik' : (p.user_id ? 'Member' : 'Poik Poik')}</div>
+                ${isOwner ? `<button class="delete-btn" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i></button>` : ''}
             </div>
             <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
                 <div class="action-icon" onclick="likePost(${p.id})">
-                    <i class="far fa-heart"></i>
-                    <span>${likeCount || 0}</span>
+                    <i class="far fa-heart" id="like-icon-${p.id}"></i>
+                    <span id="likes-${p.id}">${likeCount || 0}</span>
                 </div>
                 <div class="action-icon" onclick="toggleComments(${p.id})">
                     <i class="far fa-comment-dots"></i>
-                    <span>${comments?.length || 0}</span>
+                    <span id="comment-count-${p.id}">${comments?.length || 0}</span>
                 </div>
                 <div class="action-icon" onclick="openShareModal('${p.image_url}')">
                     <i class="fas fa-share-alt"></i>
@@ -480,7 +637,9 @@ async function loadFeed() {
                 </div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                ${comments?.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}
+                <div id="comments-list-${p.id}">
+                    ${comments?.map(c => `<div class="comment"><strong>User</strong> ${c.text}</div>`).join('') || '<div class="comment">No comments yet</div>'}
+                </div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="addComment(${p.id})">Post</button>
@@ -491,9 +650,14 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// INIT
-// ============================================
+// Also create avatars bucket in Supabase
+async function initStorage() {
+    try {
+        await SB.storage.createBucket('avatars', { public: true });
+    } catch(e) { console.log('Bucket exists'); }
+}
+
+initStorage();
 handleMagicLink();
 checkAuth();
 loadFeed();
