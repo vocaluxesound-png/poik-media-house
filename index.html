@@ -142,32 +142,15 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
-    .comments-section { 
-        padding: 12px; 
-        background: #060606; 
-        border-radius: 0 0 16px 16px;
-        position: relative;
-    }
-    .comments-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #333;
-    }
-    .comments-title { font-size: 14px; color: #888; }
-    .close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
-    .close-comments:hover { color: #ff4444; }
-    
+    /* Comments Section */
+    .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; }
     .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
     .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
     .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; }
     .comment-text { font-size: 13px; margin-left: 25px; margin-bottom: 5px; }
     .comment-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 11px; }
     .comment-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-    .comment-action.liked { color: #ff4444; }
-    .comment-action.liked i { color: #ff4444; }
+    .comment-action:hover { color: #00ff88; }
     .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
     
     .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
@@ -176,13 +159,9 @@
     .reply-text { font-size: 12px; margin-left: 25px; margin-bottom: 3px; }
     .reply-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 10px; }
     .reply-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 3px; }
-    .reply-action.liked { color: #ff4444; }
+    .reply-action:hover { color: #00ff88; }
     .reply-action.liked i { color: #ff4444; }
-    .reply-action.disliked { color: #aaa; }
-    
-    .dislike-btn { display: inline-flex; align-items: center; gap: 3px; color: #888; cursor: pointer; }
-    .dislike-btn i { font-size: 12px; color: #888; }
-    .dislike-btn.disliked i { color: #aaa; }
+    .reply-action.disliked i { color: #aaa; }
     
     .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 25px; }
     .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 12px; }
@@ -355,25 +334,13 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 
-// Storage for user interactions
-let userLikedComments = new Set();
-let userLikedReplies = new Set();
-let userDislikedReplies = new Set();
-
-function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+// ============================================
+// AUTH
+// ============================================
+function openAuthModal() { 
+    if (USER) return;
+    document.getElementById('authModal').style.display = 'flex'; 
 }
-
-// ============================================
-// AUTH FUNCTIONS
-// ============================================
-function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
@@ -385,14 +352,19 @@ document.getElementById('magicLoginBtn').onclick = async () => {
         email: email.trim(),
         options: { emailRedirectTo: window.location.origin }
     });
-    if (error) { alert('Error: ' + error.message); } else { 
+    if (error) { alert('Error: ' + error.message); } 
+    else { 
         alert('Magic link sent! Check your email.'); 
         closeAuthModal(); 
         document.getElementById('authEmail').value = '';
     }
 };
 
-async function logout() { await SB.auth.signOut(); USER = null; location.reload(); }
+async function logout() {
+    await SB.auth.signOut();
+    USER = null;
+    location.reload();
+}
 
 async function handleMagicLink() {
     const hash = window.location.hash;
@@ -411,13 +383,18 @@ async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser();
     USER = user;
     const userIcon = document.querySelector('.fa-user-circle');
-    if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); } 
-    else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
+    if (user) { 
+        userIcon.classList.remove('far'); 
+        userIcon.classList.add('fas'); 
+    } else { 
+        userIcon.classList.remove('fas'); 
+        userIcon.classList.add('far'); 
+    }
     return user;
 }
 
 // ============================================
-// PROFILE FUNCTIONS
+// PROFILE
 // ============================================
 async function uploadAvatar(file) {
     if (!USER) return;
@@ -455,7 +432,7 @@ document.getElementById('closeEditModal').onclick = () => document.getElementByI
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
 // ============================================
-// POST MENU FUNCTIONS
+// POST MENU
 // ============================================
 function togglePostMenu(postId) {
     const menu = document.getElementById(`post-menu-${postId}`);
@@ -483,9 +460,12 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================
-// SHARE FUNCTIONS
+// SHARE
 // ============================================
-function openShareModal(url) { SHARE_URL = url; document.getElementById('shareModal').style.display = 'block'; }
+function openShareModal(url) {
+    SHARE_URL = url;
+    document.getElementById('shareModal').style.display = 'block';
+}
 function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
 
 function shareTo(platform) {
@@ -499,10 +479,14 @@ function shareTo(platform) {
     closeShareModal();
 }
 
-function copyLink() { navigator.clipboard.writeText(SHARE_URL); alert('Link copied!'); closeShareModal(); }
+function copyLink() {
+    navigator.clipboard.writeText(SHARE_URL);
+    alert('Link copied!');
+    closeShareModal();
+}
 
 // ============================================
-// UI FUNCTIONS
+// UI
 // ============================================
 function openModal(img) { document.getElementById('modalImage').src = img; document.getElementById('imageModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
@@ -547,116 +531,15 @@ async function addComment(postId) {
     
     if (error) { alert("Failed: " + error.message); return; }
     input.value = '';
-    
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-    
-    await loadCommentsOnly(postId);
+    loadFeed();
 }
 
-function toggleComments(postId, element) {
-    const section = document.getElementById(`comments-${postId}`);
+function toggleComments(id) {
+    const section = document.getElementById(`comments-${id}`);
     if (section) {
         const isHidden = section.style.display === 'none';
         section.style.display = isHidden ? 'block' : 'none';
-        if (isHidden) {
-            loadCommentsOnly(postId);
-        }
     }
-}
-
-async function loadCommentsOnly(postId) {
-    const commentsList = document.getElementById(`comments-list-${postId}`);
-    if (!commentsList) return;
-    
-    commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
-    
-    const { data: comments, error } = await SB.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
-    
-    if (error || !comments || comments.length === 0) {
-        commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>';
-        return;
-    }
-    
-    const commentIds = comments.map(c => c.id);
-    let allReplies = [];
-    if (commentIds.length > 0) {
-        const { data: replies } = await SB.from("comment_replies").select("*").in("comment_id", commentIds).order("created_at", { ascending: true });
-        if (replies) allReplies = replies;
-    }
-    
-    let html = '';
-    for (const c of comments) {
-        const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-        const isLiked = userLikedComments.has(c.id);
-        
-        const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
-        
-        let repliesHtml = '';
-        for (const r of commentReplies) {
-            const isReplyLiked = userLikedReplies.has(r.id);
-            const isReplyDisliked = userDislikedReplies.has(r.id);
-            
-            const nestedReplies = allReplies.filter(nr => nr.parent_reply_id === r.id);
-            let nestedHtml = '';
-            for (const nr of nestedReplies) {
-                const isNestedLiked = userLikedReplies.has(nr.id);
-                const isNestedDisliked = userDislikedReplies.has(nr.id);
-                nestedHtml += `
-                    <div class="reply" style="margin-left: 25px;">
-                        <div class="reply-header"><span class="reply-username">User</span></div>
-                        <div class="reply-text">${escapeHtml(nr.text)}</div>
-                        <div class="reply-actions">
-                            <span class="reply-action ${isNestedLiked ? 'liked' : ''}" onclick="likeReply(${nr.id})">${isNestedLiked ? '❤️' : '🤍'} <span id="reply-like-${nr.id}">${nr.like_count || 0}</span></span>
-                            <span class="reply-action dislike-btn ${isNestedDisliked ? 'disliked' : ''}" onclick="dislikeReply(${nr.id})">👎 <span id="reply-dislike-${nr.id}">${nr.dislike_count || 0}</span></span>
-                            <span class="reply-action" onclick="showReplyInputForReply(${nr.id})">💬 Reply</span>
-                        </div>
-                        <div id="reply-reply-input-${nr.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-reply-text-${nr.id}" placeholder="Write a reply...">
-                            <button onclick="addReplyToReply(${nr.id}, ${postId})">Reply</button>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            repliesHtml += `
-                <div class="reply">
-                    <div class="reply-header"><span class="reply-username">User</span></div>
-                    <div class="reply-text">${escapeHtml(r.text)}</div>
-                    <div class="reply-actions">
-                        <span class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">${isReplyLiked ? '❤️' : '🤍'} <span id="reply-like-${r.id}">${r.like_count || 0}</span></span>
-                        <span class="reply-action dislike-btn ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👎 <span id="reply-dislike-${r.id}">${r.dislike_count || 0}</span></span>
-                        <span class="reply-action" onclick="showReplyInputForReply(${r.id})">💬 Reply</span>
-                    </div>
-                    <div id="reply-reply-input-${r.id}" class="reply-input" style="display:none;">
-                        <input type="text" id="reply-reply-text-${r.id}" placeholder="Write a reply...">
-                        <button onclick="addReplyToReply(${r.id}, ${postId})">Reply</button>
-                    </div>
-                    ${nestedHtml}
-                </div>
-            `;
-        }
-        
-        html += `
-            <div class="comment">
-                <div class="comment-header">
-                    <span class="comment-username">User</span>
-                </div>
-                <div class="comment-text">${escapeHtml(c.text)}</div>
-                <div class="comment-actions">
-                    <span class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">${isLiked ? '❤️' : '🤍'} <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
-                    <span class="comment-action" onclick="showReplyInputForComment(${c.id})">💬 Reply</span>
-                </div>
-                <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
-                    <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
-                    <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
-                </div>
-                <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
-            </div>
-        `;
-    }
-    commentsList.innerHTML = html;
 }
 
 // ============================================
@@ -713,7 +596,7 @@ async function addReplyToComment(commentId, postId) {
     });
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
-    await loadCommentsOnly(postId);
+    loadFeed();
 }
 
 async function addReplyToReply(parentReplyId, postId) {
@@ -730,98 +613,58 @@ async function addReplyToReply(parentReplyId, postId) {
     });
     input.value = '';
     document.getElementById(`reply-reply-input-${parentReplyId}`).style.display = 'none';
-    await loadCommentsOnly(postId);
+    loadFeed();
 }
 
 // ============================================
-// LIKE/DISLIKE FUNCTIONS
+// LIKE/DISLIKE FOR REPLIES
 // ============================================
-async function likeComment(commentId) {
-    if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    const { data: existing } = await SB.from("comment_likes").select("*").eq("comment_id", commentId).eq("user_id", USER.id);
-    
-    if (existing && existing.length > 0) {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userLikedComments.delete(commentId);
-    } else {
-        await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
-        userLikedComments.add(commentId);
-    }
-    const postId = await getPostIdFromComment(commentId);
-    if (postId) await loadCommentsOnly(postId);
-}
-
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     
+    // Check if already liked
     const { data: existingLike } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
     
     if (existingLike && existingLike.length > 0) {
+        // Unlike
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userLikedReplies.delete(replyId);
-        if (userDislikedReplies.has(replyId)) {
-            await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-            userDislikedReplies.delete(replyId);
-        }
+        await SB.from("comment_replies").update({ like_count: SB.raw('like_count - 1') }).eq("id", replyId);
     } else {
+        // Check if disliked
         const { data: existingDislike } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
         if (existingDislike && existingDislike.length > 0) {
             await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-            userDislikedReplies.delete(replyId);
+            await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count - 1') }).eq("id", replyId);
         }
+        // Like
         await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
-        userLikedReplies.add(replyId);
+        await SB.from("comment_replies").update({ like_count: SB.raw('like_count + 1') }).eq("id", replyId);
     }
-    const postId = await getPostIdFromReply(replyId);
-    if (postId) await loadCommentsOnly(postId);
+    loadFeed();
 }
 
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); openAuthModal(); return; }
     
+    // Check if already disliked
     const { data: existingDislike } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
     
     if (existingDislike && existingDislike.length > 0) {
+        // Remove dislike
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userDislikedReplies.delete(replyId);
+        await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count - 1') }).eq("id", replyId);
     } else {
+        // Check if liked
         const { data: existingLike } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
         if (existingLike && existingLike.length > 0) {
             await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-            userLikedReplies.delete(replyId);
+            await SB.from("comment_replies").update({ like_count: SB.raw('like_count - 1') }).eq("id", replyId);
         }
+        // Dislike
         await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
-        userDislikedReplies.add(replyId);
+        await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count + 1') }).eq("id", replyId);
     }
-    const postId = await getPostIdFromReply(replyId);
-    if (postId) await loadCommentsOnly(postId);
-}
-
-async function getPostIdFromComment(commentId) {
-    const { data } = await SB.from("comments").select("post_id").eq("id", commentId).single();
-    return data?.post_id;
-}
-
-async function getPostIdFromReply(replyId) {
-    const { data: reply } = await SB.from("comment_replies").select("comment_id").eq("id", replyId).single();
-    if (reply) {
-        const { data: comment } = await SB.from("comments").select("post_id").eq("id", reply.comment_id).single();
-        return comment?.post_id;
-    }
-    return null;
-}
-
-async function loadUserInteractions() {
-    if (!USER) return;
-    
-    const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
-    if (commentLikes) commentLikes.forEach(l => userLikedComments.add(l.comment_id));
-    
-    const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
-    if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(l.reply_id));
-    
-    const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
-    if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(d.reply_id));
+    loadFeed();
 }
 
 async function uploadPost() {
@@ -839,6 +682,9 @@ async function uploadPost() {
     loadFeed();
 }
 
+// ============================================
+// LOAD PROFILE
+// ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
@@ -855,7 +701,8 @@ async function loadProfile() {
     for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        
+        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         
         html += `<div class="post">
             <div class="post-header">
@@ -880,11 +727,12 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
+// ============================================
+// LOAD FEED WITH COMMENTS & REPLIES
+// ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
-    
-    await loadUserInteractions();
     
     const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     if (error || !posts || posts.length === 0) {
@@ -902,14 +750,7 @@ async function loadFeed() {
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
-        const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id);
-        
-        let totalCommentCount = comments.length;
-        for (const c of comments) {
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            totalCommentCount += replyCount;
-        }
-        
+        const { count: commentCount } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
@@ -922,10 +763,90 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         } else if (p.user_id && profiles[p.user_id]) {
             displayName = profiles[p.user_id].username || 'Member';
-            avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+            if (profiles[p.user_id].avatar_url) {
+                avatarHtml = `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+            }
         } else {
             displayName = 'Member';
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        }
+        
+        // Get comments for this post
+        const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id).order("created_at", { ascending: true });
+        
+        let commentsHtml = '';
+        if (comments && comments.length > 0) {
+            for (const c of comments) {
+                // Get replies for this comment
+                const { data: replies } = await SB.from("comment_replies").select("*").eq("comment_id", c.id).is("parent_reply_id", null).order("created_at", { ascending: true });
+                
+                let repliesHtml = '';
+                if (replies && replies.length > 0) {
+                    for (const r of replies) {
+                        // Get nested replies
+                        const { data: nestedReplies } = await SB.from("comment_replies").select("*").eq("parent_reply_id", r.id).order("created_at", { ascending: true });
+                        let nestedHtml = '';
+                        if (nestedReplies && nestedReplies.length > 0) {
+                            for (const nr of nestedReplies) {
+                                nestedHtml += `
+                                    <div class="reply" style="margin-left: 25px;">
+                                        <div class="reply-header"><span class="reply-username">User</span></div>
+                                        <div class="reply-text">${nr.text}</div>
+                                        <div class="reply-actions">
+                                            <span class="reply-action" onclick="likeReply(${nr.id})">🤍 <span id="reply-like-${nr.id}">${nr.like_count || 0}</span></span>
+                                            <span class="reply-action" onclick="dislikeReply(${nr.id})">👎 <span id="reply-dislike-${nr.id}">${nr.dislike_count || 0}</span></span>
+                                            <span class="reply-action" onclick="showReplyInputForReply(${nr.id})">💬 Reply</span>
+                                        </div>
+                                        <div id="reply-reply-input-${nr.id}" class="reply-input" style="display:none;">
+                                            <input type="text" id="reply-reply-text-${nr.id}" placeholder="Write a reply...">
+                                            <button onclick="addReplyToReply(${nr.id})">Reply</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                        
+                        repliesHtml += `
+                            <div class="reply">
+                                <div class="reply-header"><span class="reply-username">User</span></div>
+                                <div class="reply-text">${r.text}</div>
+                                <div class="reply-actions">
+                                    <span class="reply-action" onclick="likeReply(${r.id})">🤍 <span id="reply-like-${r.id}">${r.like_count || 0}</span></span>
+                                    <span class="reply-action" onclick="dislikeReply(${r.id})">👎 <span id="reply-dislike-${r.id}">${r.dislike_count || 0}</span></span>
+                                    <span class="reply-action" onclick="showReplyInputForReply(${r.id})">💬 Reply</span>
+                                </div>
+                                <div id="reply-reply-input-${r.id}" class="reply-input" style="display:none;">
+                                    <input type="text" id="reply-reply-text-${r.id}" placeholder="Write a reply...">
+                                    <button onclick="addReplyToReply(${r.id})">Reply</button>
+                                </div>
+                                ${nestedHtml}
+                            </div>
+                        `;
+                    }
+                }
+                
+                commentsHtml += `
+                    <div class="comment">
+                        <div class="comment-header">
+                            <span class="comment-username">User</span>
+                        </div>
+                        <div class="comment-text">${c.text}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action" onclick="likeComment(${c.id})">🤍 <span id="comment-like-${c.id}">0</span></span>
+                            <span class="comment-action" onclick="showReplyInputForComment(${c.id})">💬 Reply</span>
+                        </div>
+                        <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
+                            <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
+                            <button onclick="addReplyToComment(${c.id}, ${p.id})">Reply</button>
+                        </div>
+                        <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
+                    </div>
+                `;
+            }
+        } else {
+            commentsHtml = '<div class="comment">No comments yet. Be the first!</div>';
         }
         
         html += `<div class="post">
@@ -950,16 +871,12 @@ async function loadFeed() {
             <div class="post-caption">${p.caption || 'Fashion visual'}</div>
             <div class="post-actions-right">
                 <div class="action-icon" onclick="likePost(${p.id})"><i class="far fa-heart"></i><span id="likes-${p.id}">${likeCount || 0}</span></div>
-                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${totalCommentCount || 0}</span></div>
+                <div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${commentCount || 0}</span></div>
                 <div class="action-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-share-alt"></i><span>Share</span></div>
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div class="comments-header">
-                    <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
-                    <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
-                </div>
-                <div id="comments-list-${p.id}">Loading comments...</div>
+                <div id="comments-list-${p.id}">${commentsHtml}</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="addComment(${p.id})">Post</button>
@@ -970,6 +887,9 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
+// ============================================
+// INIT
+// ============================================
 async function initStorage() {
     try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {}
 }
