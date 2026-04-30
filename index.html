@@ -6,7 +6,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-    /* [PASTE ALL THE SAME CSS FROM BEFORE - keeping it clean, I'll include the full CSS] */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
     
@@ -157,18 +156,8 @@
         padding-bottom: 8px;
         border-bottom: 1px solid #333;
     }
-    .comments-title {
-        font-size: 14px;
-        color: #888;
-    }
-    .close-comments {
-        background: none;
-        border: none;
-        color: #888;
-        font-size: 20px;
-        cursor: pointer;
-        padding: 0 8px;
-    }
+    .comments-title { font-size: 14px; color: #888; }
+    .close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
     .close-comments:hover { color: #ff4444; }
     
     .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
@@ -191,13 +180,7 @@
     .reply-action.liked i { color: #ff4444; }
     .reply-action.disliked { color: #aaa; }
     
-    .dislike-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        color: #888;
-        cursor: pointer;
-    }
+    .dislike-btn { display: inline-flex; align-items: center; gap: 3px; color: #888; cursor: pointer; }
     .dislike-btn i { font-size: 12px; color: #888; }
     .dislike-btn.disliked i { color: #aaa; }
     
@@ -282,7 +265,86 @@
 </head>
 <body>
 
-<!-- [SAME HTML BODY AS BEFORE - keeping it consistent] -->
+<div class="header">
+    <div class="header-content">
+        <div class="logo">POIK POIK</div>
+        <div class="header-icons">
+            <i class="fas fa-plus" onclick="openUploadModal()"></i>
+            <i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444;" title="Logout"></i>
+            <i class="far fa-user-circle" onclick="openAuthModal()"></i>
+        </div>
+    </div>
+</div>
+
+<div class="top-nav">
+    <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
+    <button class="nav-item" onclick="switchTab('explore')">Explore</button>
+    <button class="nav-item" onclick="switchTab('following')">Following</button>
+</div>
+
+<div id="feed" class="feed"><div class="loading">Loading...</div></div>
+
+<div class="bottom-nav">
+    <div class="bottom-nav-items">
+        <button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
+        <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
+        <div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
+        <button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
+        <button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
+    </div>
+</div>
+
+<div id="uploadModal" class="upload-modal">
+    <h3>Upload</h3>
+    <input type="file" id="uploadFile" accept="image/*">
+    <input type="text" id="uploadCaption" placeholder="Caption...">
+    <select id="uploadPrivacy" class="privacy-select">
+        <option value="public">🌍 Public</option>
+        <option value="friends">👥 Friends Only</option>
+        <option value="private">🔒 Only Me</option>
+    </select>
+    <button onclick="uploadPost()">Post</button>
+    <button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
+</div>
+
+<div id="shareModal" class="share-modal">
+    <h3 style="text-align:center;">Share to</h3>
+    <div class="share-options">
+        <div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
+        <div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
+        <div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
+        <div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
+        <div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
+    </div>
+    <button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
+</div>
+
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <span class="close-modal" onclick="closeModal()">&times;</span>
+    <img id="modalImage">
+</div>
+
+<div id="authModal" class="auth-modal">
+    <div class="auth-box">
+        <h3 style="margin-bottom:20px;">Join Poik Poik</h3>
+        <p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a magic login link</p>
+        <input type="email" id="authEmail" placeholder="Email">
+        <button id="magicLoginBtn" class="magic-btn">Send Magic Link</button>
+        <button id="closeAuthBtn" class="cancel-btn">Cancel</button>
+    </div>
+</div>
+
+<div id="editProfileModal" class="edit-profile-modal">
+    <div class="edit-profile-box">
+        <h3 style="margin-bottom:20px;">Edit Profile</h3>
+        <input type="text" id="editUsername" placeholder="Username">
+        <textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
+        <button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
+        <button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
+    </div>
+</div>
+
+<input type="file" id="avatarInput" accept="image/*">
 
 <script>
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
@@ -298,7 +360,6 @@ let userLikedComments = new Set();
 let userLikedReplies = new Set();
 let userDislikedReplies = new Set();
 
-// Helper function to escape HTML
 function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/[&<>]/g, function(m) {
@@ -310,7 +371,7 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// AUTH FUNCTIONS (same as before)
+// AUTH FUNCTIONS
 // ============================================
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
@@ -356,7 +417,7 @@ async function checkAuth() {
 }
 
 // ============================================
-// PROFILE FUNCTIONS (simplified)
+// PROFILE FUNCTIONS
 // ============================================
 async function uploadAvatar(file) {
     if (!USER) return;
@@ -487,7 +548,6 @@ async function addComment(postId) {
     if (error) { alert("Failed: " + error.message); return; }
     input.value = '';
     
-    // Update comment count without reloading full feed
     const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
@@ -506,7 +566,6 @@ function toggleComments(postId, element) {
     }
 }
 
-// Load only comments for a specific post (no full page reload)
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -520,7 +579,6 @@ async function loadCommentsOnly(postId) {
         return;
     }
     
-    // Get all comment IDs for replies
     const commentIds = comments.map(c => c.id);
     let allReplies = [];
     if (commentIds.length > 0) {
@@ -533,7 +591,6 @@ async function loadCommentsOnly(postId) {
         const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         const isLiked = userLikedComments.has(c.id);
         
-        // Get replies for this comment
         const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
         
         let repliesHtml = '';
@@ -541,7 +598,6 @@ async function loadCommentsOnly(postId) {
             const isReplyLiked = userLikedReplies.has(r.id);
             const isReplyDisliked = userDislikedReplies.has(r.id);
             
-            // Get nested replies
             const nestedReplies = allReplies.filter(nr => nr.parent_reply_id === r.id);
             let nestedHtml = '';
             for (const nr of nestedReplies) {
@@ -691,7 +747,6 @@ async function likeComment(commentId) {
         await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
         userLikedComments.add(commentId);
     }
-    // Refresh comments to show updated like status
     const postId = await getPostIdFromComment(commentId);
     if (postId) await loadCommentsOnly(postId);
 }
@@ -784,9 +839,6 @@ async function uploadPost() {
     loadFeed();
 }
 
-// ============================================
-// LOAD PROFILE
-// ============================================
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
@@ -803,7 +855,6 @@ async function loadProfile() {
     for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        
         let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         
         html += `<div class="post">
@@ -829,9 +880,6 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// LOAD FEED (Main function)
-// ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
@@ -856,7 +904,6 @@ async function loadFeed() {
         const { count: likeCount } = await SB.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', p.id);
         const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id);
         
-        // Calculate total comment count
         let totalCommentCount = comments.length;
         for (const c of comments) {
             const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
@@ -923,9 +970,6 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// INIT
-// ============================================
 async function initStorage() {
     try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {}
 }
