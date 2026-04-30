@@ -151,9 +151,6 @@
     .comment-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 11px; }
     .comment-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 4px; }
     .comment-action:hover { color: #00ff88; }
-    .comment-action.liked { color: #ff4444; }
-    .comment-action.liked i { color: #ff4444; }
-    .comment-action.disliked { color: #aaa; }
     .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
     
     .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
@@ -530,11 +527,11 @@ async function addComment(postId) {
         post_id: postId,
         user_id: user.id,
         text: text
-    }).select();
+    });
     
     if (error) { alert("Failed: " + error.message); return; }
     input.value = '';
-    await loadFeed();
+    loadFeed();
 }
 
 function toggleComments(id) {
@@ -542,9 +539,6 @@ function toggleComments(id) {
     if (section) {
         const isHidden = section.style.display === 'none';
         section.style.display = isHidden ? 'block' : 'none';
-        if (isHidden) {
-            loadRepliesForComment(id);
-        }
     }
 }
 
@@ -602,7 +596,7 @@ async function addReplyToComment(commentId, postId) {
     });
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
-    await loadFeed();
+    loadFeed();
 }
 
 async function addReplyToReply(parentReplyId, postId) {
@@ -619,7 +613,7 @@ async function addReplyToReply(parentReplyId, postId) {
     });
     input.value = '';
     document.getElementById(`reply-reply-input-${parentReplyId}`).style.display = 'none';
-    await loadFeed();
+    loadFeed();
 }
 
 // ============================================
@@ -627,93 +621,50 @@ async function addReplyToReply(parentReplyId, postId) {
 // ============================================
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    const existing = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
-    if (existing.data?.length > 0) {
+    
+    // Check if already liked
+    const { data: existingLike } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    
+    if (existingLike && existingLike.length > 0) {
+        // Unlike
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        await SB.from("comment_replies").update({ like_count: SB.rpc('decrement', { row_id: replyId }) }).eq("id", replyId);
+        await SB.from("comment_replies").update({ like_count: SB.raw('like_count - 1') }).eq("id", replyId);
     } else {
+        // Check if disliked
+        const { data: existingDislike } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+        if (existingDislike && existingDislike.length > 0) {
+            await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+            await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count - 1') }).eq("id", replyId);
+        }
+        // Like
         await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
-        await SB.from("comment_replies").update({ like_count: SB.rpc('increment', { row_id: replyId }) }).eq("id", replyId);
+        await SB.from("comment_replies").update({ like_count: SB.raw('like_count + 1') }).eq("id", replyId);
     }
-    await loadFeed();
+    loadFeed();
 }
 
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); openAuthModal(); return; }
-    const existing = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
-    if (existing.data?.length > 0) {
+    
+    // Check if already disliked
+    const { data: existingDislike } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    
+    if (existingDislike && existingDislike.length > 0) {
+        // Remove dislike
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        await SB.from("comment_replies").update({ dislike_count: SB.rpc('decrement', { row_id: replyId }) }).eq("id", replyId);
+        await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count - 1') }).eq("id", replyId);
     } else {
-        await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
-        await SB.from("comment_replies").update({ dislike_count: SB.rpc('increment', { row_id: replyId }) }).eq("id", replyId);
-    }
-    await loadFeed();
-}
-
-async function loadRepliesForComment(commentId) {
-    const { data } = await SB
-        .from("comment_replies")
-        .select("*")
-        .eq("comment_id", commentId)
-        .is("parent_reply_id", null)
-        .order("created_at", { ascending: true });
-    
-    const container = document.getElementById(`replies-container-${commentId}`);
-    if (!container) return;
-    
-    if (!data || data.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    let html = '';
-    for (const r of data) {
-        const { data: childReplies } = await SB
-            .from("comment_replies")
-            .select("*")
-            .eq("parent_reply_id", r.id)
-            .order("created_at", { ascending: true });
-        
-        let childHtml = '';
-        if (childReplies && childReplies.length > 0) {
-            for (const cr of childReplies) {
-                childHtml += `
-                    <div class="reply" style="margin-left: 25px;">
-                        <div class="reply-header"><span class="reply-username">User</span></div>
-                        <div class="reply-text">${cr.text}</div>
-                        <div class="reply-actions">
-                            <span class="reply-action" onclick="likeReply(${cr.id})">🤍 <span id="reply-like-${cr.id}">${cr.like_count || 0}</span></span>
-                            <span class="reply-action" onclick="dislikeReply(${cr.id})">👎 <span id="reply-dislike-${cr.id}">${cr.dislike_count || 0}</span></span>
-                            <span class="reply-action" onclick="showReplyInputForReply(${cr.id})">💬 Reply</span>
-                        </div>
-                        <div id="reply-reply-input-${cr.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-reply-text-${cr.id}" placeholder="Write a reply...">
-                            <button onclick="addReplyToReply(${cr.id})">Reply</button>
-                        </div>
-                    </div>
-                `;
-            }
+        // Check if liked
+        const { data: existingLike } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+        if (existingLike && existingLike.length > 0) {
+            await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+            await SB.from("comment_replies").update({ like_count: SB.raw('like_count - 1') }).eq("id", replyId);
         }
-        
-        html += `
-            <div class="reply">
-                <div class="reply-header"><span class="reply-username">User</span></div>
-                <div class="reply-text">${r.text}</div>
-                <div class="reply-actions">
-                    <span class="reply-action" onclick="likeReply(${r.id})">🤍 <span id="reply-like-${r.id}">${r.like_count || 0}</span></span>
-                    <span class="reply-action" onclick="dislikeReply(${r.id})">👎 <span id="reply-dislike-${r.id}">${r.dislike_count || 0}</span></span>
-                    <span class="reply-action" onclick="showReplyInputForReply(${r.id})">💬 Reply</span>
-                </div>
-                <div id="reply-reply-input-${r.id}" class="reply-input" style="display:none;">
-                    <input type="text" id="reply-reply-text-${r.id}" placeholder="Write a reply...">
-                    <button onclick="addReplyToReply(${r.id})">Reply</button>
-                </div>
-                ${childHtml}
-            </div>
-        `;
+        // Dislike
+        await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
+        await SB.from("comment_replies").update({ dislike_count: SB.raw('dislike_count + 1') }).eq("id", replyId);
     }
-    container.innerHTML = html;
+    loadFeed();
 }
 
 async function uploadPost() {
@@ -828,6 +779,54 @@ async function loadFeed() {
         let commentsHtml = '';
         if (comments && comments.length > 0) {
             for (const c of comments) {
+                // Get replies for this comment
+                const { data: replies } = await SB.from("comment_replies").select("*").eq("comment_id", c.id).is("parent_reply_id", null).order("created_at", { ascending: true });
+                
+                let repliesHtml = '';
+                if (replies && replies.length > 0) {
+                    for (const r of replies) {
+                        // Get nested replies
+                        const { data: nestedReplies } = await SB.from("comment_replies").select("*").eq("parent_reply_id", r.id).order("created_at", { ascending: true });
+                        let nestedHtml = '';
+                        if (nestedReplies && nestedReplies.length > 0) {
+                            for (const nr of nestedReplies) {
+                                nestedHtml += `
+                                    <div class="reply" style="margin-left: 25px;">
+                                        <div class="reply-header"><span class="reply-username">User</span></div>
+                                        <div class="reply-text">${nr.text}</div>
+                                        <div class="reply-actions">
+                                            <span class="reply-action" onclick="likeReply(${nr.id})">🤍 <span id="reply-like-${nr.id}">${nr.like_count || 0}</span></span>
+                                            <span class="reply-action" onclick="dislikeReply(${nr.id})">👎 <span id="reply-dislike-${nr.id}">${nr.dislike_count || 0}</span></span>
+                                            <span class="reply-action" onclick="showReplyInputForReply(${nr.id})">💬 Reply</span>
+                                        </div>
+                                        <div id="reply-reply-input-${nr.id}" class="reply-input" style="display:none;">
+                                            <input type="text" id="reply-reply-text-${nr.id}" placeholder="Write a reply...">
+                                            <button onclick="addReplyToReply(${nr.id})">Reply</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                        
+                        repliesHtml += `
+                            <div class="reply">
+                                <div class="reply-header"><span class="reply-username">User</span></div>
+                                <div class="reply-text">${r.text}</div>
+                                <div class="reply-actions">
+                                    <span class="reply-action" onclick="likeReply(${r.id})">🤍 <span id="reply-like-${r.id}">${r.like_count || 0}</span></span>
+                                    <span class="reply-action" onclick="dislikeReply(${r.id})">👎 <span id="reply-dislike-${r.id}">${r.dislike_count || 0}</span></span>
+                                    <span class="reply-action" onclick="showReplyInputForReply(${r.id})">💬 Reply</span>
+                                </div>
+                                <div id="reply-reply-input-${r.id}" class="reply-input" style="display:none;">
+                                    <input type="text" id="reply-reply-text-${r.id}" placeholder="Write a reply...">
+                                    <button onclick="addReplyToReply(${r.id})">Reply</button>
+                                </div>
+                                ${nestedHtml}
+                            </div>
+                        `;
+                    }
+                }
+                
                 commentsHtml += `
                     <div class="comment">
                         <div class="comment-header">
@@ -842,7 +841,7 @@ async function loadFeed() {
                             <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
                             <button onclick="addReplyToComment(${c.id}, ${p.id})">Reply</button>
                         </div>
-                        <div id="replies-container-${c.id}" class="replies"></div>
+                        <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
                     </div>
                 `;
             }
@@ -886,16 +885,6 @@ async function loadFeed() {
         </div>`;
     }
     feedDiv.innerHTML = html;
-    
-    // Load replies for each comment after rendering
-    for (const p of posts) {
-        const { data: comments } = await SB.from("comments").select("id").eq("post_id", p.id);
-        if (comments && comments.length > 0) {
-            for (const c of comments) {
-                await loadRepliesForComment(c.id);
-            }
-        }
-    }
 }
 
 // ============================================
