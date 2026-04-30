@@ -148,19 +148,26 @@
     .close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
     .close-comments:hover { color: #ff4444; }
     
-    .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
+    .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
     .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; }
+    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; cursor: pointer; }
     .comment-text { font-size: 13px; margin-left: 25px; margin-bottom: 5px; }
     .comment-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 11px; }
     .comment-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 4px; }
     .comment-action.liked { color: #ff4444; }
     .comment-action.liked i { color: #ff4444; }
+    .comment-menu { position: absolute; right: 5px; top: 5px; }
+    .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
+    .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
+    .comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
+    .comment-menu-option:hover { background: #333; }
+    .comment-menu-option.delete { color: #ff4444; }
+    
     .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
     
-    .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
+    .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
     .reply-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-    .reply-username { font-weight: bold; font-size: 12px; color: #00ff88; }
+    .reply-username { font-weight: bold; font-size: 12px; color: #00ff88; cursor: pointer; }
     .reply-text { font-size: 12px; margin-left: 25px; margin-bottom: 3px; }
     .reply-actions { display: flex; gap: 20px; margin-left: 25px; font-size: 10px; }
     .reply-action { 
@@ -183,6 +190,12 @@
         border-color: gray;
     }
     .reply-action i { font-size: 10px; }
+    .reply-menu { position: absolute; right: 5px; top: 5px; }
+    .reply-menu-btn { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 0 5px; }
+    .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 80px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
+    .reply-menu-option { padding: 6px 10px; cursor: pointer; font-size: 11px; color: white; }
+    .reply-menu-option:hover { background: #333; }
+    .reply-menu-option.delete { color: #ff4444; }
     
     .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 25px; }
     .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 12px; }
@@ -480,7 +493,26 @@ function toggleComments(postId) {
 }
 
 // ============================================
-// REPLY FUNCTIONS (FIXED)
+// DELETE FUNCTIONS
+// ============================================
+async function deleteComment(commentId, postId) {
+    if (!confirm('Delete this comment?')) return;
+    await SB.from("comments").delete().eq("id", commentId);
+    await SB.from("comment_replies").delete().eq("comment_id", commentId);
+    await loadCommentsOnly(postId);
+    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const countSpan = document.getElementById(`comment-count-${postId}`);
+    if (countSpan) countSpan.innerText = count || 0;
+}
+
+async function deleteReply(replyId, postId) {
+    if (!confirm('Delete this reply?')) return;
+    await SB.from("comment_replies").delete().eq("id", replyId);
+    await loadCommentsOnly(postId);
+}
+
+// ============================================
+// REPLY FUNCTIONS
 // ============================================
 async function addReplyToComment(commentId, postId) {
     const { data: { user } } = await SB.auth.getUser();
@@ -541,12 +573,6 @@ async function likeReply(replyId) {
     const dislikeSpan = document.getElementById(`dislike-count-${replyId}`);
     if (likeSpan) likeSpan.innerText = likes;
     if (dislikeSpan) dislikeSpan.innerText = dislikes;
-    
-    // Update UI class
-    const btn = document.getElementById(`like-count-${replyId}`)?.parentElement;
-    if (btn) btn.classList.toggle('liked');
-    const dislikeBtn = document.getElementById(`dislike-count-${replyId}`)?.parentElement;
-    if (dislikeBtn && dislikeBtn.classList.contains('disliked')) dislikeBtn.classList.remove('disliked');
 }
 
 async function dislikeReply(replyId) {
@@ -568,12 +594,6 @@ async function dislikeReply(replyId) {
     const dislikeSpan = document.getElementById(`dislike-count-${replyId}`);
     if (likeSpan) likeSpan.innerText = likes;
     if (dislikeSpan) dislikeSpan.innerText = dislikes;
-    
-    // Update UI class
-    const btn = document.getElementById(`dislike-count-${replyId}`)?.parentElement;
-    if (btn) btn.classList.toggle('disliked');
-    const likeBtn = document.getElementById(`like-count-${replyId}`)?.parentElement;
-    if (likeBtn && likeBtn.classList.contains('liked')) likeBtn.classList.remove('liked');
 }
 
 async function likeComment(commentId) {
@@ -587,13 +607,32 @@ async function likeComment(commentId) {
     const { count } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const likeSpan = document.getElementById(`comment-like-${commentId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
-    
-    const btn = document.getElementById(`comment-like-${commentId}`)?.parentElement;
-    if (btn) btn.classList.toggle('liked');
 }
 
 // ============================================
-// LOAD COMMENTS ONLY
+// MENU FUNCTIONS
+// ============================================
+function toggleCommentMenu(commentId) {
+    const menu = document.getElementById(`comment-menu-${commentId}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleReplyMenu(replyId) {
+    const menu = document.getElementById(`reply-menu-${replyId}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.comment-menu')) {
+        document.querySelectorAll('.comment-menu-dropdown').forEach(m => m.style.display = 'none');
+    }
+    if (!e.target.closest('.reply-menu')) {
+        document.querySelectorAll('.reply-menu-dropdown').forEach(m => m.style.display = 'none');
+    }
+});
+
+// ============================================
+// LOAD FUNCTIONS
 // ============================================
 let activeReplyCommentId = null;
 let activeReplyReplyId = null;
@@ -635,18 +674,23 @@ async function loadCommentsOnly(postId) {
             const { data } = await SB.from("comment_likes").select("*").eq("comment_id", c.id).eq("user_id", USER.id);
             isLiked = data && data.length > 0;
         }
+        const isOwner = USER && USER.id === c.user_id;
         
         const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
         let repliesHtml = '';
         for (const r of commentReplies) {
             const { likes: rLikes, dislikes: rDislikes } = await getReplyCounts(r.id);
+            const isReplyOwner = USER && USER.id === r.user_id;
             const nestedReplies = allReplies.filter(nr => nr.parent_reply_id === r.id);
             let nestedHtml = '';
             for (const nr of nestedReplies) {
                 const { likes: nrLikes, dislikes: nrDislikes } = await getReplyCounts(nr.id);
+                const isNestedOwner = USER && USER.id === nr.user_id;
                 nestedHtml += `
                     <div class="reply" style="margin-left: 25px;">
-                        <div class="reply-header"><span class="reply-username">User</span></div>
+                        <div class="reply-header">
+                            <span class="reply-username">User</span>
+                        </div>
                         <div class="reply-text">${escapeHtml(nr.text)}</div>
                         <div class="reply-actions">
                             <span class="reply-action" onclick="likeReply(${nr.id})">❤️ <span id="like-count-${nr.id}">${nrLikes}</span></span>
@@ -657,12 +701,22 @@ async function loadCommentsOnly(postId) {
                             <input type="text" id="reply-text-${nr.id}" placeholder="Write a reply...">
                             <button onclick="addReplyToReply(${c.id}, ${nr.id}, ${postId})">Reply</button>
                         </div>
+                        ${isNestedOwner ? `
+                        <div class="reply-menu">
+                            <button class="reply-menu-btn" onclick="toggleReplyMenu(${nr.id})">⋮</button>
+                            <div id="reply-menu-${nr.id}" class="reply-menu-dropdown" style="display:none;">
+                                <div class="reply-menu-option delete" onclick="deleteReply(${nr.id}, ${postId})">Delete</div>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
             }
             repliesHtml += `
                 <div class="reply">
-                    <div class="reply-header"><span class="reply-username">User</span></div>
+                    <div class="reply-header">
+                        <span class="reply-username">User</span>
+                    </div>
                     <div class="reply-text">${escapeHtml(r.text)}</div>
                     <div class="reply-actions">
                         <span class="reply-action" onclick="likeReply(${r.id})">❤️ <span id="like-count-${r.id}">${rLikes}</span></span>
@@ -674,6 +728,14 @@ async function loadCommentsOnly(postId) {
                         <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
                     </div>
                     ${nestedHtml}
+                    ${isReplyOwner ? `
+                    <div class="reply-menu">
+                        <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
+                        <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
+                            <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -696,6 +758,14 @@ async function loadCommentsOnly(postId) {
                     <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
                 </div>
                 <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
+                ${isOwner ? `
+                <div class="comment-menu">
+                    <button class="comment-menu-btn" onclick="toggleCommentMenu(${c.id})">⋮</button>
+                    <div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;">
+                        <div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
+                    </div>
+                </div>
+                ` : ''}
             </div>
         `;
     }
