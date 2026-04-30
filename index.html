@@ -72,7 +72,7 @@
     .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
     .action-icon i { font-size: 24px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
     .action-icon span { font-size: 11px; color: #ddd; }
-    .action-icon:hover i { color: #ff4444; transform: scale(1.1); }
+    .action-icon:hover i { transform: scale(1.1); }
     
     .privacy-badge {
         font-size: 11px;
@@ -142,16 +142,31 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
+    /* Comments Section */
     .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; }
-    .comment { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
-    .comment strong { color: #00ff88; }
-    .comment-actions { display: flex; gap: 12px; margin-top: 5px; font-size: 11px; }
-    .comment-actions span { color: #888; cursor: pointer; }
-    .comment-actions span:hover { color: #00ff88; }
-    .replies { margin-left: 30px; margin-top: 8px; padding-left: 10px; border-left: 2px solid #333; }
-    .reply { font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
-    .reply strong { color: #00ff88; font-size: 12px; }
-    .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 30px; }
+    .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
+    .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; }
+    .comment-text { font-size: 13px; margin-left: 25px; margin-bottom: 5px; }
+    .comment-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 11px; }
+    .comment-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .comment-action:hover { color: #00ff88; }
+    .comment-action.liked { color: #ff4444; }
+    .comment-action.liked i { color: #ff4444; }
+    .comment-action.disliked { color: #aaa; }
+    .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
+    
+    .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; }
+    .reply-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .reply-username { font-weight: bold; font-size: 12px; color: #00ff88; }
+    .reply-text { font-size: 12px; margin-left: 25px; margin-bottom: 3px; }
+    .reply-actions { display: flex; gap: 15px; margin-left: 25px; font-size: 10px; }
+    .reply-action { color: #888; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+    .reply-action:hover { color: #00ff88; }
+    .reply-action.liked i { color: #ff4444; }
+    .reply-action.disliked i { color: #aaa; }
+    
+    .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 25px; }
     .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 12px; }
     .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 11px; }
     
@@ -502,91 +517,24 @@ async function likePost(postId) {
 }
 
 // ============================================
-// COMMENTS - FIXED VERSION
+// COMMENT FUNCTIONS
 // ============================================
 async function addComment(postId) {
     const { data: { user } } = await SB.auth.getUser();
-
-    if (!user) {
-        alert('Login to comment');
-        openAuthModal();
-        return;
-    }
-
+    if (!user) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
-    const commentText = input.value.trim();
-
-    if (!commentText) {
-        alert('Write a comment first');
-        return;
-    }
-
-    const { data, error } = await SB
-        .from("comments")
-        .insert({
-            post_id: postId,
-            user_id: user.id,
-            text: commentText
-        })
-        .select();
-
-    if (error) {
-        console.error("Comment error:", error);
-        alert("Failed: " + error.message);
-        return;
-    }
-
-    input.value = '';
-    await loadComments(postId);
+    const text = input.value.trim();
+    if (!text) { alert('Write a comment first'); return; }
     
-    const { count } = await SB.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-}
-
-async function loadComments(postId) {
-    const container = document.getElementById(`comments-list-${postId}`);
-    if (!container) return;
-
-    try {
-        const { data, error } = await SB
-            .from("comments")
-            .select("*")
-            .eq("post_id", postId)
-            .order("created_at", { ascending: false });
-
-        if (error) {
-            console.error("Load comments error:", error);
-            container.innerHTML = '<div class="comment">Error loading comments</div>';
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div class="comment">No comments yet</div>';
-            return;
-        }
-
-        let html = "";
-        for (const c of data) {
-            html += `
-                <div class="comment">
-                    <strong>User</strong> ${c.text || c.content || ''}
-                    <div class="comment-actions">
-                        <span onclick="likeComment(${c.id})">❤️ Like</span>
-                        <span onclick="showReplyInput(${c.id})">💬 Reply</span>
-                    </div>
-                    <div id="reply-input-${c.id}" class="reply-input" style="display:none;">
-                        <input type="text" id="reply-text-${c.id}" placeholder="Write a reply...">
-                        <button onclick="addReply(${c.id}, ${postId})">Reply</button>
-                    </div>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
-    } catch (err) {
-        console.error("Load comments exception:", err);
-        container.innerHTML = '<div class="comment">Error loading comments</div>';
-    }
+    const { error } = await SB.from("comments").insert({
+        post_id: postId,
+        user_id: user.id,
+        text: text
+    }).select();
+    
+    if (error) { alert("Failed: " + error.message); return; }
+    input.value = '';
+    await loadFeed();
 }
 
 function toggleComments(id) {
@@ -595,40 +543,177 @@ function toggleComments(id) {
         const isHidden = section.style.display === 'none';
         section.style.display = isHidden ? 'block' : 'none';
         if (isHidden) {
-            loadComments(id);
+            loadRepliesForComment(id);
         }
     }
 }
 
-async function likeComment(commentId) {
-    if (!USER) { alert('Login to like comment'); openAuthModal(); return; }
-    await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
-}
+// ============================================
+// REPLY FUNCTIONS
+// ============================================
+let activeReplyCommentId = null;
+let activeReplyReplyId = null;
 
-let activeReplyInput = null;
-
-function showReplyInput(commentId) {
-    if (activeReplyInput) {
-        const prev = document.getElementById(activeReplyInput);
+function showReplyInputForComment(commentId) {
+    if (activeReplyCommentId) {
+        const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`);
         if (prev) prev.style.display = 'none';
     }
-    const replyDiv = document.getElementById(`reply-input-${commentId}`);
+    if (activeReplyReplyId) {
+        const prev = document.getElementById(`reply-reply-input-${activeReplyReplyId}`);
+        if (prev) prev.style.display = 'none';
+    }
+    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
     if (replyDiv) {
         replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
-        activeReplyInput = `reply-input-${commentId}`;
+        activeReplyCommentId = commentId;
+        activeReplyReplyId = null;
     }
 }
 
-async function addReply(commentId, postId) {
-    if (!USER) { alert('Login to reply'); openAuthModal(); return; }
-    const input = document.getElementById(`reply-text-${commentId}`);
+function showReplyInputForReply(replyId) {
+    if (activeReplyReplyId) {
+        const prev = document.getElementById(`reply-reply-input-${activeReplyReplyId}`);
+        if (prev) prev.style.display = 'none';
+    }
+    if (activeReplyCommentId) {
+        const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`);
+        if (prev) prev.style.display = 'none';
+    }
+    const replyDiv = document.getElementById(`reply-reply-input-${replyId}`);
+    if (replyDiv) {
+        replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+        activeReplyReplyId = replyId;
+        activeReplyCommentId = null;
+    }
+}
+
+async function addReplyToComment(commentId, postId) {
+    const { data: { user } } = await SB.auth.getUser();
+    if (!user) { alert('Login to reply'); openAuthModal(); return; }
+    const input = document.getElementById(`reply-comment-text-${commentId}`);
     const text = input.value.trim();
     if (!text) return;
     
-    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: USER.id, text: text });
+    await SB.from("comment_replies").insert({
+        comment_id: commentId,
+        user_id: user.id,
+        text: text
+    });
     input.value = '';
-    document.getElementById(`reply-input-${commentId}`).style.display = 'none';
-    loadComments(postId);
+    document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
+    await loadFeed();
+}
+
+async function addReplyToReply(parentReplyId, postId) {
+    const { data: { user } } = await SB.auth.getUser();
+    if (!user) { alert('Login to reply'); openAuthModal(); return; }
+    const input = document.getElementById(`reply-reply-text-${parentReplyId}`);
+    const text = input.value.trim();
+    if (!text) return;
+    
+    await SB.from("comment_replies").insert({
+        parent_reply_id: parentReplyId,
+        user_id: user.id,
+        text: text
+    });
+    input.value = '';
+    document.getElementById(`reply-reply-input-${parentReplyId}`).style.display = 'none';
+    await loadFeed();
+}
+
+// ============================================
+// LIKE/DISLIKE FOR REPLIES
+// ============================================
+async function likeReply(replyId) {
+    if (!USER) { alert('Login to like'); openAuthModal(); return; }
+    const existing = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    if (existing.data?.length > 0) {
+        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+        await SB.from("comment_replies").update({ like_count: SB.rpc('decrement', { row_id: replyId }) }).eq("id", replyId);
+    } else {
+        await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
+        await SB.from("comment_replies").update({ like_count: SB.rpc('increment', { row_id: replyId }) }).eq("id", replyId);
+    }
+    await loadFeed();
+}
+
+async function dislikeReply(replyId) {
+    if (!USER) { alert('Login to dislike'); openAuthModal(); return; }
+    const existing = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    if (existing.data?.length > 0) {
+        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+        await SB.from("comment_replies").update({ dislike_count: SB.rpc('decrement', { row_id: replyId }) }).eq("id", replyId);
+    } else {
+        await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
+        await SB.from("comment_replies").update({ dislike_count: SB.rpc('increment', { row_id: replyId }) }).eq("id", replyId);
+    }
+    await loadFeed();
+}
+
+async function loadRepliesForComment(commentId) {
+    const { data } = await SB
+        .from("comment_replies")
+        .select("*")
+        .eq("comment_id", commentId)
+        .is("parent_reply_id", null)
+        .order("created_at", { ascending: true });
+    
+    const container = document.getElementById(`replies-container-${commentId}`);
+    if (!container) return;
+    
+    if (!data || data.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    for (const r of data) {
+        const { data: childReplies } = await SB
+            .from("comment_replies")
+            .select("*")
+            .eq("parent_reply_id", r.id)
+            .order("created_at", { ascending: true });
+        
+        let childHtml = '';
+        if (childReplies && childReplies.length > 0) {
+            for (const cr of childReplies) {
+                childHtml += `
+                    <div class="reply" style="margin-left: 25px;">
+                        <div class="reply-header"><span class="reply-username">User</span></div>
+                        <div class="reply-text">${cr.text}</div>
+                        <div class="reply-actions">
+                            <span class="reply-action" onclick="likeReply(${cr.id})">🤍 <span id="reply-like-${cr.id}">${cr.like_count || 0}</span></span>
+                            <span class="reply-action" onclick="dislikeReply(${cr.id})">👎 <span id="reply-dislike-${cr.id}">${cr.dislike_count || 0}</span></span>
+                            <span class="reply-action" onclick="showReplyInputForReply(${cr.id})">💬 Reply</span>
+                        </div>
+                        <div id="reply-reply-input-${cr.id}" class="reply-input" style="display:none;">
+                            <input type="text" id="reply-reply-text-${cr.id}" placeholder="Write a reply...">
+                            <button onclick="addReplyToReply(${cr.id})">Reply</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        html += `
+            <div class="reply">
+                <div class="reply-header"><span class="reply-username">User</span></div>
+                <div class="reply-text">${r.text}</div>
+                <div class="reply-actions">
+                    <span class="reply-action" onclick="likeReply(${r.id})">🤍 <span id="reply-like-${r.id}">${r.like_count || 0}</span></span>
+                    <span class="reply-action" onclick="dislikeReply(${r.id})">👎 <span id="reply-dislike-${r.id}">${r.dislike_count || 0}</span></span>
+                    <span class="reply-action" onclick="showReplyInputForReply(${r.id})">💬 Reply</span>
+                </div>
+                <div id="reply-reply-input-${r.id}" class="reply-input" style="display:none;">
+                    <input type="text" id="reply-reply-text-${r.id}" placeholder="Write a reply...">
+                    <button onclick="addReplyToReply(${r.id})">Reply</button>
+                </div>
+                ${childHtml}
+            </div>
+        `;
+    }
+    container.innerHTML = html;
 }
 
 async function uploadPost() {
@@ -692,7 +777,7 @@ async function loadProfile() {
 }
 
 // ============================================
-// LOAD FEED
+// LOAD FEED WITH COMMENTS & REPLIES
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
@@ -737,6 +822,34 @@ async function loadFeed() {
             avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
         }
         
+        // Get comments for this post
+        const { data: comments } = await SB.from("comments").select("*").eq("post_id", p.id).order("created_at", { ascending: true });
+        
+        let commentsHtml = '';
+        if (comments && comments.length > 0) {
+            for (const c of comments) {
+                commentsHtml += `
+                    <div class="comment">
+                        <div class="comment-header">
+                            <span class="comment-username">User</span>
+                        </div>
+                        <div class="comment-text">${c.text}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action" onclick="likeComment(${c.id})">🤍 <span id="comment-like-${c.id}">0</span></span>
+                            <span class="comment-action" onclick="showReplyInputForComment(${c.id})">💬 Reply</span>
+                        </div>
+                        <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
+                            <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
+                            <button onclick="addReplyToComment(${c.id}, ${p.id})">Reply</button>
+                        </div>
+                        <div id="replies-container-${c.id}" class="replies"></div>
+                    </div>
+                `;
+            }
+        } else {
+            commentsHtml = '<div class="comment">No comments yet. Be the first!</div>';
+        }
+        
         html += `<div class="post">
             <div class="post-header">
                 <div class="post-header-left">
@@ -764,7 +877,7 @@ async function loadFeed() {
                 <div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div id="comments-list-${p.id}">Loading comments...</div>
+                <div id="comments-list-${p.id}">${commentsHtml}</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="addComment(${p.id})">Post</button>
@@ -773,6 +886,16 @@ async function loadFeed() {
         </div>`;
     }
     feedDiv.innerHTML = html;
+    
+    // Load replies for each comment after rendering
+    for (const p of posts) {
+        const { data: comments } = await SB.from("comments").select("id").eq("post_id", p.id);
+        if (comments && comments.length > 0) {
+            for (const c of comments) {
+                await loadRepliesForComment(c.id);
+            }
+        }
+    }
 }
 
 // ============================================
