@@ -56,7 +56,6 @@
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
     
-    /* Post action buttons - Like, Comment, Save, Share */
     .post-actions-right {
         position: absolute;
         right: 12px;
@@ -66,6 +65,7 @@
         flex-direction: column;
         gap: 16px;
         z-index: 10;
+        align-items: center;
     }
     @media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
     @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
@@ -76,7 +76,12 @@
     .action-icon:hover i { transform: scale(1.1); }
     .action-icon.liked i { color: #FE2C55; }
     
-    .share-icon i { font-size: 24px; transform: rotate(-45deg); display: inline-block; }
+    .share-icon i {
+        font-size: 24px;
+        transform: rotate(-45deg);
+        display: inline-block;
+        color: white;
+    }
     
     .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
     .privacy-public { background: #00ff88; color: black; }
@@ -423,7 +428,7 @@ function bottomNav(page) {
 }
 
 // ============================================
-// POST LIKE (Only Like - No Dislike on Post)
+// POST LIKE
 // ============================================
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
@@ -482,7 +487,6 @@ function toggleComments(postId) {
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
     
-    // Remove dislike if exists
     await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
     userDislikedComments.delete(commentId);
     
@@ -512,7 +516,6 @@ async function likeComment(commentId) {
 async function dislikeComment(commentId) {
     if (!USER) { alert('Login to dislike'); return; }
     
-    // Remove like if exists
     await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
     userLikedComments.delete(commentId);
     
@@ -884,7 +887,7 @@ async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // Load user likes
+    // Load user likes/dislikes
     if (USER) {
         const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
         if (postLikes) postLikes.forEach(l => userLikedPosts.add(l.post_id));
@@ -963,7 +966,7 @@ async function loadFeed() {
                     <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
                 </div>
                 <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                    <i class="fas fa-share-alt"></i>
+                    <i class="fas fa-arrow-up"></i>
                     <span>Share</span>
                 </div>
                 <div class="action-icon" onclick="alert('Saved!')">
