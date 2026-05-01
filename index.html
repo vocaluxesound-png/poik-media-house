@@ -653,7 +653,7 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
-// ========== LOAD COMMENTS ONLY (FIXED - Shows delete buttons and reply colors) ==========
+// ========== LOAD COMMENTS ONLY (FIXED - No foreign key needed) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -661,37 +661,56 @@ async function loadCommentsOnly(postId) {
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
     try {
-        // Fetch comments with profile data in one query
+        // Fetch comments
         const { data: comments } = await SB
             .from("comments")
-            .select(`
-                *,
-                profiles!comments_user_id_fkey (id, username, avatar_url)
-            `)
+            .select("*")
             .eq("post_id", postId)
             .order("created_at", { ascending: true });
-        
-        console.log("Comments loaded:", comments?.length);
         
         if (!comments || comments.length === 0) {
             commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>';
             return;
         }
         
-        // Get all comment IDs
+        // Get unique user IDs from comments
+        const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
+        
+        // Fetch profiles separately (no foreign key needed)
+        let profiles = {};
+        if (userIds.length > 0) {
+            const { data: profileData } = await SB
+                .from("profiles")
+                .select("id, username, avatar_url")
+                .in("id", userIds);
+            if (profileData) {
+                profileData.forEach(p => { profiles[p.id] = p; });
+            }
+        }
+        
+        // Fetch replies
         const commentIds = comments.map(c => c.id);
+        let allReplies = [];
+        if (commentIds.length > 0) {
+            const { data: replies } = await SB
+                .from("comment_replies")
+                .select("*")
+                .in("comment_id", commentIds)
+                .order("created_at", { ascending: true });
+            allReplies = replies || [];
+        }
         
-        // Fetch replies with profile data
-        const { data: allReplies } = await SB
-            .from("comment_replies")
-            .select(`
-                *,
-                profiles!comment_replies_user_id_fkey (id, username, avatar_url)
-            `)
-            .in("comment_id", commentIds)
-            .order("created_at", { ascending: true });
-        
-        const replies = allReplies || [];
+        // Get reply user IDs
+        const replyUserIds = [...new Set(allReplies.map(r => r.user_id).filter(id => id))];
+        if (replyUserIds.length > 0) {
+            const { data: replyProfileData } = await SB
+                .from("profiles")
+                .select("id, username, avatar_url")
+                .in("id", replyUserIds);
+            if (replyProfileData) {
+                replyProfileData.forEach(p => { if (!profiles[p.id]) profiles[p.id] = p; });
+            }
+        }
         
         let html = '';
         for (const c of comments) {
@@ -703,12 +722,12 @@ async function loadCommentsOnly(postId) {
             const isDisliked = userDislikedComments.has(Number(c.id));
             const isOwner = USER && USER.id === c.user_id;
             
-            const profile = c.profiles;
+            const profile = profiles[c.user_id];
             const commenterName = profile?.username || 'User';
             const commenterAvatar = profile?.avatar_url;
             
-            // Get replies for this comment (top-level)
-            const commentReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
+            // Get replies for this comment (top-level only)
+            const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
             
             let repliesHtml = '';
             for (const r of commentReplies) {
@@ -719,7 +738,7 @@ async function loadCommentsOnly(postId) {
                 const isReplyDisliked = userDislikedReplies.has(Number(r.id));
                 const isReplyOwner = USER && USER.id === r.user_id;
                 
-                const replyProfile = r.profiles;
+                const replyProfile = profiles[r.user_id];
                 const replyerName = replyProfile?.username || 'User';
                 const replyerAvatar = replyProfile?.avatar_url;
                 
