@@ -9,19 +9,94 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
     
-    .header {
-        position: sticky;
-        top: 0;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(10px);
-        padding: 12px 16px;
-        z-index: 100;
-        border-bottom: 1px solid #222;
-    }
+    .header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 16px; z-index: 100; border-bottom: 1px solid #222; }
     .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .header-icons { display: flex; gap: 16px; align-items: center; }
     .header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
+    
+    .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
+    .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid #111; }
+    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .post-header-left { display: flex; align-items: center; gap: 10px; }
+    
+    /* Post UI Elements */
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #333; background: #222; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .post-image { width: 100%; display: block; cursor: pointer; }
+    .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
+    
+    .post-actions-right { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 18px; align-items: center; z-index: 10; }
+    .action-icon { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    .action-icon i { font-size: 24px; color: white; }
+    .action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
+    .action-icon.liked i { color: #FE2C55; }
+
+    /* Comment Section Styling */
+    .comments-section { padding: 12px; background: #060606; border-top: 1px solid #1a1a1a; }
+    .comment { margin-bottom: 15px; position: relative; border-bottom: 1px solid #111; padding-bottom: 10px; }
+    .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; flex-wrap: wrap; }
+    .comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; }
+    .comment-time { font-size: 10px; color: #666; margin-left: auto; }
+    .comment-text { font-size: 13px; margin-left: 42px; color: #efefef; word-break: break-word; }
+    
+    /* FIX 1: Colored only when active user has liked/disliked */
+    .comment-action, .reply-action { background: none; border: none; color: white; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; padding: 2px 5px; border-radius: 15px; }
+    .comment-action.liked, .reply-action.liked { color: #FE2C55 !important; }
+    .comment-action.disliked, .reply-action.disliked { color: #FFC107 !important; }
+    .comment-action i, .reply-action i { font-size: 11px; }
+
+    .replies { margin-left: 42px; border-left: 1px solid #333; padding-left: 12px; margin-top: 10px; }
+    .reply { position: relative; margin-bottom: 10px; padding-bottom: 5px; }
+    .reply-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 8px; }
+
+    /* Modals & Inputs */
+    .comment-input, .reply-input { display: flex; gap: 8px; margin-top: 10px; }
+    .comment-input input, .reply-input input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: white; padding: 8px 12px; border-radius: 20px; font-size: 13px; }
+    .comment-input button, .reply-input button { background: #00ff88; color: black; border: none; padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    
+    .comment-menu, .reply-menu { position: absolute; right: 0; top: 0; }
+    .menu-btn { background: none; border: none; color: #666; cursor: pointer; padding: 5px; font-size: 16px; }
+    .dropdown { display: none; position: absolute; right: 0; background: #222; border: 1px solid #333; border-radius: 8px; z-index: 50; }
+    .dropdown-item { padding: 8px 12px; font-size: 12px; color: #ff4444; cursor: pointer; white-space: nowrap; }
+    .dropdown-item:hover { background: #333; }
+
+    .loading { text-align: center; padding: 50px; color: #666; }
+    
+    /* Share modal */
+    .share-modal { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 20px 20px 0 0; padding: 20px; z-index: 200; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
+    .share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
+    .share-option i { font-size: 30px; display: block; }
+    .share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
+    .share-option:hover { background: #333; }
+    
+    .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
+    .auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+    .auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+    .auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .magic-btn { background: #00ff88; color: black; border: none; }
+    
+    .upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
+    .upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
+    .upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
+    .upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
+    .modal img { max-width: 100%; max-height: 100%; }
+    .close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
+    
+    #avatarInput { display: none; }
+    
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); border-top: 1px solid #222; padding: 8px 20px; z-index: 100; }
+    .bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
+    .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
+    .bottom-nav-item i { font-size: 22px; }
+    .bottom-nav-item span { font-size: 10px; }
+    .bottom-nav-item.active { color: #00ff88; }
+    .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
+    .plus-circle i { color: black; font-size: 24px; }
     
     .top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
     .nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
@@ -29,192 +104,12 @@
     .nav-item.active { color: white; }
     .nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
     
-    .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
-    .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
-    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-    .post-header-left { display: flex; align-items: center; gap: 10px; }
-    
-    .m-logo {
-        width: 40px;
-        height: 40px;
-        background: black;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 2px;
-        padding: 5px 3px;
-        border-radius: 8px;
-    }
-    .tri { width: 7px; background: #00ff88; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
-    .tri1 { height: 14px; }
-    .tri2 { height: 24px; }
-    .tri3 { height: 28px; }
-    .tri4 { height: 18px; }
-    
-    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .post-username { font-weight: 600; font-size: 14px; }
-    .post-image { width: 100%; display: block; cursor: pointer; }
-    .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
-    
-    .post-actions-right {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        z-index: 10;
-        align-items: center;
-    }
-    @media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
-    @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
-    
-    .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
-    .action-icon i { font-size: 24px; color: white; transition: all 0.2s; }
-    .action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
-    .action-icon:hover i { transform: scale(1.1); }
-    .action-icon.liked i { color: #FE2C55; }
-    
-    .share-icon i {
-        font-size: 22px;
-        color: white;
-    }
-    
-    .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
-    .privacy-public { background: #00ff88; color: black; }
-    .privacy-friends { background: #ffaa00; color: black; }
-    .privacy-private { background: #ff4444; color: white; }
-    
-    .post-privacy-menu { position: relative; }
-    .post-menu-dropdown { display: none; position: absolute; right: 0; top: 35px; background: #1a1a1a; border-radius: 12px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #333; overflow: hidden; }
-    .post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
-    .post-menu-option:hover { background: #333; }
-    .delete-option { color: #ff4444; }
-    .delete-option:hover { background: #ff4444; color: white; }
-    
-    .share-modal { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 20px 20px 0 0; padding: 20px; z-index: 200; animation: slideUp 0.3s ease; }
-    .share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
-    .share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
-    .share-option i { font-size: 30px; display: block; }
-    .share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
-    .share-option:hover { background: #333; }
-    
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(0,0,0,0.95);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid #222;
-        padding: 8px 20px;
-        z-index: 100;
-    }
-    .bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
-    .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
-    .bottom-nav-item i { font-size: 22px; }
-    .bottom-nav-item span { font-size: 10px; }
-    .bottom-nav-item.active { color: #00ff88; }
-    .bottom-nav-item:hover { color: #ccc; }
-    .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
-    .plus-circle i { color: black; font-size: 24px; }
-    
-    /* Comments Section */
-    .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; position: relative; }
-    .comments-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-    .comments-title { font-size: 14px; color: #888; }
-    .close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
-    .close-comments:hover { color: #ff4444; }
-    
-    .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
-    .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
-    .comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; cursor: pointer; }
-    .comment-text { font-size: 13px; margin-left: 42px; margin-bottom: 5px; word-break: break-word; }
-    .comment-actions { display: flex; gap: 12px; margin-left: 42px; font-size: 11px; }
-    .comment-action { 
-        color: white;
-        cursor: pointer; 
-        display: inline-flex; 
-        align-items: center; 
-        gap: 4px;
-        background: transparent;
-        border: none;
-        padding: 2px 6px;
-        font-size: 11px;
-        transition: color 0.15s ease;
-    }
-    .comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
-    .comment-action.liked { color: #FE2C55; }
-    .comment-action.liked i { color: #FE2C55; }
-    .comment-action.disliked { color: #FFC107; }
-    .comment-action.disliked i { color: #FFC107; }
-    .comment-menu { position: absolute; right: 5px; top: 5px; }
-    .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
-    .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-    .comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
-    .comment-menu-option:hover { background: #333; }
-    .comment-menu-option.delete { color: #ff4444; }
-    
-    .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
-    
-    .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
-    .reply-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-    .reply-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-    .reply-username { font-weight: bold; font-size: 11px; color: #00ff88; cursor: pointer; }
-    .reply-text { font-size: 11px; margin-left: 32px; margin-bottom: 3px; word-break: break-word; }
-    .reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 10px; }
-    .reply-action { 
-        color: white;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        background: transparent;
-        border: none;
-        padding: 1px 5px;
-        font-size: 10px;
-        transition: color 0.15s ease;
-    }
-    .reply-action i { font-size: 10px; color: white; transition: color 0.15s ease; }
-    .reply-action.liked { color: #FE2C55; }
-    .reply-action.liked i { color: #FE2C55; }
-    .reply-action.disliked { color: #FFC107; }
-    .reply-action.disliked i { color: #FFC107; }
-    .reply-menu { position: absolute; right: 5px; top: 5px; }
-    .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
-    .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-    .reply-menu-option { padding: 5px 8px; cursor: pointer; font-size: 10px; color: white; }
-    .reply-menu-option:hover { background: #333; }
-    .reply-menu-option.delete { color: #ff4444; }
-    
-    .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 32px; }
-    .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 11px; }
-    .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 10px; }
-    
-    .comment-input { display: flex; gap: 8px; margin-top: 12px; }
-    .comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
-    .comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
-    
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
-    .modal img { max-width: 100%; max-height: 100%; }
-    .close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
-    
-    .upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
-    .upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
-    .upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
-    .upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
-    
-    .loading { text-align: center; padding: 50px; color: #888; }
-    
     .profile-header { text-align: center; padding: 30px 20px; }
     .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
     .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
     .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
     .edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
-    
     .edit-profile-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; align-items: center; justify-content: center; }
     .edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
     .edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
@@ -222,15 +117,6 @@
     .edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .save-profile-btn { background: #00ff88; color: black; border: none; }
     .cancel-edit-btn { background: #222; color: white; border: none; }
-    
-    .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
-    .auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-    .auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-    .auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .magic-btn { background: #00ff88; color: black; border: none; }
-    .cancel-btn { background: #222; color: white; border: none; }
-    
-    #avatarInput { display: none; }
 </style>
 </head>
 <body>
@@ -320,16 +206,31 @@
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 const SB = window.supabase.createClient(API_URL, API_KEY);
-
 let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 
-let userLikedPosts = new Set();
-let userLikedComments = new Set();
-let userDislikedComments = new Set();
-let userLikedReplies = new Set();
-let userDislikedReplies = new Set();
+// Helper: Get user's profile
+async function getUserProfile(userId) {
+    const { data } = await SB.from("profiles").select("*").eq("id", userId).single();
+    return data;
+}
+
+// FIX 4: Real-time relative timestamp helper
+function timeAgo(dateString) {
+    if (!dateString) return '';
+    const now = new Date();
+    const then = new Date(dateString);
+    const seconds = Math.floor((now - then) / 1000);
+    if (seconds < 60) return 'just now';
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'yesterday';
+    return `${days}d ago`;
+}
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
@@ -382,21 +283,22 @@ async function saveProfile() {
     document.getElementById('editProfileModal').style.display = 'none';
     loadProfile(); loadFeed();
 }
-function openEditProfile() { document.getElementById('editUsername').value = USER?.user_metadata?.username || ''; document.getElementById('editBio').value = USER?.user_metadata?.bio || ''; document.getElementById('editProfileModal').style.display = 'flex'; }
+function openEditProfile() { 
+    document.getElementById('editUsername').value = USER?.user_metadata?.username || ''; 
+    document.getElementById('editBio').value = USER?.user_metadata?.bio || ''; 
+    document.getElementById('editProfileModal').style.display = 'flex'; 
+}
 document.getElementById('closeEditModal').onclick = () => document.getElementById('editProfileModal').style.display = 'none';
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
 // ============================================
-// POST MENU
+// POST FUNCTIONS
 // ============================================
-function togglePostMenu(postId) { const menu = document.getElementById(`post-menu-${postId}`); document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
+function togglePostMenu(postId) { const menu = document.getElementById(`post-menu-${postId}`); if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
 async function changePostPrivacy(postId, newPrivacy) { await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); loadFeed(); }
 async function deletePost(postId) { if (confirm('Delete this post?')) { await SB.from("posts").delete().eq("id", postId); loadFeed(); if (CURRENT_TAB === 'profile') loadProfile(); } }
 document.addEventListener('click', (e) => { if (!e.target.closest('.post-privacy-menu')) { document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); } });
 
-// ============================================
-// SHARE
-// ============================================
 function openShareModal(url) { SHARE_URL = url; document.getElementById('shareModal').style.display = 'block'; }
 function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
 function shareTo(platform) {
@@ -411,9 +313,6 @@ function shareTo(platform) {
 }
 function copyLink() { navigator.clipboard.writeText(SHARE_URL); alert('Link copied!'); closeShareModal(); }
 
-// ============================================
-// UI
-// ============================================
 function openModal(img) { document.getElementById('modalImage').src = img; document.getElementById('imageModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
@@ -427,46 +326,32 @@ function bottomNav(page) {
     if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
 }
 
-// ============================================
-// POST LIKE
-// ============================================
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    
     const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    
     if (existing && existing.length > 0) {
         await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(Number(postId));
     } else {
         await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(Number(postId));
     }
-    
     const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const likeSpan = document.getElementById(`likes-${postId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
-    
     const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (existing && existing.length > 0) likeBtn.classList.remove('liked');
-        else likeBtn.classList.add('liked');
-    }
+    if (likeBtn) likeBtn.classList.toggle('liked');
 }
 
 // ============================================
 // COMMENT FUNCTIONS
 // ============================================
-async function addComment(postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to comment'); openAuthModal(); return; }
+async function postComment(postId) {
+    if (!USER) { alert('Login to comment'); openAuthModal(); return; }
     const input = document.getElementById(`comment-input-${postId}`);
     const text = input.value.trim();
     if (!text) { alert('Write a comment first'); return; }
-    const { error } = await SB.from("comments").insert({ post_id: postId, user_id: user.id, text: text });
-    if (error) { alert("Failed: " + error.message); return; }
+    await SB.from("comments").insert({ post_id: postId, user_id: USER.id, text: text });
     input.value = '';
-    await loadCommentsOnly(postId);
+    await loadComments(postId);
     const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
@@ -477,224 +362,273 @@ function toggleComments(postId) {
     if (section) {
         const isHidden = section.style.display === 'none';
         section.style.display = isHidden ? 'block' : 'none';
-        if (isHidden) { loadCommentsOnly(postId); }
+        if (isHidden) { loadComments(postId); }
     }
 }
 
-// ============================================
-// COMMENT LIKE/DISLIKE (Fixed with Number() conversion)
-// ============================================
-async function likeComment(commentId) {
-    if (!USER) { alert('Login to like'); return; }
-    commentId = Number(commentId);
+// FIX 1: Mutually exclusive Like/Dislike logic for comments
+async function toggleCommentInteraction(commentId, type, postId) {
+    if (!USER) { alert('Login first'); openAuthModal(); return; }
+    const otherType = type === 'like' ? 'dislike' : 'like';
+    const table = `comment_${type}s`;
+    const otherTable = `comment_${otherType}s`;
+
+    await SB.from(otherTable).delete().eq('comment_id', commentId).eq('user_id', USER.id);
+    const { data: existing } = await SB.from(table).select().eq('comment_id', commentId).eq('user_id', USER.id);
     
-    const isCurrentlyLiked = userLikedComments.has(commentId);
-    
-    if (userDislikedComments.has(commentId)) {
-        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userDislikedComments.delete(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    }
-    
-    if (isCurrentlyLiked) {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userLikedComments.delete(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
+    if (existing && existing.length > 0) {
+        await SB.from(table).delete().eq('comment_id', commentId).eq('user_id', USER.id);
     } else {
-        await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
-        userLikedComments.add(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.add('liked');
+        await SB.from(table).insert({ comment_id: commentId, user_id: USER.id });
     }
-    
-    const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const likeSpan = document.getElementById(`comment-like-${commentId}`);
-    if (likeSpan) likeSpan.innerText = likeCount || 0;
-    const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
-    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
+    await loadComments(postId);
 }
 
-async function dislikeComment(commentId) {
-    if (!USER) { alert('Login to dislike'); return; }
-    commentId = Number(commentId);
+// FIX 1: Mutually exclusive Like/Dislike logic for replies
+async function toggleReplyInteraction(replyId, type, postId) {
+    if (!USER) { alert('Login first'); openAuthModal(); return; }
+    const table = `reply_${type}s`;
+    const otherTable = type === 'like' ? 'reply_dislikes' : 'reply_likes';
+
+    await SB.from(otherTable).delete().eq('reply_id', replyId).eq('user_id', USER.id);
+    const { data: existing } = await SB.from(table).select().eq('reply_id', replyId).eq('user_id', USER.id);
     
-    const isCurrentlyDisliked = userDislikedComments.has(commentId);
-    
-    if (userLikedComments.has(commentId)) {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userLikedComments.delete(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    }
-    
-    if (isCurrentlyDisliked) {
-        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userDislikedComments.delete(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+    if (existing && existing.length > 0) {
+        await SB.from(table).delete().eq('reply_id', replyId).eq('user_id', USER.id);
     } else {
-        await SB.from("comment_dislikes").insert({ comment_id: commentId, user_id: USER.id });
-        userDislikedComments.add(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.add('disliked');
+        await SB.from(table).insert({ reply_id: replyId, user_id: USER.id });
     }
-    
-    const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const likeSpan = document.getElementById(`comment-like-${commentId}`);
-    if (likeSpan) likeSpan.innerText = likeCount || 0;
-    const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
-    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
+    await loadComments(postId);
 }
 
-// ============================================
-// REPLY FUNCTIONS
-// ============================================
+// FIX 2 & 3 & 4: Delete reply with profile pictures and timestamps
+async function deleteReply(replyId, postId) {
+    if (!confirm('Delete this reply?')) return;
+    const { error } = await SB.from('comment_replies').delete().eq('id', replyId);
+    if (error) { console.error(error); alert('Failed to delete'); return; }
+    await loadComments(postId);
+}
+
 async function addReplyToComment(commentId, postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to reply'); openAuthModal(); return; }
+    if (!USER) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-comment-text-${commentId}`);
     const text = input.value.trim();
     if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: user.id, text: text });
+    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: USER.id, text: text, post_id: postId });
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
-    await loadCommentsOnly(postId);
+    await loadComments(postId);
 }
 
 async function addReplyToReply(commentId, parentReplyId, postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to reply'); openAuthModal(); return; }
+    if (!USER) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-text-${parentReplyId}`);
     const text = input.value.trim();
     if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: user.id, text: text });
+    await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: USER.id, text: text, post_id: postId });
     input.value = '';
-    await loadCommentsOnly(postId);
-}
-
-async function likeReply(replyId) {
-    if (!USER) { alert('Login to like'); return; }
-    replyId = Number(replyId);
-    
-    const isCurrentlyLiked = userLikedReplies.has(replyId);
-    
-    if (userDislikedReplies.has(replyId)) {
-        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userDislikedReplies.delete(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    }
-    
-    if (isCurrentlyLiked) {
-        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userLikedReplies.delete(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    } else {
-        await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
-        userLikedReplies.add(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.add('liked');
-    }
-    
-    const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
-    const likeSpan = document.getElementById(`reply-like-${replyId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-}
-
-async function dislikeReply(replyId) {
-    if (!USER) { alert('Login to dislike'); return; }
-    replyId = Number(replyId);
-    
-    const isCurrentlyDisliked = userDislikedReplies.has(replyId);
-    
-    if (userLikedReplies.has(replyId)) {
-        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userLikedReplies.delete(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    }
-    
-    if (isCurrentlyDisliked) {
-        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userDislikedReplies.delete(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    } else {
-        await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
-        userDislikedReplies.add(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.add('disliked');
-    }
-    
-    const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
-    const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
-    if (dislikeSpan) dislikeSpan.innerText = count || 0;
+    document.getElementById(`reply-input-${parentReplyId}`).style.display = 'none';
+    await loadComments(postId);
 }
 
 // ============================================
-// DELETE FUNCTIONS
+// LOAD COMMENTS (FIXED all issues)
 // ============================================
+async function loadComments(postId) {
+    const container = document.getElementById(`comments-list-${postId}`);
+    if (!container) return;
+    container.innerHTML = '<div class="comment" style="padding:10px">Loading comments...</div>';
+    
+    // Get comments with profile data
+    const { data: comments } = await SB.from('comments').select(`*, profiles(username, avatar_url)`).eq('post_id', postId).order('created_at', { ascending: true });
+    if (!comments || comments.length === 0) {
+        container.innerHTML = '<div class="comment" style="padding:10px">No comments yet. Be the first!</div>';
+        return;
+    }
+    
+    // Get replies with profile data
+    const { data: replies } = await SB.from('comment_replies').select(`*, profiles(username, avatar_url)`).eq('post_id', postId).order('created_at', { ascending: true });
+    
+    // Get user's likes/dislikes for colors
+    let myCommentLikes = new Set();
+    let myCommentDislikes = new Set();
+    let myReplyLikes = new Set();
+    let myReplyDislikes = new Set();
+    
+    if (USER) {
+        const { data: cLikes } = await SB.from('comment_likes').select('comment_id').eq('user_id', USER.id);
+        if (cLikes) cLikes.forEach(l => myCommentLikes.add(l.comment_id));
+        const { data: cDislikes } = await SB.from('comment_dislikes').select('comment_id').eq('user_id', USER.id);
+        if (cDislikes) cDislikes.forEach(d => myCommentDislikes.add(d.comment_id));
+        const { data: rLikes } = await SB.from('reply_likes').select('reply_id').eq('user_id', USER.id);
+        if (rLikes) rLikes.forEach(l => myReplyLikes.add(l.reply_id));
+        const { data: rDislikes } = await SB.from('reply_dislikes').select('reply_id').eq('user_id', USER.id);
+        if (rDislikes) rDislikes.forEach(d => myReplyDislikes.add(d.reply_id));
+    }
+    
+    let html = '';
+    for (const c of comments) {
+        const { count: lCount } = await SB.from('comment_likes').select('*', { count: 'exact', head: true }).eq('comment_id', c.id);
+        const { count: dCount } = await SB.from('comment_dislikes').select('*', { count: 'exact', head: true }).eq('comment_id', c.id);
+        const isLiked = myCommentLikes.has(c.id);
+        const isDisliked = myCommentDislikes.has(c.id);
+        const isOwner = USER && USER.id === c.user_id;
+        const avatarUrl = c.profiles?.avatar_url;
+        
+        html += `
+            <div class="comment">
+                <div class="comment-header">
+                    ${avatarUrl ? `<img src="${avatarUrl}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
+                    <span class="comment-username">${escapeHtml(c.profiles?.username || 'User')}</span>
+                    <span class="comment-time">${timeAgo(c.created_at)}</span>
+                </div>
+                <div class="comment-text">${escapeHtml(c.text)}</div>
+                <div class="comment-actions">
+                    <button class="comment-action ${isLiked ? 'liked' : ''}" onclick="toggleCommentInteraction(${c.id}, 'like', ${postId})">
+                        <i class="fas fa-heart"></i> ${lCount || 0}
+                    </button>
+                    <button class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="toggleCommentInteraction(${c.id}, 'dislike', ${postId})">
+                        <i class="fas fa-thumbs-down"></i> ${dCount || 0}
+                    </button>
+                    <button class="comment-action" onclick="showReplyInputForComment(${c.id})">💬 Reply</button>
+                </div>
+                <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
+                    <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
+                    <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
+                </div>
+                <div id="replies-container-${c.id}" class="replies"></div>
+                ${isOwner ? `
+                <div class="comment-menu">
+                    <button class="menu-btn" onclick="toggleMenu(this)">⋮</button>
+                    <div class="dropdown">
+                        <div class="dropdown-item" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        // Get replies for this comment
+        const commentReplies = (replies || []).filter(r => r.comment_id === c.id && !r.parent_reply_id);
+        let repliesHtml = '';
+        for (const r of commentReplies) {
+            const { count: rLikes } = await SB.from('reply_likes').select('*', { count: 'exact', head: true }).eq('reply_id', r.id);
+            const { count: rDislikes } = await SB.from('reply_dislikes').select('*', { count: 'exact', head: true }).eq('reply_id', r.id);
+            const isReplyLiked = myReplyLikes.has(r.id);
+            const isReplyDisliked = myReplyDislikes.has(r.id);
+            const isReplyOwner = USER && USER.id === r.user_id;
+            const replyAvatarUrl = r.profiles?.avatar_url;
+            const replyUsername = r.profiles?.username || 'User';
+            
+            // Get nested replies
+            const nestedReplies = (replies || []).filter(nr => nr.parent_reply_id === r.id);
+            let nestedHtml = '';
+            for (const nr of nestedReplies) {
+                const { count: nrLikes } = await SB.from('reply_likes').select('*', { count: 'exact', head: true }).eq('reply_id', nr.id);
+                const { count: nrDislikes } = await SB.from('reply_dislikes').select('*', { count: 'exact', head: true }).eq('reply_id', nr.id);
+                const isNestedLiked = myReplyLikes.has(nr.id);
+                const isNestedDisliked = myReplyDislikes.has(nr.id);
+                const isNestedOwner = USER && USER.id === nr.user_id;
+                const nestedAvatarUrl = nr.profiles?.avatar_url;
+                const nestedUsername = nr.profiles?.username || 'User';
+                
+                nestedHtml += `
+                    <div class="reply" style="margin-left: 25px;">
+                        <div class="comment-header">
+                            ${nestedAvatarUrl ? `<img src="${nestedAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
+                            <span class="comment-username" style="font-size:12px;">${escapeHtml(nestedUsername)}</span>
+                            <span class="comment-time">${timeAgo(nr.created_at)}</span>
+                        </div>
+                        <div class="comment-text" style="margin-left:32px;">${escapeHtml(nr.text)}</div>
+                        <div class="comment-actions" style="margin-left:32px;">
+                            <button class="reply-action ${isNestedLiked ? 'liked' : ''}" onclick="toggleReplyInteraction(${nr.id}, 'like', ${postId})">
+                                <i class="fas fa-heart"></i> ${nrLikes || 0}
+                            </button>
+                            <button class="reply-action ${isNestedDisliked ? 'disliked' : ''}" onclick="toggleReplyInteraction(${nr.id}, 'dislike', ${postId})">
+                                <i class="fas fa-thumbs-down"></i> ${nrDislikes || 0}
+                            </button>
+                            <button class="reply-action" onclick="showReplyInputForReply(${c.id}, ${nr.id})">💬 Reply</button>
+                        </div>
+                        <div id="reply-input-${nr.id}" class="reply-input" style="display:none; margin-left:32px;">
+                            <input type="text" id="reply-text-${nr.id}" placeholder="Write a reply...">
+                            <button onclick="addReplyToReply(${c.id}, ${nr.id}, ${postId})">Reply</button>
+                        </div>
+                        ${isNestedOwner ? `
+                        <div class="reply-menu">
+                            <button class="menu-btn" onclick="toggleMenu(this)">⋮</button>
+                            <div class="dropdown">
+                                <div class="dropdown-item" onclick="deleteReply(${nr.id}, ${postId})">Delete</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            repliesHtml += `
+                <div class="reply">
+                    <div class="comment-header">
+                        ${replyAvatarUrl ? `<img src="${replyAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
+                        <span class="comment-username" style="font-size:12px;">${escapeHtml(replyUsername)}</span>
+                        <span class="comment-time">${timeAgo(r.created_at)}</span>
+                    </div>
+                    <div class="comment-text" style="margin-left:32px;">${escapeHtml(r.text)}</div>
+                    <div class="comment-actions" style="margin-left:32px;">
+                        <button class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="toggleReplyInteraction(${r.id}, 'like', ${postId})">
+                            <i class="fas fa-heart"></i> ${rLikes || 0}
+                        </button>
+                        <button class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="toggleReplyInteraction(${r.id}, 'dislike', ${postId})">
+                            <i class="fas fa-thumbs-down"></i> ${rDislikes || 0}
+                        </button>
+                        <button class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id})">💬 Reply</button>
+                    </div>
+                    <div id="reply-input-${r.id}" class="reply-input" style="display:none; margin-left:32px;">
+                        <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
+                        <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
+                    </div>
+                    ${nestedHtml}
+                    ${isReplyOwner ? `
+                    <div class="reply-menu">
+                        <button class="menu-btn" onclick="toggleMenu(this)">⋮</button>
+                        <div class="dropdown">
+                            <div class="dropdown-item" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        // Set replies HTML after the main loop
+        const repliesContainer = document.getElementById(`replies-container-${c.id}`);
+        if (repliesContainer) repliesContainer.innerHTML = repliesHtml;
+    }
+    container.innerHTML = html;
+}
+
+function toggleMenu(btn) {
+    const dropdown = btn.nextElementSibling;
+    if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+function showReplyInputForComment(commentId) {
+    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
+    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+}
+
+function showReplyInputForReply(commentId, replyId) {
+    const replyDiv = document.getElementById(`reply-input-${replyId}`);
+    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+}
+
 async function deleteComment(commentId, postId) {
     if (!confirm('Delete this comment?')) return;
     await SB.from("comments").delete().eq("id", commentId);
     await SB.from("comment_replies").delete().eq("comment_id", commentId);
-    await loadCommentsOnly(postId);
+    await loadComments(postId);
     const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
-}
-
-async function deleteReply(replyId, postId) {
-    if (!confirm('Delete this reply?')) return;
-    await SB.from("comment_replies").delete().eq("id", replyId);
-    await loadCommentsOnly(postId);
-}
-
-// ============================================
-// UI MENU FUNCTIONS
-// ============================================
-function toggleCommentMenu(commentId) {
-    const menu = document.getElementById(`comment-menu-${commentId}`);
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-
-function toggleReplyMenu(replyId) {
-    const menu = document.getElementById(`reply-menu-${replyId}`);
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.comment-menu')) {
-        document.querySelectorAll('.comment-menu-dropdown').forEach(m => m.style.display = 'none');
-    }
-    if (!e.target.closest('.reply-menu')) {
-        document.querySelectorAll('.reply-menu-dropdown').forEach(m => m.style.display = 'none');
-    }
-});
-
-// ============================================
-// REPLY INPUT TOGGLE
-// ============================================
-let activeReplyCommentId = null;
-let activeReplyReplyId = null;
-
-function showReplyInputForComment(commentId, postId) {
-    if (activeReplyCommentId) { const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); if (prev) prev.style.display = 'none'; }
-    if (activeReplyReplyId) { const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); if (prev) prev.style.display = 'none'; }
-    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
-    if (replyDiv) { replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; activeReplyCommentId = commentId; activeReplyReplyId = null; }
-}
-
-function showReplyInputForReply(commentId, replyId, postId) {
-    if (activeReplyReplyId) { const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); if (prev) prev.style.display = 'none'; }
-    if (activeReplyCommentId) { const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); if (prev) prev.style.display = 'none'; }
-    const replyDiv = document.getElementById(`reply-input-${replyId}`);
-    if (replyDiv) { replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; activeReplyReplyId = replyId; activeReplyCommentId = null; }
 }
 
 // ============================================
@@ -728,226 +662,50 @@ async function loadProfile() {
     for (const p of posts || []) {
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="user-avatar">👤</div>`;
         html += `<div class="post"><div class="post-header"><div class="post-header-left">${avatarDisplay}<div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
     }
     feedDiv.innerHTML = html;
 }
 
 // ============================================
-// LOAD COMMENTS ONLY (FIXED - Number conversion for IDs)
-// ============================================
-async function loadCommentsOnly(postId) {
-    const commentsList = document.getElementById(`comments-list-${postId}`);
-    if (!commentsList) return;
-    commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
-    
-    const { data: comments } = await SB.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
-    if (!comments || comments.length === 0) { commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>'; return; }
-    
-    const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
-    let profiles = {};
-    if (userIds.length > 0) {
-        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
-        if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
-    }
-    
-    const commentIds = comments.map(c => c.id);
-    let allReplies = [];
-    if (commentIds.length > 0) {
-        const { data: replies } = await SB.from("comment_replies").select("*").in("comment_id", commentIds).order("created_at", { ascending: true });
-        if (replies) allReplies = replies;
-    }
-    
-    let html = '';
-    for (const c of comments) {
-        const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-        const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-        
-        // FIXED: Use Number() for Set lookups
-        let isLiked = userLikedComments.has(Number(c.id));
-        let isDisliked = userDislikedComments.has(Number(c.id));
-        
-        const isOwner = USER && USER.id === c.user_id;
-        const profile = profiles[c.user_id];
-        const username = profile?.username || 'User';
-        const avatarUrl = profile?.avatar_url;
-        
-        const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
-        let repliesHtml = '';
-        for (const r of commentReplies) {
-            const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-            const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-            
-            // FIXED: Use Number() for Set lookups
-            let isReplyLiked = userLikedReplies.has(Number(r.id));
-            let isReplyDisliked = userDislikedReplies.has(Number(r.id));
-            const isReplyOwner = USER && USER.id === r.user_id;
-            const replyProfile = profiles[r.user_id];
-            const replyUsername = replyProfile?.username || 'User';
-            const replyAvatarUrl = replyProfile?.avatar_url;
-            
-            const nestedReplies = allReplies.filter(nr => nr.parent_reply_id === r.id);
-            let nestedHtml = '';
-            for (const nr of nestedReplies) {
-                const { count: nrLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
-                const { count: nrDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
-                
-                // FIXED: Use Number() for Set lookups
-                let isNestedLiked = userLikedReplies.has(Number(nr.id));
-                let isNestedDisliked = userDislikedReplies.has(Number(nr.id));
-                const isNestedOwner = USER && USER.id === nr.user_id;
-                const nestedProfile = profiles[nr.user_id];
-                const nestedUsername = nestedProfile?.username || 'User';
-                const nestedAvatarUrl = nestedProfile?.avatar_url;
-                
-                nestedHtml += `
-                    <div class="reply" style="margin-left: 25px;">
-                        <div class="reply-header">
-                            ${nestedAvatarUrl ? `<img src="${nestedAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                            <span class="reply-username">${escapeHtml(nestedUsername)}</span>
-                        </div>
-                        <div class="reply-text">${escapeHtml(nr.text)}</div>
-                        <div class="reply-actions">
-                            <span id="reply-like-btn-${nr.id}" class="reply-action ${isNestedLiked ? 'liked' : ''}" onclick="likeReply(${nr.id})">❤️ <span id="reply-like-${nr.id}">${nrLikes || 0}</span></span>
-                            <span id="reply-dislike-btn-${nr.id}" class="reply-action ${isNestedDisliked ? 'disliked' : ''}" onclick="dislikeReply(${nr.id})">👍 <span id="reply-dislike-${nr.id}">${nrDislikes || 0}</span></span>
-                            <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${nr.id}, ${postId})">💬 Reply</span>
-                        </div>
-                        <div id="reply-input-${nr.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-text-${nr.id}" placeholder="Write a reply...">
-                            <button onclick="addReplyToReply(${c.id}, ${nr.id}, ${postId})">Reply</button>
-                        </div>
-                        ${isNestedOwner ? `
-                        <div class="reply-menu">
-                            <button class="reply-menu-btn" onclick="toggleReplyMenu(${nr.id})">⋮</button>
-                            <div id="reply-menu-${nr.id}" class="reply-menu-dropdown" style="display:none;">
-                                <div class="reply-menu-option delete" onclick="deleteReply(${nr.id}, ${postId})">Delete</div>
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                `;
-            }
-            
-            repliesHtml += `
-                <div class="reply">
-                    <div class="reply-header">
-                        ${replyAvatarUrl ? `<img src="${replyAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                        <span class="reply-username">${escapeHtml(replyUsername)}</span>
-                    </div>
-                    <div class="reply-text">${escapeHtml(r.text)}</div>
-                    <div class="reply-actions">
-                        <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">❤️ <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
-                        <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👍 <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
-                        <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})">💬 Reply</span>
-                    </div>
-                    <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
-                        <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
-                        <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
-                    </div>
-                    ${nestedHtml}
-                    ${isReplyOwner ? `
-                    <div class="reply-menu">
-                        <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
-                        <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
-                            <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
-        }
-        
-        const totalRepliesCount = allReplies.filter(r => r.comment_id === c.id).length;
-        const avatarDisplay = avatarUrl ? `<img src="${avatarUrl}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`;
-        
-        html += `
-            <div class="comment">
-                <div class="comment-header">
-                    ${avatarDisplay}
-                    <span class="comment-username">${escapeHtml(username)}</span>
-                    <span style="font-size: 11px; color: #555;">💬 ${totalRepliesCount}</span>
-                </div>
-                <div class="comment-text">${escapeHtml(c.text)}</div>
-                <div class="comment-actions">
-                    <span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">❤️ <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
-                    <span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})">👍 <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span>
-                    <span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})">💬 Reply</span>
-                </div>
-                <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
-                    <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
-                    <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
-                </div>
-                <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
-                ${isOwner ? `
-                <div class="comment-menu">
-                    <button class="comment-menu-btn" onclick="toggleCommentMenu(${c.id})">⋮</button>
-                    <div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;">
-                        <div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
-    commentsList.innerHTML = html;
-}
-
-// ============================================
-// LOAD FEED (FIXED - Number conversion for Sets)
+// LOAD FEED
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // Load user likes/dislikes (FIXED: Store as Numbers)
+    // Load user likes for posts
+    let userLikedPosts = new Set();
     if (USER) {
         const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
-        if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
-        
-        const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
-        if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
-        
-        const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
-        if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
-        
-        const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
-        if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
-        
-        const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
-        if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
+        if (postLikes) postLikes.forEach(l => userLikedPosts.add(l.post_id));
     }
     
-    const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
+    const { data: posts, error } = await SB.from("posts").select("*, profiles(username, avatar_url)").order("id", { ascending: false });
     if (error || !posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
-    
-    const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
-    let profiles = {};
-    if (userIds.length > 0) {
-        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
-        if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
-    }
     
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-        const isLiked = userLikedPosts.has(Number(p.id));
-        
+        const isLiked = userLikedPosts.has(p.id);
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
         let totalCommentCount = commentsData.length;
         for (const c of commentsData) {
             const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             totalCommentCount += replyCount;
         }
-        
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         let displayName = 'Poik Poik';
         let avatarHtml = '';
-        if (p.is_ai) { displayName = 'Poik Poik'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        else if (p.user_id && profiles[p.user_id]) { displayName = profiles[p.user_id].username || 'Member'; avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        else { displayName = 'Member'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
+        if (p.is_ai) { displayName = 'Poik Poik'; avatarHtml = `<div class="user-avatar">🤖</div>`; }
+        else if (p.user_id && p.profiles) { 
+            displayName = p.profiles.username || 'Member'; 
+            avatarHtml = p.profiles.avatar_url ? `<img src="${p.profiles.avatar_url}" class="user-avatar">` : `<div class="user-avatar">👤</div>`; 
+        }
+        else { displayName = 'Member'; avatarHtml = `<div class="user-avatar">👤</div>`; }
         
         html += `<div class="post">
             <div class="post-header">
@@ -988,14 +746,14 @@ async function loadFeed() {
                 </div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div class="comments-header">
+                <div class="comments-header" style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
-                    <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
+                    <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'" style="background:none; border:none; color:#888; font-size:18px; cursor:pointer;">✕</button>
                 </div>
                 <div id="comments-list-${p.id}">Loading comments...</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                    <button onclick="addComment(${p.id})">Post</button>
+                    <button onclick="postComment(${p.id})">Post</button>
                 </div>
             </div>
         </div>`;
@@ -1004,6 +762,7 @@ async function loadFeed() {
 }
 
 async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
+
 initStorage();
 handleMagicLink();
 checkAuth();
