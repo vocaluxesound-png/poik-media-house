@@ -76,11 +76,12 @@
     .action-icon:hover i { transform: scale(1.1); }
     .action-icon.liked i { color: #FE2C55; }
     
+    /* Share icon - curved arrow pointing right */
     .share-icon i {
         font-size: 24px;
+        color: white;
         transform: rotate(-45deg);
         display: inline-block;
-        color: white;
     }
     
     .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
@@ -136,7 +137,7 @@
     .comment-text { font-size: 13px; margin-left: 42px; margin-bottom: 5px; word-break: break-word; }
     .comment-actions { display: flex; gap: 12px; margin-left: 42px; font-size: 11px; }
     .comment-action { 
-        color: #888;
+        color: white;
         cursor: pointer; 
         display: inline-flex; 
         align-items: center; 
@@ -147,10 +148,10 @@
         font-size: 11px;
     }
     .comment-action.liked { color: #FE2C55; }
-    .comment-action.liked i { color: #FE2C55; }
     .comment-action.disliked { color: #FFC107; }
+    .comment-action i { font-size: 11px; color: white; }
+    .comment-action.liked i { color: #FE2C55; }
     .comment-action.disliked i { color: #FFC107; }
-    .comment-action i { font-size: 11px; }
     .comment-menu { position: absolute; right: 5px; top: 5px; }
     .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
     .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
@@ -167,7 +168,7 @@
     .reply-text { font-size: 11px; margin-left: 32px; margin-bottom: 3px; word-break: break-word; }
     .reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 10px; }
     .reply-action { 
-        color: #888;
+        color: white;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -178,10 +179,10 @@
         font-size: 10px;
     }
     .reply-action.liked { color: #FE2C55; }
-    .reply-action.liked i { color: #FE2C55; }
     .reply-action.disliked { color: #FFC107; }
+    .reply-action i { font-size: 10px; color: white; }
+    .reply-action.liked i { color: #FE2C55; }
     .reply-action.disliked i { color: #FFC107; }
-    .reply-action i { font-size: 10px; }
     .reply-menu { position: absolute; right: 5px; top: 5px; }
     .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
     .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
@@ -482,7 +483,7 @@ function toggleComments(postId) {
 }
 
 // ============================================
-// COMMENT LIKE/DISLIKE
+// COMMENT LIKE/DISLIKE (Fixed - Default white)
 // ============================================
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
@@ -966,7 +967,7 @@ async function loadFeed() {
                     <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
                 </div>
                 <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                    <i class="fas fa-arrow-up"></i>
+                    <i class="fas fa-share-alt"></i>
                     <span>Share</span>
                 </div>
                 <div class="action-icon" onclick="alert('Saved!')">
