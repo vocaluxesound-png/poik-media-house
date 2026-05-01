@@ -6,926 +6,210 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
-
-.header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 16px; z-index: 100; border-bottom: 1px solid #222; }
-.header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-.logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.header-icons { display: flex; gap: 16px; align-items: center; }
-.header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
-
-.top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
-.nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
-.nav-item:hover { color: white; }
-.nav-item.active { color: white; }
-.nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
-
-.feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
-.post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
-.post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-.post-header-left { display: flex; align-items: center; gap: 10px; }
-.m-logo { width: 40px; height: 40px; background: black; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 5px 3px; border-radius: 8px; }
-.tri { width: 7px; background: #00ff88; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
-.tri1 { height: 14px; }
-.tri2 { height: 24px; }
-.tri3 { height: 28px; }
-.tri4 { height: 18px; }
-.user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.post-username { font-weight: 600; font-size: 14px; }
-.post-image { width: 100%; display: block; cursor: pointer; }
-.post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
-
-.post-actions-right { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 16px; z-index: 10; align-items: center; }
-@media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
-@media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
-.action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
-.action-icon i { font-size: 24px; color: white; transition: all 0.2s; }
-.action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
-.action-icon:hover i { transform: scale(1.1); }
-.action-icon.liked i { color: #FE2C55; }
-.share-icon i { font-size: 22px; color: white; }
-
-.privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
-.privacy-public { background: #00ff88; color: black; }
-.privacy-friends { background: #ffaa00; color: black; }
-.privacy-private { background: #ff4444; color: white; }
-.post-privacy-menu { position: relative; }
-.post-menu-dropdown { display: none; position: absolute; right: 0; top: 35px; background: #1a1a1a; border-radius: 12px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #333; overflow: hidden; }
-.post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
-.post-menu-option:hover { background: #333; }
-.delete-option { color: #ff4444; }
-.delete-option:hover { background: #ff4444; color: white; }
-
-.share-modal { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 20px 20px 0 0; padding: 20px; z-index: 200; animation: slideUp 0.3s ease; }
-.share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
-.share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
-.share-option i { font-size: 30px; display: block; }
-.share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
-.share-option:hover { background: #333; }
-
-.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); border-top: 1px solid #222; padding: 8px 20px; z-index: 100; }
-.bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
-.bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
-.bottom-nav-item i { font-size: 22px; }
-.bottom-nav-item span { font-size: 10px; }
-.bottom-nav-item.active { color: #00ff88; }
-.bottom-nav-item:hover { color: #ccc; }
-.plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
-.plus-circle i { color: black; font-size: 24px; }
-
-/* Comments Section */
-.comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; position: relative; }
-.comments-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-.comments-title { font-size: 14px; color: #888; }
-.close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
-.close-comments:hover { color: #ff4444; }
-
-.comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
-.comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
-.comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.comment-username { font-weight: bold; font-size: 12px; color: #00ff88; cursor: pointer; }
-.comment-time { font-size: 10px; color: #666; }
-.comment-text { font-size: 13px; margin-left: 36px; margin-bottom: 5px; word-break: break-word; }
-.comment-actions { display: flex; gap: 12px; margin-left: 36px; font-size: 11px; }
-.comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
-.comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
-.comment-action.liked { color: #FE2C55; }
-.comment-action.liked i { color: #FE2C55; }
-.comment-action.disliked { color: #FFC107; }
-.comment-action.disliked i { color: #FFC107; }
-.comment-menu { position: absolute; right: 5px; top: 5px; }
-.comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
-.comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-.comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
-.comment-menu-option:hover { background: #333; }
-.comment-menu-option.delete { color: #ff4444; }
-
-.replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
-.reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
-.reply-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
-.reply-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-.reply-username { font-weight: bold; font-size: 10px; color: #00ff88; cursor: pointer; }
-.reply-time { font-size: 9px; color: #666; }
-.reply-text { font-size: 11px; margin-left: 26px; margin-bottom: 3px; word-break: break-word; }
-.reply-actions { display: flex; gap: 8px; margin-left: 26px; font-size: 9px; }
-.reply-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; background: transparent; border: none; padding: 1px 5px; font-size: 9px; transition: color 0.15s ease; }
-.reply-action i { font-size: 9px; color: white; transition: color 0.15s ease; }
-.reply-action.liked { color: #FE2C55; }
-.reply-action.liked i { color: #FE2C55; }
-.reply-action.disliked { color: #FFC107; }
-.reply-action.disliked i { color: #FFC107; }
-.reply-menu { position: absolute; right: 5px; top: 5px; }
-.reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
-.reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-.reply-menu-option { padding: 5px 8px; cursor: pointer; font-size: 10px; color: white; }
-.reply-menu-option:hover { background: #333; }
-.reply-menu-option.delete { color: #ff4444; }
-
-.reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 26px; }
-.reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 11px; }
-.reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 10px; }
-.comment-input { display: flex; gap: 8px; margin-top: 12px; }
-.comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
-.comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
-
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
-.modal img { max-width: 100%; max-height: 100%; }
-.close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
-
-.upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
-.upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
-.upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
-.upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
-
-.loading { text-align: center; padding: 50px; color: #888; }
-
-.profile-header { text-align: center; padding: 30px 20px; }
-.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
-.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
-.profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
-.edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
-
-.edit-profile-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; align-items: center; justify-content: center; }
-.edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-.edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-.edit-profile-box textarea { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; resize: none; font-family: inherit; }
-.edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-.save-profile-btn { background: #00ff88; color: black; border: none; }
-.cancel-edit-btn { background: #222; color: white; border: none; }
-
-.auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
-.auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-.auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-.auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-.magic-btn { background: #00ff88; color: black; border: none; }
-.cancel-btn { background: #222; color: white; border: none; }
-
-#avatarInput { display: none; }
+*{margin:0;padding:0;box-sizing:border-box}body{background:black;color:white;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding-bottom:70px}
+.header{position:sticky;top:0;background:rgba(0,0,0,0.9);backdrop-filter:blur(10px);padding:12px 16px;z-index:100;border-bottom:1px solid #222}
+.header-content{max-width:600px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:bold;background:linear-gradient(135deg,#00ff88 40%,#fff 60%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.header-icons{display:flex;gap:16px;align-items:center}.header-icons i{font-size:22px;cursor:pointer;color:#ccc}
+.top-nav{max-width:600px;margin:0 auto;display:flex;justify-content:space-around;padding:12px 16px;position:sticky;top:60px;background:transparent;z-index:99}
+.nav-item{background:none;border:none;color:#aaa;font-size:15px;font-weight:600;padding:8px 16px;cursor:pointer;position:relative}
+.nav-item:hover{color:white}.nav-item.active{color:white}.nav-item.active::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:30px;height:2px;background-color:#00ff88;border-radius:2px}
+.feed{max-width:600px;margin:0 auto;padding-bottom:20px}
+.post{background:#0a0a0a;margin-bottom:20px;border-radius:16px;overflow:hidden;position:relative}
+.post-header{padding:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.post-header-left{display:flex;align-items:center;gap:10px}
+.m-logo{width:40px;height:40px;background:black;display:flex;align-items:flex-end;justify-content:center;gap:2px;padding:5px 3px;border-radius:8px}
+.tri{width:7px;background:#00ff88;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
+.tri1{height:14px}.tri2{height:24px}.tri3{height:28px}.tri4{height:18px}
+.user-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.post-username{font-weight:600;font-size:14px}
+.post-image{width:100%;display:block;cursor:pointer}
+.post-caption{padding:12px;font-size:14px;padding-right:70px}
+.post-actions-right{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:16px;z-index:10;align-items:center}
+@media(max-width:640px){.post-actions-right{right:10px;gap:14px}}
+@media(min-width:641px){.post-actions-right{right:16px;gap:18px}}
+.action-icon{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;text-align:center}
+.action-icon i{font-size:24px;color:white;transition:all 0.2s}
+.action-icon span{font-size:11px;color:#ddd;margin-top:4px}
+.action-icon:hover i{transform:scale(1.1)}
+.action-icon.liked i{color:#FE2C55}
+.share-icon i{font-size:22px;color:white}
+.privacy-badge{font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;border:none}
+.privacy-public{background:#00ff88;color:black}
+.privacy-friends{background:#ffaa00;color:black}
+.privacy-private{background:#ff4444;color:white}
+.post-privacy-menu{position:relative}
+.post-menu-dropdown{display:none;position:absolute;right:0;top:35px;background:#1a1a1a;border-radius:12px;z-index:100;min-width:150px;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:1px solid #333;overflow:hidden}
+.post-menu-option{padding:12px 16px;cursor:pointer;font-size:14px;color:white;border-bottom:1px solid #333}
+.post-menu-option:hover{background:#333}
+.delete-option{color:#ff4444}.delete-option:hover{background:#ff4444;color:white}
+.share-modal{display:none;position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;border-radius:20px 20px 0 0;padding:20px;z-index:200;animation:slideUp 0.3s ease}
+.share-options{display:flex;justify-content:space-around;margin-top:20px;flex-wrap:wrap;gap:15px}
+.share-option{text-align:center;cursor:pointer;padding:10px;border-radius:12px;min-width:70px}
+.share-option i{font-size:30px;display:block}
+.share-option span{font-size:12px;margin-top:5px;color:#ccc}
+.share-option:hover{background:#333}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(10px);border-top:1px solid #222;padding:8px 20px;z-index:100}
+.bottom-nav-items{max-width:600px;margin:0 auto;display:flex;justify-content:space-around;align-items:center}
+.bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:#888;cursor:pointer}
+.bottom-nav-item i{font-size:22px}
+.bottom-nav-item span{font-size:10px}
+.bottom-nav-item.active{color:#00ff88}
+.bottom-nav-item:hover{color:#ccc}
+.plus-circle{background:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;margin-top:-20px;cursor:pointer}
+.plus-circle i{color:black;font-size:24px}
+.comments-section{padding:12px;background:#060606;border-radius:0 0 16px 16px;position:relative}
+.comments-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #333}
+.comments-title{font-size:14px;color:#888}
+.close-comments{background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:0 8px}
+.close-comments:hover{color:#ff4444}
+.comment{margin-bottom:15px;border-bottom:1px solid #1a1a1a;padding-bottom:8px;position:relative}
+.comment-header{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.comment-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#333;display:flex;align-items:center;justify-content:center;font-size:14px}
+.comment-username{font-weight:bold;font-size:12px;color:#00ff88;cursor:pointer}
+.comment-time{font-size:10px;color:#666;margin-left:auto}
+.comment-text{font-size:13px;margin-left:36px;margin-bottom:5px;word-break:break-word}
+.comment-actions{display:flex;gap:12px;margin-left:36px;font-size:11px}
+.comment-action{color:white;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;padding:2px 6px;font-size:11px;transition:color 0.15s ease}
+.comment-action i{font-size:11px;color:white;transition:color 0.15s ease}
+.comment-action.liked{color:#FE2C55}
+.comment-action.liked i{color:#FE2C55}
+.comment-action.disliked{color:#FFC107}
+.comment-action.disliked i{color:#FFC107}
+.comment-menu{position:absolute;right:5px;top:5px}
+.comment-menu-btn{background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:0 5px}
+.comment-menu-dropdown{display:none;position:absolute;right:0;top:20px;background:#1a1a1a;border-radius:8px;z-index:100;min-width:100px;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:1px solid #333}
+.comment-menu-option{padding:8px 12px;cursor:pointer;font-size:12px;color:white}
+.comment-menu-option:hover{background:#333}
+.comment-menu-option.delete{color:#ff4444}
+.replies{margin-left:30px;margin-top:10px;padding-left:10px;border-left:2px solid #333}
+.reply{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;position:relative}
+.reply-header{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
+.reply-avatar{width:20px;height:20px;border-radius:50%;object-fit:cover;background:#333;display:flex;align-items:center;justify-content:center;font-size:10px}
+.reply-username{font-weight:bold;font-size:10px;color:#00ff88;cursor:pointer}
+.reply-time{font-size:9px;color:#666;margin-left:auto}
+.reply-text{font-size:11px;margin-left:26px;margin-bottom:3px;word-break:break-word}
+.reply-actions{display:flex;gap:8px;margin-left:26px;font-size:9px}
+.reply-action{color:white;cursor:pointer;display:inline-flex;align-items:center;gap:3px;background:transparent;border:none;padding:1px 5px;font-size:9px;transition:color 0.15s ease}
+.reply-action i{font-size:9px;color:white;transition:color 0.15s ease}
+.reply-action.liked{color:#FE2C55}
+.reply-action.liked i{color:#FE2C55}
+.reply-action.disliked{color:#FFC107}
+.reply-action.disliked i{color:#FFC107}
+.reply-menu{position:absolute;right:5px;top:5px}
+.reply-menu-btn{background:none;border:none;color:#888;font-size:12px;cursor:pointer;padding:0 3px}
+.reply-menu-dropdown{display:none;position:absolute;right:0;top:18px;background:#1a1a1a;border-radius:6px;z-index:100;min-width:70px;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:1px solid #333}
+.reply-menu-option{padding:5px 8px;cursor:pointer;font-size:10px;color:white}
+.reply-menu-option:hover{background:#333}
+.reply-menu-option.delete{color:#ff4444}
+.reply-input{display:flex;gap:8px;margin-top:8px;margin-left:26px}
+.reply-input input{flex:1;padding:6px;border-radius:16px;border:none;background:#222;color:white;font-size:11px}
+.reply-input button{padding:6px 12px;border-radius:16px;border:none;background:#00ff88;color:black;font-weight:bold;cursor:pointer;font-size:10px}
+.comment-input{display:flex;gap:8px;margin-top:12px}
+.comment-input input{flex:1;padding:10px;border-radius:20px;border:none;background:#222;color:white}
+.comment-input button{padding:8px 16px;border-radius:20px;border:none;background:#00ff88;color:black;font-weight:bold;cursor:pointer}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:black;z-index:1000;justify-content:center;align-items:center}
+.modal img{max-width:100%;max-height:100%}
+.close-modal{position:absolute;top:20px;right:30px;font-size:40px;color:white;cursor:pointer}
+.upload-modal{display:none;position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a1a1a;padding:20px;border-radius:20px;z-index:200;width:90%;max-width:350px;text-align:center}
+.upload-modal .privacy-select{width:100%;padding:10px;margin:8px 0;border-radius:10px;background:#333;color:white;border:none}
+.upload-modal input{width:100%;padding:10px;margin:8px 0;border-radius:10px;border:none;background:#333;color:white}
+.upload-modal button{background:#00ff88;color:black;border:none;padding:10px 16px;border-radius:30px;font-weight:bold;cursor:pointer;margin:5px}
+.loading{text-align:center;padding:50px;color:#888}
+.profile-header{text-align:center;padding:30px 20px}
+.profile-avatar{width:80px;height:80px;border-radius:50%;background:#333;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:40px;cursor:pointer;overflow:hidden}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-stats{display:flex;justify-content:center;gap:30px;margin:15px 0}
+.profile-bio{color:#888;font-size:14px;margin:10px 0}
+.edit-profile-btn{background:#333;color:white;border:none;padding:8px 20px;border-radius:20px;cursor:pointer;margin-top:10px}
+.edit-profile-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:300;align-items:center;justify-content:center}
+.edit-profile-box{background:#111;padding:30px;border-radius:20px;width:90%;max-width:350px;text-align:center}
+.edit-profile-box input{width:100%;padding:12px;margin:10px 0;background:#222;border:1px solid #333;border-radius:10px;color:white}
+.edit-profile-box textarea{width:100%;padding:12px;margin:10px 0;background:#222;border:1px solid #333;border-radius:10px;color:white;resize:none;font-family:inherit}
+.edit-profile-box button{width:100%;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px}
+.save-profile-btn{background:#00ff88;color:black;border:none}
+.cancel-edit-btn{background:#222;color:white;border:none}
+.auth-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;align-items:center;justify-content:center}
+.auth-box{background:#111;padding:30px;border-radius:20px;width:90%;max-width:350px;text-align:center}
+.auth-box input{width:100%;padding:12px;margin:10px 0;background:#222;border:1px solid #333;border-radius:10px;color:white}
+.auth-box button{width:100%;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px}
+.magic-btn{background:#00ff88;color:black;border:none}
+.cancel-btn{background:#222;color:white;border:none}
+#avatarInput{display:none}
 </style>
 </head>
 <body>
-
-<div class="header">
-<div class="header-content">
-<div class="logo">POIK POIK</div>
-<div class="header-icons">
-<i class="fas fa-plus" onclick="openUploadModal()"></i>
-<i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444;" title="Logout"></i>
-<i class="far fa-user-circle" onclick="openAuthModal()"></i>
-</div>
-</div>
-</div>
-
-<div class="top-nav">
-<button class="nav-item active" onclick="switchTab('feed')">Feed</button>
-<button class="nav-item" onclick="switchTab('explore')">Explore</button>
-<button class="nav-item" onclick="switchTab('following')">Following</button>
-</div>
-
+<div class="header"><div class="header-content"><div class="logo">POIK POIK</div><div class="header-icons"><i class="fas fa-plus" onclick="openUploadModal()"></i><i class="fas fa-sign-out-alt" onclick="logout()" style="color:#ff4444" title="Logout"></i><i class="far fa-user-circle" onclick="openAuthModal()"></i></div></div></div>
+<div class="top-nav"><button class="nav-item active" onclick="switchTab('feed')">Feed</button><button class="nav-item" onclick="switchTab('explore')">Explore</button><button class="nav-item" onclick="switchTab('following')">Following</button></div>
 <div id="feed" class="feed"><div class="loading">Loading...</div></div>
-
-<div class="bottom-nav">
-<div class="bottom-nav-items">
-<button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
-<button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
-<div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
-<button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
-<button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
-</div>
-</div>
-
-<div id="uploadModal" class="upload-modal">
-<h3>Upload</h3>
-<input type="file" id="uploadFile" accept="image/*">
-<input type="text" id="uploadCaption" placeholder="Caption...">
-<select id="uploadPrivacy" class="privacy-select">
-<option value="public">🌍 Public</option>
-<option value="friends">👥 Friends Only</option>
-<option value="private">🔒 Only Me</option>
-</select>
-<button onclick="uploadPost()">Post</button>
-<button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
-</div>
-
-<div id="shareModal" class="share-modal">
-<h3 style="text-align:center;">Share to</h3>
-<div class="share-options">
-<div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
-<div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
-<div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
-<div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
-<div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
-</div>
-<button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
-</div>
-
-<div id="imageModal" class="modal" onclick="closeModal()">
-<span class="close-modal" onclick="closeModal()">&times;</span>
-<img id="modalImage">
-</div>
-
-<div id="authModal" class="auth-modal">
-<div class="auth-box">
-<h3 style="margin-bottom:20px;">Join Poik Poik</h3>
-<p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a magic login link</p>
-<input type="email" id="authEmail" placeholder="Email">
-<button id="magicLoginBtn" class="magic-btn">Send Magic Link</button>
-<button id="closeAuthBtn" class="cancel-btn">Cancel</button>
-</div>
-</div>
-
-<div id="editProfileModal" class="edit-profile-modal">
-<div class="edit-profile-box">
-<h3 style="margin-bottom:20px;">Edit Profile</h3>
-<input type="text" id="editUsername" placeholder="Username">
-<textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
-<button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
-<button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
-</div>
-</div>
-
+<div class="bottom-nav"><div class="bottom-nav-items"><button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button><button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button><div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div><button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button><button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button></div></div>
+<div id="uploadModal" class="upload-modal"><h3>Upload</h3><input type="file" id="uploadFile" accept="image/*"><input type="text" id="uploadCaption" placeholder="Caption..."><select id="uploadPrivacy" class="privacy-select"><option value="public">🌍 Public</option><option value="friends">👥 Friends Only</option><option value="private">🔒 Only Me</option></select><button onclick="uploadPost()">Post</button><button onclick="closeUploadModal()" style="background:#444">Cancel</button></div>
+<div id="shareModal" class="share-modal"><h3 style="text-align:center">Share to</h3><div class="share-options"><div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2"></i><span>Facebook</span></div><div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366"></i><span>WhatsApp</span></div><div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2"></i><span>Twitter</span></div><div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F"></i><span>Instagram</span></div><div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div></div><button onclick="closeShareModal()" style="width:100%;padding:12px;margin-top:15px;background:#333;border:none;border-radius:30px;color:white">Cancel</button></div>
+<div id="imageModal" class="modal" onclick="closeModal()"><span class="close-modal" onclick="closeModal()">&times;</span><img id="modalImage"></div>
+<div id="authModal" class="auth-modal"><div class="auth-box"><h3 style="margin-bottom:20px">Join Poik Poik</h3><p style="font-size:14px;color:#888;margin-bottom:15px">Enter your email to receive a magic login link</p><input type="email" id="authEmail" placeholder="Email"><button id="magicLoginBtn" class="magic-btn">Send Magic Link</button><button id="closeAuthBtn" class="cancel-btn">Cancel</button></div></div>
+<div id="editProfileModal" class="edit-profile-modal"><div class="edit-profile-box"><h3 style="margin-bottom:20px">Edit Profile</h3><input type="text" id="editUsername" placeholder="Username"><textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea><button id="saveProfileBtn" class="save-profile-btn">Save Changes</button><button id="closeEditModal" class="cancel-edit-btn">Cancel</button></div></div>
 <input type="file" id="avatarInput" accept="image/*">
-
 <script>
-const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
-const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const SB = window.supabase.createClient(API_URL, API_KEY);
-
-let USER = null;
-let CURRENT_TAB = 'feed';
-let SHARE_URL = '';
-let timestampInterval = null;
-
-let userLikedPosts = new Set();
-let userLikedComments = new Set();
-let userDislikedComments = new Set();
-let userLikedReplies = new Set();
-let userDislikedReplies = new Set();
-
-function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
-
-// FIXED TIMEAGO - shows "1 day ago" instead of "yesterday"
-function timeAgo(dateString) {
-    if (!dateString) return '';
-    const now = new Date();
-    const then = new Date(dateString);
-    const seconds = Math.floor((now - then) / 1000);
-    
-    if (seconds < 60) return 'just now';
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    return `${Math.floor(days / 7)}w ago`;
-}
-
-function updateAllTimestamps() {
-    document.querySelectorAll('.comment-time, .reply-time').forEach(el => {
-        const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) el.textContent = timeAgo(timestamp);
-    });
-}
-
-function startTimestampUpdater() {
-    if (timestampInterval) clearInterval(timestampInterval);
-    timestampInterval = setInterval(updateAllTimestamps, 60000);
-}
-
-// ========== AUTH ==========
-function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
-function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
-document.getElementById('closeAuthBtn').onclick = closeAuthModal;
-
-document.getElementById('magicLoginBtn').onclick = async () => {
-    const email = document.getElementById('authEmail').value;
-    if (!email) { alert('Enter your email'); return; }
-    const { error } = await SB.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
-    if (error) { alert('Error: ' + error.message); } else { alert('Magic link sent! Check your email.'); closeAuthModal(); document.getElementById('authEmail').value = ''; }
-};
-
-async function logout() { await SB.auth.signOut(); USER = null; if (timestampInterval) clearInterval(timestampInterval); location.reload(); }
-async function handleMagicLink() {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token) { await SB.auth.setSession({ access_token, refresh_token }); window.location.href = window.location.pathname; }
-    }
-}
-async function checkAuth() { const { data: { user } } = await SB.auth.getUser(); USER = user; const userIcon = document.querySelector('.fa-user-circle'); if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); } else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); } return user; }
-
-// ========== PROFILE ==========
-async function uploadAvatar(file) {
-    if (!USER) return;
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
-    await SB.storage.from("avatars").upload(fileName, file, { upsert: true });
-    const { data } = SB.storage.from("avatars").getPublicUrl(fileName);
-    await SB.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", USER.id);
-    alert("Profile picture updated!");
-    loadProfile(); loadFeed();
-}
-document.getElementById('avatarInput').onchange = async (e) => { if (e.target.files[0]) await uploadAvatar(e.target.files[0]); };
-
-async function saveProfile() {
-    if (!USER) return;
-    const username = document.getElementById("editUsername").value;
-    const bio = document.getElementById("editBio").value;
-    await SB.from("profiles").upsert({ id: USER.id, username: username, bio: bio });
-    alert("Profile updated!");
-    document.getElementById('editProfileModal').style.display = 'none';
-    loadProfile(); loadFeed();
-}
-function openEditProfile() {
-    document.getElementById('editUsername').value = USER?.user_metadata?.username || '';
-    document.getElementById('editBio').value = USER?.user_metadata?.bio || '';
-    document.getElementById('editProfileModal').style.display = 'flex';
-}
-document.getElementById('closeEditModal').onclick = () => document.getElementById('editProfileModal').style.display = 'none';
-document.getElementById('saveProfileBtn').onclick = saveProfile;
-
-// ========== POST MENU ==========
-function togglePostMenu(postId) { const menu = document.getElementById(`post-menu-${postId}`); document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
-async function changePostPrivacy(postId, newPrivacy) { await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); loadFeed(); }
-async function deletePost(postId) { if (confirm('Delete this post?')) { await SB.from("posts").delete().eq("id", postId); loadFeed(); if (CURRENT_TAB === 'profile') loadProfile(); } }
-document.addEventListener('click', (e) => { if (!e.target.closest('.post-privacy-menu')) { document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); } });
-
-// ========== SHARE ==========
-function openShareModal(url) { SHARE_URL = url; document.getElementById('shareModal').style.display = 'block'; }
-function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
-function shareTo(platform) {
-    const url = encodeURIComponent(SHARE_URL);
-    let link = '';
-    if (platform === 'facebook') link = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-    if (platform === 'whatsapp') link = `https://wa.me/?text=${url}`;
-    if (platform === 'twitter') link = `https://twitter.com/intent/tweet?url=${url}`;
-    if (platform === 'instagram') { alert('Save image first, then post manually.'); closeShareModal(); return; }
-    if (link) window.open(link, '_blank');
-    closeShareModal();
-}
-function copyLink() { navigator.clipboard.writeText(SHARE_URL); alert('Link copied!'); closeShareModal(); }
-
-// ========== UI ==========
-function openModal(img) { document.getElementById('modalImage').src = img; document.getElementById('imageModal').style.display = 'flex'; }
-function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
-function openUploadModal() { if (!USER) { alert('Please login first'); openAuthModal(); return; } document.getElementById('uploadModal').style.display = 'block'; }
-function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
-function switchTab(tab) { CURRENT_TAB = tab; loadFeed(); }
-function bottomNav(page) {
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    if (page === 'home') { document.querySelector('.bottom-nav-item:first-child').classList.add('active'); switchTab('feed'); }
-    if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
-}
-
-// ========== POST LIKE ==========
-async function likePost(postId) {
-    if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    if (existing && existing.length > 0) {
-        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(Number(postId));
-    } else {
-        await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(Number(postId));
-    }
-    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
-        else likeBtn.classList.remove('liked');
-    }
-}
-
-// ========== COMMENT FUNCTIONS ==========
-async function addComment(postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to comment'); openAuthModal(); return; }
-    const input = document.getElementById(`comment-input-${postId}`);
-    const text = input.value.trim();
-    if (!text) { alert('Write a comment first'); return; }
-    const { error } = await SB.from("comments").insert({ post_id: postId, user_id: user.id, text: text });
-    if (error) { alert("Failed: " + error.message); return; }
-    input.value = '';
-    await loadCommentsOnly(postId);
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-}
-function toggleComments(postId) {
-    const section = document.getElementById(`comments-${postId}`);
-    if (section) { const isHidden = section.style.display === 'none'; section.style.display = isHidden ? 'block' : 'none'; if (isHidden) { loadCommentsOnly(postId); } }
-}
-
-// ========== COMMENT LIKE/DISLIKE ==========
-async function likeComment(commentId) {
-    if (!USER) { alert('Login to like'); return; }
-    commentId = Number(commentId);
-    if (userDislikedComments.has(commentId)) {
-        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userDislikedComments.delete(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    }
-    if (userLikedComments.has(commentId)) {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userLikedComments.delete(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    } else {
-        await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
-        userLikedComments.add(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.add('liked');
-    }
-    const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const likeSpan = document.getElementById(`comment-like-${commentId}`);
-    if (likeSpan) likeSpan.innerText = likeCount || 0;
-    const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
-    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
-}
-async function dislikeComment(commentId) {
-    if (!USER) { alert('Login to dislike'); return; }
-    commentId = Number(commentId);
-    if (userLikedComments.has(commentId)) {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userLikedComments.delete(commentId);
-        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    }
-    if (userDislikedComments.has(commentId)) {
-        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-        userDislikedComments.delete(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    } else {
-        await SB.from("comment_dislikes").insert({ comment_id: commentId, user_id: USER.id });
-        userDislikedComments.add(commentId);
-        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-        if (dislikeBtn) dislikeBtn.classList.add('disliked');
-    }
-    const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
-    const likeSpan = document.getElementById(`comment-like-${commentId}`);
-    if (likeSpan) likeSpan.innerText = likeCount || 0;
-    const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
-    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
-}
-
-// ========== REPLY FUNCTIONS ==========
-async function addReplyToComment(commentId, postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to reply'); openAuthModal(); return; }
-    const input = document.getElementById(`reply-comment-text-${commentId}`);
-    const text = input.value.trim();
-    if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: user.id, text: text });
-    input.value = '';
-    document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
-    await loadCommentsOnly(postId);
-}
-async function addReplyToReply(commentId, parentReplyId, postId) {
-    const { data: { user } } = await SB.auth.getUser();
-    if (!user) { alert('Login to reply'); openAuthModal(); return; }
-    const input = document.getElementById(`reply-text-${parentReplyId}`);
-    const text = input.value.trim();
-    if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: user.id, text: text });
-    input.value = '';
-    await loadCommentsOnly(postId);
-}
-async function likeReply(replyId) {
-    if (!USER) { alert('Login to like'); return; }
-    replyId = Number(replyId);
-    if (userDislikedReplies.has(replyId)) {
-        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userDislikedReplies.delete(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    }
-    if (userLikedReplies.has(replyId)) {
-        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userLikedReplies.delete(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    } else {
-        await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
-        userLikedReplies.add(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.add('liked');
-    }
-    const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
-    const likeSpan = document.getElementById(`reply-like-${replyId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-}
-async function dislikeReply(replyId) {
-    if (!USER) { alert('Login to dislike'); return; }
-    replyId = Number(replyId);
-    if (userLikedReplies.has(replyId)) {
-        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userLikedReplies.delete(replyId);
-        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-        if (likeBtn) likeBtn.classList.remove('liked');
-    }
-    if (userDislikedReplies.has(replyId)) {
-        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-        userDislikedReplies.delete(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-    } else {
-        await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
-        userDislikedReplies.add(replyId);
-        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-        if (dislikeBtn) dislikeBtn.classList.add('disliked');
-    }
-    const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
-    const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
-    if (dislikeSpan) dislikeSpan.innerText = count || 0;
-}
-
-// FIXED DELETE REPLY FUNCTION WITH PROPER ERROR HANDLING
-async function deleteComment(commentId, postId) {
-    if (!confirm('Delete this comment?')) return;
-    const { error } = await SB.from("comments").delete().eq("id", commentId);
-    if (error) { alert("Delete failed: " + error.message); return; }
-    await SB.from("comment_replies").delete().eq("comment_id", commentId);
-    await loadCommentsOnly(postId);
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-}
-
-async function deleteReply(replyId, postId) {
-    if (!confirm('Delete this reply?')) return;
-    const { error } = await SB.from("comment_replies").delete().eq("id", replyId);
-    if (error) {
-        console.error("Delete reply error:", error);
-        alert("Failed to delete: " + error.message);
-        return;
-    }
-    await loadCommentsOnly(postId);
-}
-
-// ========== UI MENU FUNCTIONS ==========
-function toggleCommentMenu(commentId) { 
-    const menu = document.getElementById(`comment-menu-${commentId}`); 
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
-}
-function toggleReplyMenu(replyId) { 
-    const menu = document.getElementById(`reply-menu-${replyId}`); 
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
-}
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.comment-menu')) { 
-        document.querySelectorAll('.comment-menu-dropdown').forEach(m => m.style.display = 'none'); 
-    }
-    if (!e.target.closest('.reply-menu')) { 
-        document.querySelectorAll('.reply-menu-dropdown').forEach(m => m.style.display = 'none'); 
-    }
-});
-
-// ========== REPLY INPUT TOGGLE ==========
-let activeReplyCommentId = null;
-let activeReplyReplyId = null;
-function showReplyInputForComment(commentId, postId) {
-    if (activeReplyCommentId) { 
-        const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); 
-        if (prev) prev.style.display = 'none'; 
-    }
-    if (activeReplyReplyId) { 
-        const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); 
-        if (prev) prev.style.display = 'none'; 
-    }
-    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
-    if (replyDiv) { 
-        replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; 
-        activeReplyCommentId = commentId; 
-        activeReplyReplyId = null; 
-    }
-}
-function showReplyInputForReply(commentId, replyId, postId) {
-    if (activeReplyReplyId) { 
-        const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); 
-        if (prev) prev.style.display = 'none'; 
-    }
-    if (activeReplyCommentId) { 
-        const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); 
-        if (prev) prev.style.display = 'none'; 
-    }
-    const replyDiv = document.getElementById(`reply-input-${replyId}`);
-    if (replyDiv) { 
-        replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; 
-        activeReplyReplyId = replyId; 
-        activeReplyCommentId = null; 
-    }
-}
-
-// ========== UPLOAD POST ==========
-async function uploadPost() {
-    if (!USER) { alert('Login first'); return; }
-    const file = document.getElementById("uploadFile").files[0];
-    const caption = document.getElementById("uploadCaption").value;
-    const privacy = document.getElementById("uploadPrivacy").value;
-    if (!file) { alert("Select an image"); return; }
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
-    await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
-    alert("Posted!"); closeUploadModal(); loadFeed();
-}
-
-// ========== LOAD PROFILE ==========
-async function loadProfile() {
-    if (!USER) { alert('Please login'); openAuthModal(); return; }
-    const feedDiv = document.getElementById("feed");
-    feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
-    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
-    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
-    const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
-    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${profile?.username || USER.email.split('@')[0]}</h3><div class="profile-bio">${profile?.bio || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
-    for (const p of posts || []) {
-        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
-        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
-        html += `<div class="post"><div class="post-header"><div class="post-header-left">${avatarDisplay}<div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
-    }
-    feedDiv.innerHTML = html;
-}
-
-// ========== LOAD COMMENTS ONLY (FIXED - All issues resolved) ==========
-async function loadCommentsOnly(postId) {
-    const commentsList = document.getElementById(`comments-list-${postId}`);
-    if (!commentsList) return;
-    
-    commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
-    
-    try {
-        // Fetch comments
-        const { data: comments } = await SB
-            .from("comments")
-            .select("*")
-            .eq("post_id", postId)
-            .order("created_at", { ascending: true });
-        
-        if (!comments || comments.length === 0) {
-            commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>';
-            return;
-        }
-        
-        // Get unique user IDs
-        const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
-        
-        // Fetch profiles
-        let profiles = {};
-        if (userIds.length > 0) {
-            const { data: profileData } = await SB
-                .from("profiles")
-                .select("id, username, avatar_url")
-                .in("id", userIds);
-            if (profileData) {
-                profileData.forEach(p => { profiles[p.id] = p; });
-            }
-        }
-        
-        // Fetch replies
-        const commentIds = comments.map(c => c.id);
-        let allReplies = [];
-        if (commentIds.length > 0) {
-            const { data: replies } = await SB
-                .from("comment_replies")
-                .select("*")
-                .in("comment_id", commentIds)
-                .order("created_at", { ascending: true });
-            allReplies = replies || [];
-        }
-        
-        // Get reply user IDs
-        const replyUserIds = [...new Set(allReplies.map(r => r.user_id).filter(id => id))];
-        if (replyUserIds.length > 0) {
-            const { data: replyProfileData } = await SB
-                .from("profiles")
-                .select("id, username, avatar_url")
-                .in("id", replyUserIds);
-            if (replyProfileData) {
-                replyProfileData.forEach(p => { if (!profiles[p.id]) profiles[p.id] = p; });
-            }
-        }
-        
-        let html = '';
-        for (const c of comments) {
-            // Get like/dislike counts
-            const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            
-            // FIXED: Only show liked/disliked if user ACTUALLY interacted
-            const isLiked = USER && userLikedComments.has(Number(c.id));
-            const isDisliked = USER && userDislikedComments.has(Number(c.id));
-            const isOwner = USER && USER.id === c.user_id;
-            
-            const profile = profiles[c.user_id];
-            const commenterName = profile?.username || 'User';
-            const commenterAvatar = profile?.avatar_url;
-            
-            // Get replies for this comment
-            const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
-            
-            let repliesHtml = '';
-            for (const r of commentReplies) {
-                const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                
-                // FIXED: Only show liked/disliked if user ACTUALLY interacted
-                const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
-                const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
-                const isReplyOwner = USER && USER.id === r.user_id;
-                
-                const replyProfile = profiles[r.user_id];
-                const replyerName = replyProfile?.username || 'User';
-                const replyerAvatar = replyProfile?.avatar_url;
-                
-                repliesHtml += `
-                    <div class="reply">
-                        <div class="reply-header">
-                            ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                            <span class="reply-username">${escapeHtml(replyerName)}</span>
-                            <span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span>
-                        </div>
-                        <div class="reply-text">${escapeHtml(r.text)}</div>
-                        <div class="reply-actions">
-                            <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">❤️ <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
-                            <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👍 <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
-                            <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})">💬 Reply</span>
-                        </div>
-                        <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
-                            <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
-                        </div>
-                        ${isReplyOwner ? `
-                        <div class="reply-menu">
-                            <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
-                            <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
-                                <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
-                            </div>
-                        </div>` : ''}
-                    </div>`;
-            }
-            
-            html += `
-                <div class="comment">
-                    <div class="comment-header">
-                        ${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
-                        <span class="comment-username">${escapeHtml(commenterName)}</span>
-                        <span class="comment-time" data-timestamp="${c.created_at}">${timeAgo(c.created_at)}</span>
-                    </div>
-                    <div class="comment-text">${escapeHtml(c.text)}</div>
-                    <div class="comment-actions">
-                        <span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">❤️ <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
-                        <span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})">👍 <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span>
-                        <span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})">💬 Reply</span>
-                    </div>
-                    <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
-                        <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
-                        <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
-                    </div>
-                    <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
-                    ${isOwner ? `
-                    <div class="comment-menu">
-                        <button class="comment-menu-btn" onclick="toggleCommentMenu(${c.id})">⋮</button>
-                        <div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;">
-                            <div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
-                        </div>
-                    </div>` : ''}
-                </div>`;
-        }
-        
-        commentsList.innerHTML = html;
-        updateAllTimestamps();
-        
-    } catch (err) {
-        console.error("Load comments error:", err);
-        commentsList.innerHTML = '<div class="comment">Error loading comments. Please refresh.</div>';
-    }
-}
-
-// ========== LOAD USER INTERACTIONS ==========
-async function loadUserInteractions() {
-    if (!USER) return;
-    
-    userLikedPosts.clear();
-    userLikedComments.clear();
-    userDislikedComments.clear();
-    userLikedReplies.clear();
-    userDislikedReplies.clear();
-    
-    const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
-    if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
-    
-    const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
-    if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
-    
-    const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
-    if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
-    
-    const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
-    if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
-    
-    const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
-    if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
-}
-
-// ========== LOAD FEED ==========
-async function loadFeed() {
-    const feedDiv = document.getElementById("feed");
-    feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
-    
-    await loadUserInteractions();
-    
-    const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
-    if (error || !posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
-    
-    const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
-    let profiles = {};
-    if (userIds.length > 0) {
-        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
-        if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
-    }
-    
-    let html = '';
-    for (const p of posts) {
-        const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-        const isLiked = userLikedPosts.has(Number(p.id));
-        const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
-        let totalCommentCount = commentsData.length;
-        for (const c of commentsData) {
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            totalCommentCount += replyCount;
-        }
-        const isOwner = USER && USER.id === p.user_id;
-        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
-        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let displayName = 'Poik Poik';
-        let avatarHtml = '';
-        if (p.is_ai) { displayName = 'Poik Poik'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        else if (p.user_id && profiles[p.user_id]) { displayName = profiles[p.user_id].username || 'Member'; avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        else { displayName = 'Member'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        
-        html += `<div class="post">
-            <div class="post-header">
-                <div class="post-header-left">
-                    ${avatarHtml}
-                    <div class="post-username">${escapeHtml(displayName)}</div>
-                </div>
-                ${isOwner ? `<div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div>` : ''}
-            </div>
-            <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
-            <div class="post-caption">${escapeHtml(p.caption || 'Fashion visual')}</div>
-            <div class="post-actions-right">
-                <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                    <i class="fas fa-heart"></i>
-                    <span id="likes-${p.id}">${likeCount || 0}</span>
-                </div>
-                <div class="action-icon" onclick="toggleComments(${p.id})">
-                    <i class="far fa-comment-dots"></i>
-                    <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
-                </div>
-                <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                    <i class="fas fa-paper-plane"></i>
-                    <span>Share</span>
-                </div>
-                <div class="action-icon" onclick="alert('Saved!')">
-                    <i class="far fa-bookmark"></i>
-                    <span>Save</span>
-                </div>
-            </div>
-            <div class="comments-section" id="comments-${p.id}" style="display:none">
-                <div class="comments-header">
-                    <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
-                    <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
-                </div>
-                <div id="comments-list-${p.id}">Loading comments...</div>
-                <div class="comment-input">
-                    <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                    <button onclick="addComment(${p.id})">Post</button>
-                </div>
-            </div>
-        </div>`;
-    }
-    feedDiv.innerHTML = html;
-    startTimestampUpdater();
-}
-
-async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
-initStorage();
-handleMagicLink();
-checkAuth().then(() => { loadFeed(); });
+const API_URL="https://xxnuhisweolpibzthjcc.supabase.co";
+const API_KEY="sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+const SB=window.supabase.createClient(API_URL,API_KEY);
+let USER=null,CURRENT_TAB='feed',SHARE_URL='',timestampInterval=null;
+let userLikedPosts=new Set(),userLikedComments=new Set(),userDislikedComments=new Set(),userLikedReplies=new Set(),userDislikedReplies=new Set();
+function escapeHtml(t){if(!t)return '';return t.replace(/[&<>]/g,function(m){if(m==='&')return'&amp;';if(m==='<')return'&lt;';if(m==='>')return'&gt;';return m;})}
+function timeAgo(d){if(!d)return '';const n=new Date,t=new Date(d),s=Math.floor((n-t)/1000);if(s<60)return'just now';const m=Math.floor(s/60);if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';const dy=Math.floor(h/24);if(dy===1)return'1 day ago';if(dy<7)return dy+' days ago';return Math.floor(dy/7)+'w ago'}
+function updateAllTimestamps(){document.querySelectorAll('.comment-time,.reply-time').forEach(el=>{const ts=el.getAttribute('data-timestamp');if(ts)el.textContent=timeAgo(ts)})}
+function startTimestampUpdater(){if(timestampInterval)clearInterval(timestampInterval);timestampInterval=setInterval(updateAllTimestamps,60000)}
+function openAuthModal(){if(USER)return;document.getElementById('authModal').style.display='flex'}
+function closeAuthModal(){document.getElementById('authModal').style.display='none'}
+document.getElementById('closeAuthBtn').onclick=closeAuthModal;
+document.getElementById('magicLoginBtn').onclick=async()=>{const e=document.getElementById('authEmail').value;if(!e){alert('Enter your email');return}const{error}=await SB.auth.signInWithOtp({email:e.trim(),options:{emailRedirectTo:window.location.origin}});if(error){alert('Error: '+error.message)}else{alert('Magic link sent! Check your email.');closeAuthModal();document.getElementById('authEmail').value=''}};
+async function logout(){await SB.auth.signOut();USER=null;if(timestampInterval)clearInterval(timestampInterval);location.reload()}
+async function handleMagicLink(){const h=window.location.hash;if(h&&h.includes('access_token')){const p=new URLSearchParams(h.substring(1)),at=p.get('access_token'),rt=p.get('refresh_token');if(at){await SB.auth.setSession({access_token:at,refresh_token:rt});window.location.href=window.location.pathname}}}
+async function checkAuth(){const{data:{user}}=await SB.auth.getUser();USER=user;const ic=document.querySelector('.fa-user-circle');if(user){ic.classList.remove('far');ic.classList.add('fas')}else{ic.classList.remove('fas');ic.classList.add('far')}return user}
+async function uploadAvatar(f){if(!USER)return;const fn=USER.id+'_'+Date.now()+'.jpg';await SB.storage.from('avatars').upload(fn,f,{upsert:true});const{data}=SB.storage.from('avatars').getPublicUrl(fn);await SB.from('profiles').update({avatar_url:data.publicUrl}).eq('id',USER.id);alert('Profile picture updated!');loadProfile();loadFeed()}
+document.getElementById('avatarInput').onchange=async(e)=>{if(e.target.files[0])await uploadAvatar(e.target.files[0])};
+async function saveProfile(){if(!USER)return;const un=document.getElementById('editUsername').value,b=document.getElementById('editBio').value;await SB.from('profiles').upsert({id:USER.id,username:un,bio:b});alert('Profile updated!');document.getElementById('editProfileModal').style.display='none';loadProfile();loadFeed()}
+function openEditProfile(){document.getElementById('editUsername').value=USER?.user_metadata?.username||'';document.getElementById('editBio').value=USER?.user_metadata?.bio||'';document.getElementById('editProfileModal').style.display='flex'}
+document.getElementById('closeEditModal').onclick=()=>document.getElementById('editProfileModal').style.display='none';
+document.getElementById('saveProfileBtn').onclick=saveProfile;
+function togglePostMenu(pid){const m=document.getElementById('post-menu-'+pid);document.querySelectorAll('.post-menu-dropdown').forEach(x=>x.style.display='none');m.style.display=m.style.display==='none'?'block':'none'}
+async function changePostPrivacy(pid,np){await SB.from('posts').update({privacy:np}).eq('id',pid);loadFeed()}
+async function deletePost(pid){if(confirm('Delete this post?')){await SB.from('posts').delete().eq('id',pid);loadFeed();if(CURRENT_TAB==='profile')loadProfile()}}
+document.addEventListener('click',(e)=>{if(!e.target.closest('.post-privacy-menu')){document.querySelectorAll('.post-menu-dropdown').forEach(m=>m.style.display='none')}});
+function openShareModal(u){SHARE_URL=u;document.getElementById('shareModal').style.display='block'}
+function closeShareModal(){document.getElementById('shareModal').style.display='none'}
+function shareTo(p){const u=encodeURIComponent(SHARE_URL);let l='';if(p==='facebook')l='https://www.facebook.com/sharer/sharer.php?u='+u;if(p==='whatsapp')l='https://wa.me/?text='+u;if(p==='twitter')l='https://twitter.com/intent/tweet?url='+u;if(p==='instagram'){alert('Save image first, then post manually.');closeShareModal();return}if(l)window.open(l,'_blank');closeShareModal()}
+function copyLink(){navigator.clipboard.writeText(SHARE_URL);alert('Link copied!');closeShareModal()}
+function openModal(img){document.getElementById('modalImage').src=img;document.getElementById('imageModal').style.display='flex'}
+function closeModal(){document.getElementById('imageModal').style.display='none'}
+function openUploadModal(){if(!USER){alert('Please login first');openAuthModal();return}document.getElementById('uploadModal').style.display='block'}
+function closeUploadModal(){document.getElementById('uploadModal').style.display='none';document.getElementById('uploadFile').value='';document.getElementById('uploadCaption').value=''}
+function switchTab(tab){CURRENT_TAB=tab;loadFeed()}
+function bottomNav(page){document.querySelectorAll('.bottom-nav-item').forEach(i=>i.classList.remove('active'));if(page==='home'){document.querySelector('.bottom-nav-item:first-child').classList.add('active');switchTab('feed')}if(page==='profile'){document.querySelector('.bottom-nav-item:last-child').classList.add('active');loadProfile()}}
+async function likePost(pid){if(!USER){alert('Login to like');openAuthModal();return}const{data:exist}=await SB.from('post_likes').select('*').eq('post_id',pid).eq('user_id',USER.id);if(exist&&exist.length>0){await SB.from('post_likes').delete().eq('post_id',pid).eq('user_id',USER.id);userLikedPosts.delete(Number(pid))}else{await SB.from('post_likes').insert({post_id:pid,user_id:USER.id});userLikedPosts.add(Number(pid))}const{count}=await SB.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',pid);const span=document.getElementById('likes-'+pid);if(span)span.innerText=count||0;const btn=document.getElementById('like-btn-'+pid);if(btn){if(userLikedPosts.has(Number(pid)))btn.classList.add('liked');else btn.classList.remove('liked')}}
+async function addComment(pid){const{data:{user}}=await SB.auth.getUser();if(!user){alert('Login to comment');openAuthModal();return}const inp=document.getElementById('comment-input-'+pid);const txt=inp.value.trim();if(!txt){alert('Write a comment first');return}const{error}=await SB.from('comments').insert({post_id:pid,user_id:user.id,text:txt});if(error){alert('Failed: '+error.message);return}inp.value='';await loadCommentsOnly(pid);const{count}=await SB.from('comments').select('*',{count:'exact',head:true}).eq('post_id',pid);const cs=document.getElementById('comment-count-'+pid);if(cs)cs.innerText=count||0}
+function toggleComments(pid){const sec=document.getElementById('comments-'+pid);if(sec){const hid=sec.style.display==='none';sec.style.display=hid?'block':'none';if(hid)loadCommentsOnly(pid)}}
+async function likeComment(cid){if(!USER){alert('Login to like');return}cid=Number(cid);if(userDislikedComments.has(cid)){await SB.from('comment_dislikes').delete().eq('comment_id',cid).eq('user_id',USER.id);userDislikedComments.delete(cid);const db=document.getElementById('comment-dislike-btn-'+cid);if(db)db.classList.remove('disliked')}if(userLikedComments.has(cid)){await SB.from('comment_likes').delete().eq('comment_id',cid).eq('user_id',USER.id);userLikedComments.delete(cid);const lb=document.getElementById('comment-like-btn-'+cid);if(lb)lb.classList.remove('liked')}else{await SB.from('comment_likes').insert({comment_id:cid,user_id:USER.id});userLikedComments.add(cid);const lb=document.getElementById('comment-like-btn-'+cid);if(lb)lb.classList.add('liked')}const lc=await SB.from('comment_likes').select('*',{count:'exact',head:true}).eq('comment_id',cid);const dc=await SB.from('comment_dislikes').select('*',{count:'exact',head:true}).eq('comment_id',cid);const ls=document.getElementById('comment-like-'+cid);if(ls)ls.innerText=lc.count||0;const ds=document.getElementById('comment-dislike-'+cid);if(ds)ds.innerText=dc.count||0}
+async function dislikeComment(cid){if(!USER){alert('Login to dislike');return}cid=Number(cid);if(userLikedComments.has(cid)){await SB.from('comment_likes').delete().eq('comment_id',cid).eq('user_id',USER.id);userLikedComments.delete(cid);const lb=document.getElementById('comment-like-btn-'+cid);if(lb)lb.classList.remove('liked')}if(userDislikedComments.has(cid)){await SB.from('comment_dislikes').delete().eq('comment_id',cid).eq('user_id',USER.id);userDislikedComments.delete(cid);const db=document.getElementById('comment-dislike-btn-'+cid);if(db)db.classList.remove('disliked')}else{await SB.from('comment_dislikes').insert({comment_id:cid,user_id:USER.id});userDislikedComments.add(cid);const db=document.getElementById('comment-dislike-btn-'+cid);if(db)db.classList.add('disliked')}const lc=await SB.from('comment_likes').select('*',{count:'exact',head:true}).eq('comment_id',cid);const dc=await SB.from('comment_dislikes').select('*',{count:'exact',head:true}).eq('comment_id',cid);const ls=document.getElementById('comment-like-'+cid);if(ls)ls.innerText=lc.count||0;const ds=document.getElementById('comment-dislike-'+cid);if(ds)ds.innerText=dc.count||0}
+async function addReplyToComment(cid,pid){const{data:{user}}=await SB.auth.getUser();if(!user){alert('Login to reply');openAuthModal();return}const inp=document.getElementById('reply-comment-text-'+cid);const txt=inp.value.trim();if(!txt)return;const{error}=await SB.from('comment_replies').insert({comment_id:cid,user_id:user.id,text:txt});if(error){alert('Reply failed: '+error.message);return}inp.value='';document.getElementById('reply-comment-input-'+cid).style.display='none';await loadCommentsOnly(pid)}
+async function addReplyToReply(cid,rid,pid){const{data:{user}}=await SB.auth.getUser();if(!user){alert('Login to reply');openAuthModal();return}const inp=document.getElementById('reply-text-'+rid);const txt=inp.value.trim();if(!txt)return;const{error}=await SB.from('comment_replies').insert({comment_id:cid,parent_reply_id:rid,user_id:user.id,text:txt});if(error){alert('Reply failed: '+error.message);return}inp.value='';await loadCommentsOnly(pid)}
+async function likeReply(rid){if(!USER){alert('Login to like');return}rid=Number(rid);if(userDislikedReplies.has(rid)){await SB.from('reply_dislikes').delete().eq('reply_id',rid).eq('user_id',USER.id);userDislikedReplies.delete(rid);const db=document.getElementById('reply-dislike-btn-'+rid);if(db)db.classList.remove('disliked')}if(userLikedReplies.has(rid)){await SB.from('reply_likes').delete().eq('reply_id',rid).eq('user_id',USER.id);userLikedReplies.delete(rid);const lb=document.getElementById('reply-like-btn-'+rid);if(lb)lb.classList.remove('liked')}else{await SB.from('reply_likes').insert({reply_id:rid,user_id:USER.id});userLikedReplies.add(rid);const lb=document.getElementById('reply-like-btn-'+rid);if(lb)lb.classList.add('liked')}const{count}=await SB.from('reply_likes').select('*',{count:'exact',head:true}).eq('reply_id',rid);const ls=document.getElementById('reply-like-'+rid);if(ls)ls.innerText=count||0}
+async function dislikeReply(rid){if(!USER){alert('Login to dislike');return}rid=Number(rid);if(userLikedReplies.has(rid)){await SB.from('reply_likes').delete().eq('reply_id',rid).eq('user_id',USER.id);userLikedReplies.delete(rid);const lb=document.getElementById('reply-like-btn-'+rid);if(lb)lb.classList.remove('liked')}if(userDislikedReplies.has(rid)){await SB.from('reply_dislikes').delete().eq('reply_id',rid).eq('user_id',USER.id);userDislikedReplies.delete(rid);const db=document.getElementById('reply-dislike-btn-'+rid);if(db)db.classList.remove('disliked')}else{await SB.from('reply_dislikes').insert({reply_id:rid,user_id:USER.id});userDislikedReplies.add(rid);const db=document.getElementById('reply-dislike-btn-'+rid);if(db)db.classList.add('disliked')}const{count}=await SB.from('reply_dislikes').select('*',{count:'exact',head:true}).eq('reply_id',rid);const ds=document.getElementById('reply-dislike-'+rid);if(ds)ds.innerText=count||0}
+async function deleteComment(cid,pid){if(!confirm('Delete this comment?'))return;const{error}=await SB.from('comments').delete().eq('id',cid);if(error){alert('Delete failed: '+error.message);return}await SB.from('comment_replies').delete().eq('comment_id',cid);await loadCommentsOnly(pid);const{count}=await SB.from('comments').select('*',{count:'exact',head:true}).eq('post_id',pid);const cs=document.getElementById('comment-count-'+pid);if(cs)cs.innerText=count||0}
+async function deleteReply(rid,pid){if(!confirm('Delete this reply?'))return;const{error}=await SB.from('comment_replies').delete().eq('id',rid);if(error){alert('Delete failed: '+error.message);return}await loadCommentsOnly(pid)}
+function toggleCommentMenu(cid){const m=document.getElementById('comment-menu-'+cid);if(m)m.style.display=m.style.display==='none'?'block':'none'}
+function toggleReplyMenu(rid){const m=document.getElementById('reply-menu-'+rid);if(m)m.style.display=m.style.display==='none'?'block':'none'}
+document.addEventListener('click',(e)=>{if(!e.target.closest('.comment-menu'))document.querySelectorAll('.comment-menu-dropdown').forEach(m=>m.style.display='none');if(!e.target.closest('.reply-menu'))document.querySelectorAll('.reply-menu-dropdown').forEach(m=>m.style.display='none')});
+let activeReplyCommentId=null,activeReplyReplyId=null;
+function showReplyInputForComment(cid,pid){if(activeReplyCommentId){const p=document.getElementById('reply-comment-input-'+activeReplyCommentId);if(p)p.style.display='none'}if(activeReplyReplyId){const p=document.getElementById('reply-input-'+activeReplyReplyId);if(p)p.style.display='none'}const d=document.getElementById('reply-comment-input-'+cid);if(d){d.style.display=d.style.display==='none'?'flex':'none';activeReplyCommentId=cid;activeReplyReplyId=null}}
+function showReplyInputForReply(cid,rid,pid){if(activeReplyReplyId){const p=document.getElementById('reply-input-'+activeReplyReplyId);if(p)p.style.display='none'}if(activeReplyCommentId){const p=document.getElementById('reply-comment-input-'+activeReplyCommentId);if(p)p.style.display='none'}const d=document.getElementById('reply-input-'+rid);if(d){d.style.display=d.style.display==='none'?'flex':'none';activeReplyReplyId=rid;activeReplyCommentId=null}}
+async function uploadPost(){if(!USER){alert('Login first');return}const f=document.getElementById('uploadFile').files[0];const cap=document.getElementById('uploadCaption').value;const priv=document.getElementById('uploadPrivacy').value;if(!f){alert('Select an image');return}const fn=USER.id+'_'+Date.now()+'.jpg';await SB.storage.from('post-images').upload(fn,f);const{data}=SB.storage.from('post-images').getPublicUrl(fn);await SB.from('posts').insert({image_url:data.publicUrl,caption:cap,user_id:USER.id,privacy:priv,is_ai:false,likes:0});alert('Posted!');closeUploadModal();loadFeed()}
+async function loadProfile(){if(!USER){alert('Please login');openAuthModal();return}const fd=document.getElementById('feed');fd.innerHTML='<div class="loading">Loading profile...</div>';const{data:prof}=await SB.from('profiles').select('*').eq('id',USER.id).single();const{data:posts}=await SB.from('posts').select('*').eq('user_id',USER.id).order('id',{ascending:false});const{count}=await SB.from('posts').select('*',{count:'exact',head:true}).eq('user_id',USER.id);const avHtml=prof?.avatar_url?('<img src="'+prof.avatar_url+'">'):'👤';let html='<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById(\'avatarInput\').click()">'+avHtml+'</div><h3>'+(prof?.username||USER.email.split('@')[0])+'</h3><div class="profile-bio">'+(prof?.bio||'No bio yet')+'</div><div class="profile-stats"><div><strong>'+(count||0)+'</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab(\'feed\')" style="background:#00ff88;color:black;border:none;padding:8px 20px;border-radius:20px;margin-top:10px;margin-left:10px">Back to Feed</button></div>';for(const p of posts||[]){let pI=p.privacy==='public'?'🌍':(p.privacy==='friends'?'👥':'🔒');let pT=p.privacy==='public'?'Public':(p.privacy==='friends'?'Friends':'Only Me');let avD=prof?.avatar_url?('<img src="'+prof.avatar_url+'" class="user-avatar">'):'<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';html+='<div class="post"><div class="post-header"><div class="post-header-left">'+avD+'<div class="post-username">'+(prof?.username||'User')+'</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-'+(p.privacy||'public')+'" onclick="togglePostMenu('+p.id+')">'+pI+' '+pT+'</button><div id="post-menu-'+p.id+'" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'public\')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'friends\')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'private\')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost('+p.id+')">🗑️ Delete</div></div></div></div><img class="post-image" src="'+p.image_url+'" onclick="openModal(\''+p.image_url+'\')" loading="lazy"><div class="post-caption">'+(p.caption||'Fashion visual')+'</div></div>'}fd.innerHTML=html}
+async function loadCommentsOnly(pid){const cl=document.getElementById('comments-list-'+pid);if(!cl)return;cl.innerHTML='<div class="comment">Loading comments...</div>';try{const{data:comments}=await SB.from('comments').select('*').eq('post_id',pid).order('created_at',{ascending:true});if(!comments||comments.length===0){cl.innerHTML='<div class="comment">No comments yet. Be the first!</div>';return}const uids=[...new Set(comments.map(c=>c.user_id).filter(id=>id))];let profiles={};if(uids.length>0){const{data:pd}=await SB.from('profiles').select('id,username,avatar_url').in('id',uids);if(pd)pd.forEach(p=>{profiles[p.id]=p})}const cids=comments.map(c=>c.id);let allReplies=[];if(cids.length>0){const{data:replies}=await SB.from('comment_replies').select('*').in('comment_id',cids).order('created_at',{ascending:true});allReplies=replies||[]}const ruids=[...new Set(allReplies.map(r=>r.user_id).filter(id=>id))];if(ruids.length>0){const{data:rpd}=await SB.from('profiles').select('id,username,avatar_url').in('id',ruids);if(rpd)rpd.forEach(p=>{if(!profiles[p.id])profiles[p.id]=p})}let html='';for(const c of comments){const lc=await SB.from('comment_likes').select('*',{count:'exact',head:true}).eq('comment_id',c.id);const dc=await SB.from('comment_dislikes').select('*',{count:'exact',head:true}).eq('comment_id',c.id);const isLiked=USER&&userLikedComments.has(Number(c.id));const isDisliked=USER&&userDislikedComments.has(Number(c.id));const isOwner=USER&&USER.id===c.user_id;const prof=profiles[c.user_id];const name=prof?.username||'User';const avatar=prof?.avatar_url;const creplies=allReplies.filter(r=>r.comment_id===c.id&&!r.parent_reply_id);let repliesHtml='';for(const r of creplies){const rlc=await SB.from('reply_likes').select('*',{count:'exact',head:true}).eq('reply_id',r.id);const rdc=await SB.from('reply_dislikes').select('*',{count:'exact',head:true}).eq('reply_id',r.id);const isRLiked=USER&&userLikedReplies.has(Number(r.id));const isRDisliked=USER&&userDislikedReplies.has(Number(r.id));const isROwner=USER&&USER.id===r.user_id;const rp=profiles[r.user_id];const rname=rp?.username||'User';const ravatar=rp?.avatar_url;repliesHtml+='<div class="reply"><div class="reply-header">'+(ravatar?'<img src="'+ravatar+'" class="reply-avatar">':'<div class="reply-avatar">👤</div>')+'<span class="reply-username">'+escapeHtml(rname)+'</span><span class="reply-time" data-timestamp="'+r.created_at+'">'+timeAgo(r.created_at)+'</span></div><div class="reply-text">'+escapeHtml(r.text)+'</div><div class="reply-actions"><span id="reply-like-btn-'+r.id+'" class="reply-action '+(isRLiked?'liked':'')+'" onclick="likeReply('+r.id+')">❤️ <span id="reply-like-'+r.id+'">'+(rlc.count||0)+'</span></span><span id="reply-dislike-btn-'+r.id+'" class="reply-action '+(isRDisliked?'disliked':'')+'" onclick="dislikeReply('+r.id+')">👍 <span id="reply-dislike-'+r.id+'">'+(rdc.count||0)+'</span></span><span class="reply-action" onclick="showReplyInputForReply('+c.id+','+r.id+','+pid+')">💬 Reply</span></div><div id="reply-input-'+r.id+'" class="reply-input" style="display:none;"><input type="text" id="reply-text-'+r.id+'" placeholder="Write a reply..."><button onclick="addReplyToReply('+c.id+','+r.id+','+pid+')">Reply</button></div>'+(isROwner?'<div class="reply-menu"><button class="reply-menu-btn" onclick="toggleReplyMenu('+r.id+')">⋮</button><div id="reply-menu-'+r.id+'" class="reply-menu-dropdown" style="display:none;"><div class="reply-menu-option delete" onclick="deleteReply('+r.id+','+pid+')">Delete</div></div></div>':'')+'</div>'}html+='<div class="comment"><div class="comment-header">'+(avatar?'<img src="'+avatar+'" class="comment-avatar">':'<div class="comment-avatar">👤</div>')+'<span class="comment-username">'+escapeHtml(name)+'</span><span class="comment-time" data-timestamp="'+c.created_at+'">'+timeAgo(c.created_at)+'</span></div><div class="comment-text">'+escapeHtml(c.text)+'</div><div class="comment-actions"><span id="comment-like-btn-'+c.id+'" class="comment-action '+(isLiked?'liked':'')+'" onclick="likeComment('+c.id+')">❤️ <span id="comment-like-'+c.id+'">'+(lc.count||0)+'</span></span><span id="comment-dislike-btn-'+c.id+'" class="comment-action '+(isDisliked?'disliked':'')+'" onclick="dislikeComment('+c.id+')">👍 <span id="comment-dislike-'+c.id+'">'+(dc.count||0)+'</span></span><span class="comment-action" onclick="showReplyInputForComment('+c.id+','+pid+')">💬 Reply</span></div><div id="reply-comment-input-'+c.id+'" class="reply-input" style="display:none;"><input type="text" id="reply-comment-text-'+c.id+'" placeholder="Write a reply..."><button onclick="addReplyToComment('+c.id+','+pid+')">Reply</button></div><div id="replies-container-'+c.id+'" class="replies">'+repliesHtml+'</div>'+(isOwner?'<div class="comment-menu"><button class="comment-menu-btn" onclick="toggleCommentMenu('+c.id+')">⋮</button><div id="comment-menu-'+c.id+'" class="comment-menu-dropdown" style="display:none;"><div class="comment-menu-option delete" onclick="deleteComment('+c.id+','+pid+')">Delete</div></div></div>':'')+'</div>'}cl.innerHTML=html;updateAllTimestamps()}catch(err){console.error(err);cl.innerHTML='<div class="comment">Error loading comments</div>'}}
+async function loadUserInteractions(){if(!USER)return;userLikedPosts.clear();userLikedComments.clear();userDislikedComments.clear();userLikedReplies.clear();userDislikedReplies.clear();const{data:pl}=await SB.from('post_likes').select('post_id').eq('user_id',USER.id);if(pl)pl.forEach(l=>userLikedPosts.add(Number(l.post_id)));const{data:cl}=await SB.from('comment_likes').select('comment_id').eq('user_id',USER.id);if(cl)cl.forEach(l=>userLikedComments.add(Number(l.comment_id)));const{data:cd}=await SB.from('comment_dislikes').select('comment_id').eq('user_id',USER.id);if(cd)cd.forEach(d=>userDislikedComments.add(Number(d.comment_id)));const{data:rl}=await SB.from('reply_likes').select('reply_id').eq('user_id',USER.id);if(rl)rl.forEach(l=>userLikedReplies.add(Number(l.reply_id)));const{data:rd}=await SB.from('reply_dislikes').select('reply_id').eq('user_id',USER.id);if(rd)rd.forEach(d=>userDislikedReplies.add(Number(d.reply_id)))}
+async function loadFeed(){const fd=document.getElementById('feed');fd.innerHTML='<div class="loading">Loading posts...</div>';await loadUserInteractions();const{data:posts,error}=await SB.from('posts').select('*').order('id',{ascending:false});if(error||!posts||posts.length===0){fd.innerHTML='<div class="loading">No posts yet</div>';return}const uids=[...new Set(posts.filter(p=>p.user_id&&!p.is_ai).map(p=>p.user_id))];let profiles={};if(uids.length>0){const{data:pd}=await SB.from('profiles').select('id,username,avatar_url').in('id',uids);if(pd)pd.forEach(p=>{profiles[p.id]=p})}let html='';for(const p of posts){const{count:lc}=await SB.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',p.id);const isLiked=userLikedPosts.has(Number(p.id));const{data:cd}=await SB.from('comments').select('*').eq('post_id',p.id);let tc=cd.length;for(const c of cd){const{count:rc}=await SB.from('comment_replies').select('*',{count:'exact',head:true}).eq('comment_id',c.id);tc+=rc}const isOwner=USER&&USER.id===p.user_id;let pI=p.privacy==='public'?'🌍':(p.privacy==='friends'?'👥':'🔒');let pT=p.privacy==='public'?'Public':(p.privacy==='friends'?'Friends':'Only Me');let dName='Poik Poik';let avHtml='';if(p.is_ai){dName='Poik Poik';avHtml='<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>'}else if(p.user_id&&profiles[p.user_id]){dName=profiles[p.user_id].username||'Member';avHtml=profiles[p.user_id].avatar_url?'<img src="'+profiles[p.user_id].avatar_url+'" class="user-avatar">':'<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>'}else{dName='Member';avHtml='<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>'}html+='<div class="post"><div class="post-header"><div class="post-header-left">'+avHtml+'<div class="post-username">'+escapeHtml(dName)+'</div></div>'+(isOwner?'<div class="post-privacy-menu"><button class="privacy-badge privacy-'+(p.privacy||'public')+'" onclick="togglePostMenu('+p.id+')">'+pI+' '+pT+'</button><div id="post-menu-'+p.id+'" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'public\')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'friends\')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy('+p.id+',\'private\')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost('+p.id+')">🗑️ Delete</div></div></div>':'')+'</div><img class="post-image" src="'+p.image_url+'" onclick="openModal(\''+p.image_url+'\')" loading="lazy"><div class="post-caption">'+escapeHtml(p.caption||'Fashion visual')+'</div><div class="post-actions-right"><div id="like-btn-'+p.id+'" class="action-icon '+(isLiked?'liked':'')+'" onclick="likePost('+p.id+')"><i class="fas fa-heart"></i><span id="likes-'+p.id+'">'+(lc||0)+'</span></div><div class="action-icon" onclick="toggleComments('+p.id+')"><i class="far fa-comment-dots"></i><span id="comment-count-'+p.id+'">'+(tc||0)+'</span></div><div class="action-icon share-icon" onclick="openShareModal(\''+p.image_url+'\')"><i class="fas fa-paper-plane"></i><span>Share</span></div><div class="action-icon" onclick="alert(\'Saved!\')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-'+p.id+'" style="display:none"><div class="comments-header"><span class="comments-title">💬 Comments ('+(tc||0)+')</span><button class="close-comments" onclick="document.getElementById(\'comments-'+p.id+'\').style.display=\'none\'">✕</button></div><div id="comments-list-'+p.id+'">Loading comments...</div><div class="comment-input"><input type="text" id="comment-input-'+p.id+'" placeholder="Add comment..."><button onclick="addComment('+p.id+')">Post</button></div></div></div>'}fd.innerHTML=html;startTimestampUpdater()}
+async function initStorage(){try{await SB.storage.createBucket('avatars',{public:true})}catch(e){}}
+initStorage();handleMagicLink();checkAuth().then(()=>{loadFeed()});
 </script>
 </body>
 </html>
