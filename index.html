@@ -56,6 +56,7 @@
     .post-image { width: 100%; display: block; cursor: pointer; }
     .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
     
+    /* Post action buttons - Like, Comment, Save, Share */
     .post-actions-right {
         position: absolute;
         right: 12px;
@@ -65,19 +66,17 @@
         flex-direction: column;
         gap: 16px;
         z-index: 10;
-        align-items: center;
     }
     @media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
     @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
     
     .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
-    .action-icon i { font-size: 28px; color: #333; background: white; border-radius: 50%; padding: 8px; transition: all 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+    .action-icon i { font-size: 24px; color: white; transition: all 0.2s; }
     .action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
-    .action-icon:hover i { transform: scale(1.05); }
-    .action-icon.liked i { color: #FE2C55; background: white; }
-    .action-icon.disliked i { color: #FFC107; background: white; }
+    .action-icon:hover i { transform: scale(1.1); }
+    .action-icon.liked i { color: #FE2C55; }
     
-    .share-icon i { font-size: 28px; color: #333; background: white; border-radius: 50%; padding: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+    .share-icon i { font-size: 24px; transform: rotate(-45deg); display: inline-block; }
     
     .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
     .privacy-public { background: #00ff88; color: black; }
@@ -98,7 +97,17 @@
     .share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
     .share-option:hover { background: #333; }
     
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); border-top: 1px solid #222; padding: 8px 20px; z-index: 100; }
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0,0,0,0.95);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid #222;
+        padding: 8px 20px;
+        z-index: 100;
+    }
     .bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
     .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
     .bottom-nav-item i { font-size: 22px; }
@@ -108,6 +117,7 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
+    /* Comments Section */
     .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; position: relative; }
     .comments-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
     .comments-title { font-size: 14px; color: #888; }
@@ -121,22 +131,21 @@
     .comment-text { font-size: 13px; margin-left: 42px; margin-bottom: 5px; word-break: break-word; }
     .comment-actions { display: flex; gap: 12px; margin-left: 42px; font-size: 11px; }
     .comment-action { 
-        color: #333;
+        color: #888;
         cursor: pointer; 
         display: inline-flex; 
         align-items: center; 
         gap: 4px;
-        background: white;
+        background: transparent;
         border: none;
-        border-radius: 20px;
-        padding: 2px 8px;
-        font-size: 10px;
+        padding: 2px 6px;
+        font-size: 11px;
     }
-    .comment-action.liked { color: #FE2C55; background: white; }
+    .comment-action.liked { color: #FE2C55; }
     .comment-action.liked i { color: #FE2C55; }
-    .comment-action.disliked { color: #FFC107; background: white; }
+    .comment-action.disliked { color: #FFC107; }
     .comment-action.disliked i { color: #FFC107; }
-    .comment-action i { font-size: 10px; }
+    .comment-action i { font-size: 11px; }
     .comment-menu { position: absolute; right: 5px; top: 5px; }
     .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
     .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
@@ -151,24 +160,23 @@
     .reply-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; }
     .reply-username { font-weight: bold; font-size: 11px; color: #00ff88; cursor: pointer; }
     .reply-text { font-size: 11px; margin-left: 32px; margin-bottom: 3px; word-break: break-word; }
-    .reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 9px; }
+    .reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 10px; }
     .reply-action { 
-        color: #333;
+        color: #888;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         gap: 3px;
-        background: white;
+        background: transparent;
         border: none;
-        border-radius: 16px;
-        padding: 1px 6px;
-        font-size: 9px;
+        padding: 1px 5px;
+        font-size: 10px;
     }
-    .reply-action.liked { color: #FE2C55; background: white; }
+    .reply-action.liked { color: #FE2C55; }
     .reply-action.liked i { color: #FE2C55; }
-    .reply-action.disliked { color: #FFC107; background: white; }
+    .reply-action.disliked { color: #FFC107; }
     .reply-action.disliked i { color: #FFC107; }
-    .reply-action i { font-size: 9px; }
+    .reply-action i { font-size: 10px; }
     .reply-menu { position: absolute; right: 5px; top: 5px; }
     .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
     .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
@@ -312,6 +320,7 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 
+let userLikedPosts = new Set();
 let userLikedComments = new Set();
 let userDislikedComments = new Set();
 let userLikedReplies = new Set();
@@ -414,70 +423,30 @@ function bottomNav(page) {
 }
 
 // ============================================
-// POST LIKE/DISLIKE
+// POST LIKE (Only Like - No Dislike on Post)
 // ============================================
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     
-    // Check if already liked
-    const { data: existingLike } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
+    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
     
-    if (existingLike && existingLike.length > 0) {
-        // Unlike
+    if (existing && existing.length > 0) {
         await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
+        userLikedPosts.delete(postId);
     } else {
-        // Remove dislike if exists
-        await SB.from("post_dislikes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        // Add like
         await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
+        userLikedPosts.add(postId);
     }
     
-    // Update counts
-    const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = likeCount || 0;
+    if (likeSpan) likeSpan.innerText = count || 0;
     
-    // Update UI class
     const likeBtn = document.getElementById(`like-btn-${postId}`);
-    const dislikeBtn = document.getElementById(`dislike-btn-${postId}`);
     if (likeBtn) {
-        const hasLike = existingLike && existingLike.length > 0;
-        if (hasLike) likeBtn.classList.remove('liked');
+        if (existing && existing.length > 0) likeBtn.classList.remove('liked');
         else likeBtn.classList.add('liked');
     }
-    if (dislikeBtn) dislikeBtn.classList.remove('disliked');
-}
-
-async function dislikePost(postId) {
-    if (!USER) { alert('Login to dislike'); openAuthModal(); return; }
-    
-    // Check if already disliked
-    const { data: existingDislike } = await SB.from("post_dislikes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    
-    if (existingDislike && existingDislike.length > 0) {
-        // Remove dislike
-        await SB.from("post_dislikes").delete().eq("post_id", postId).eq("user_id", USER.id);
-    } else {
-        // Remove like if exists
-        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        // Add dislike
-        await SB.from("post_dislikes").insert({ post_id: postId, user_id: USER.id });
-    }
-    
-    // Update counts
-    const { count: dislikeCount } = await SB.from("post_dislikes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const dislikeSpan = document.getElementById(`dislikes-${postId}`);
-    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
-    
-    // Update UI class
-    const dislikeBtn = document.getElementById(`dislike-btn-${postId}`);
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (dislikeBtn) {
-        const hasDislike = existingDislike && existingDislike.length > 0;
-        if (hasDislike) dislikeBtn.classList.remove('disliked');
-        else dislikeBtn.classList.add('disliked');
-    }
-    if (likeBtn) likeBtn.classList.remove('liked');
 }
 
 // ============================================
@@ -513,23 +482,24 @@ function toggleComments(postId) {
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
     
+    // Remove dislike if exists
+    await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
+    userDislikedComments.delete(commentId);
+    
     const { data: existing } = await SB.from("comment_likes").select("*").eq("comment_id", commentId).eq("user_id", USER.id);
     
     if (existing && existing.length > 0) {
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
     } else {
-        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
         userLikedComments.add(commentId);
-        userDislikedComments.delete(commentId);
     }
     
     const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const likeSpan = document.getElementById(`comment-like-${commentId}`);
     if (likeSpan) likeSpan.innerText = likeCount || 0;
     
-    // Update UI classes
     const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
     const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
     if (likeBtn) {
@@ -542,23 +512,24 @@ async function likeComment(commentId) {
 async function dislikeComment(commentId) {
     if (!USER) { alert('Login to dislike'); return; }
     
+    // Remove like if exists
+    await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
+    userLikedComments.delete(commentId);
+    
     const { data: existing } = await SB.from("comment_dislikes").select("*").eq("comment_id", commentId).eq("user_id", USER.id);
     
     if (existing && existing.length > 0) {
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
     } else {
-        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         await SB.from("comment_dislikes").insert({ comment_id: commentId, user_id: USER.id });
         userDislikedComments.add(commentId);
-        userLikedComments.delete(commentId);
     }
     
     const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
     
-    // Update UI classes
     const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
     const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
     if (dislikeBtn) {
@@ -597,16 +568,17 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
     
+    await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+    userDislikedReplies.delete(replyId);
+    
     const { data: existing } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
     
     if (existing && existing.length > 0) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
     } else {
-        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
         userLikedReplies.add(replyId);
-        userDislikedReplies.delete(replyId);
     }
     
     const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
@@ -625,16 +597,17 @@ async function likeReply(replyId) {
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
     
+    await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+    userLikedReplies.delete(replyId);
+    
     const { data: existing } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
     
     if (existing && existing.length > 0) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
     } else {
-        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
         userDislikedReplies.add(replyId);
-        userLikedReplies.delete(replyId);
     }
     
     const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
@@ -712,6 +685,43 @@ function showReplyInputForReply(commentId, replyId, postId) {
 }
 
 // ============================================
+// UPLOAD POST
+// ============================================
+async function uploadPost() {
+    if (!USER) { alert('Login first'); return; }
+    const file = document.getElementById("uploadFile").files[0];
+    const caption = document.getElementById("uploadCaption").value;
+    const privacy = document.getElementById("uploadPrivacy").value;
+    if (!file) { alert("Select an image"); return; }
+    const fileName = `${USER.id}_${Date.now()}.jpg`;
+    await SB.storage.from("post-images").upload(fileName, file);
+    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
+    await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
+    alert("Posted!"); closeUploadModal(); loadFeed();
+}
+
+// ============================================
+// LOAD PROFILE
+// ============================================
+async function loadProfile() {
+    if (!USER) { alert('Please login'); openAuthModal(); return; }
+    const feedDiv = document.getElementById("feed");
+    feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
+    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
+    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
+    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
+    const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
+    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${profile?.username || USER.email.split('@')[0]}</h3><div class="profile-bio">${profile?.bio || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
+    for (const p of posts || []) {
+        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
+        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
+        html += `<div class="post"><div class="post-header"><div class="post-header-left">${avatarDisplay}<div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
+    }
+    feedDiv.innerHTML = html;
+}
+
+// ============================================
 // LOAD COMMENTS ONLY
 // ============================================
 async function loadCommentsOnly(postId) {
@@ -719,11 +729,9 @@ async function loadCommentsOnly(postId) {
     if (!commentsList) return;
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
-    // Get all comments for this post
     const { data: comments } = await SB.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
     if (!comments || comments.length === 0) { commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>'; return; }
     
-    // Get user IDs from comments
     const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
     let profiles = {};
     if (userIds.length > 0) {
@@ -731,7 +739,6 @@ async function loadCommentsOnly(postId) {
         if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
     }
     
-    // Get all replies
     const commentIds = comments.map(c => c.id);
     let allReplies = [];
     if (commentIds.length > 0) {
@@ -739,27 +746,13 @@ async function loadCommentsOnly(postId) {
         if (replies) allReplies = replies;
     }
     
-    // Get reply user profiles
-    const replyUserIds = [...new Set(allReplies.map(r => r.user_id).filter(id => id))];
-    let replyProfiles = {};
-    if (replyUserIds.length > 0) {
-        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", replyUserIds);
-        if (profileData) profileData.forEach(p => { replyProfiles[p.id] = p; });
-    }
-    
     let html = '';
     for (const c of comments) {
         const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         
-        let isLiked = false;
-        let isDisliked = false;
-        if (USER) {
-            const { data: liked } = await SB.from("comment_likes").select("*").eq("comment_id", c.id).eq("user_id", USER.id);
-            const { data: disliked } = await SB.from("comment_dislikes").select("*").eq("comment_id", c.id).eq("user_id", USER.id);
-            isLiked = liked && liked.length > 0;
-            isDisliked = disliked && disliked.length > 0;
-        }
+        let isLiked = userLikedComments.has(c.id);
+        let isDisliked = userDislikedComments.has(c.id);
         
         const isOwner = USER && USER.id === c.user_id;
         const profile = profiles[c.user_id];
@@ -772,16 +765,10 @@ async function loadCommentsOnly(postId) {
             const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
             const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
             
-            let isReplyLiked = false;
-            let isReplyDisliked = false;
-            if (USER) {
-                const { data: liked } = await SB.from("reply_likes").select("*").eq("reply_id", r.id).eq("user_id", USER.id);
-                const { data: disliked } = await SB.from("reply_dislikes").select("*").eq("reply_id", r.id).eq("user_id", USER.id);
-                isReplyLiked = liked && liked.length > 0;
-                isReplyDisliked = disliked && disliked.length > 0;
-            }
+            let isReplyLiked = userLikedReplies.has(r.id);
+            let isReplyDisliked = userDislikedReplies.has(r.id);
             const isReplyOwner = USER && USER.id === r.user_id;
-            const replyProfile = replyProfiles[r.user_id];
+            const replyProfile = profiles[r.user_id];
             const replyUsername = replyProfile?.username || 'User';
             const replyAvatarUrl = replyProfile?.avatar_url;
             
@@ -791,16 +778,10 @@ async function loadCommentsOnly(postId) {
                 const { count: nrLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
                 const { count: nrDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
                 
-                let isNestedLiked = false;
-                let isNestedDisliked = false;
-                if (USER) {
-                    const { data: liked } = await SB.from("reply_likes").select("*").eq("reply_id", nr.id).eq("user_id", USER.id);
-                    const { data: disliked } = await SB.from("reply_dislikes").select("*").eq("reply_id", nr.id).eq("user_id", USER.id);
-                    isNestedLiked = liked && liked.length > 0;
-                    isNestedDisliked = disliked && disliked.length > 0;
-                }
+                let isNestedLiked = userLikedReplies.has(nr.id);
+                let isNestedDisliked = userDislikedReplies.has(nr.id);
                 const isNestedOwner = USER && USER.id === nr.user_id;
-                const nestedProfile = replyProfiles[nr.user_id];
+                const nestedProfile = profiles[nr.user_id];
                 const nestedUsername = nestedProfile?.username || 'User';
                 const nestedAvatarUrl = nestedProfile?.avatar_url;
                 
@@ -897,48 +878,29 @@ async function loadCommentsOnly(postId) {
 }
 
 // ============================================
-// UPLOAD POST
-// ============================================
-async function uploadPost() {
-    if (!USER) { alert('Login first'); return; }
-    const file = document.getElementById("uploadFile").files[0];
-    const caption = document.getElementById("uploadCaption").value;
-    const privacy = document.getElementById("uploadPrivacy").value;
-    if (!file) { alert("Select an image"); return; }
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
-    await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
-    alert("Posted!"); closeUploadModal(); loadFeed();
-}
-
-// ============================================
-// LOAD PROFILE
-// ============================================
-async function loadProfile() {
-    if (!USER) { alert('Please login'); openAuthModal(); return; }
-    const feedDiv = document.getElementById("feed");
-    feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
-    const { data: profile } = await SB.from("profiles").select("*").eq("id", USER.id).single();
-    const { data: posts } = await SB.from("posts").select("*").eq("user_id", USER.id).order("id", { ascending: false });
-    const { count } = await SB.from("posts").select("*", { count: 'exact', head: true }).eq("user_id", USER.id);
-    const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}">` : '👤';
-    let html = `<div class="profile-header"><div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">${avatarHtml}</div><h3>${profile?.username || USER.email.split('@')[0]}</h3><div class="profile-bio">${profile?.bio || 'No bio yet'}</div><div class="profile-stats"><div><strong>${count || 0}</strong><br>posts</div><div><strong>0</strong><br>followers</div><div><strong>0</strong><br>following</div></div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button><button onclick="switchTab('feed')" style="background:#00ff88; color:black; border:none; padding:8px 20px; border-radius:20px; margin-top:10px; margin-left:10px;">Back to Feed</button></div>`;
-    for (const p of posts || []) {
-        let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
-        let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-        let avatarDisplay = profile?.avatar_url ? `<img src="${profile.avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`;
-        html += `<div class="post"><div class="post-header"><div class="post-header-left">${avatarDisplay}<div class="post-username">${profile?.username || 'User'}</div></div><div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div></div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${p.caption || 'Fashion visual'}</div></div>`;
-    }
-    feedDiv.innerHTML = html;
-}
-
-// ============================================
 // LOAD FEED
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
+    
+    // Load user likes
+    if (USER) {
+        const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
+        if (postLikes) postLikes.forEach(l => userLikedPosts.add(l.post_id));
+        
+        const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
+        if (commentLikes) commentLikes.forEach(l => userLikedComments.add(l.comment_id));
+        
+        const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
+        if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(d.comment_id));
+        
+        const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
+        if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(l.reply_id));
+        
+        const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
+        if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(d.reply_id));
+    }
     
     const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     if (error || !posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
@@ -953,16 +915,7 @@ async function loadFeed() {
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-        const { count: dislikeCount } = await SB.from("post_dislikes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-        
-        let isLiked = false;
-        let isDisliked = false;
-        if (USER) {
-            const { data: liked } = await SB.from("post_likes").select("*").eq("post_id", p.id).eq("user_id", USER.id);
-            const { data: disliked } = await SB.from("post_dislikes").select("*").eq("post_id", p.id).eq("user_id", USER.id);
-            isLiked = liked && liked.length > 0;
-            isDisliked = disliked && disliked.length > 0;
-        }
+        const isLiked = userLikedPosts.has(p.id);
         
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
         let totalCommentCount = commentsData.length;
@@ -1005,17 +958,17 @@ async function loadFeed() {
                     <i class="fas fa-heart"></i>
                     <span id="likes-${p.id}">${likeCount || 0}</span>
                 </div>
-                <div id="dislike-btn-${p.id}" class="action-icon ${isDisliked ? 'disliked' : ''}" onclick="dislikePost(${p.id})">
-                    <i class="fas fa-thumbs-down"></i>
-                    <span id="dislikes-${p.id}">${dislikeCount || 0}</span>
+                <div class="action-icon" onclick="toggleComments(${p.id})">
+                    <i class="far fa-comment-dots"></i>
+                    <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
                 </div>
                 <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
                     <i class="fas fa-share-alt"></i>
                     <span>Share</span>
                 </div>
-                <div class="action-icon" onclick="toggleComments(${p.id})">
-                    <i class="far fa-comment-dots"></i>
-                    <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
+                <div class="action-icon" onclick="alert('Saved!')">
+                    <i class="far fa-bookmark"></i>
+                    <span>Save</span>
                 </div>
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
@@ -1034,22 +987,7 @@ async function loadFeed() {
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// CREATE TABLES IF NOT EXISTS (Run once in Supabase)
-// ============================================
-async function createTablesIfNeeded() {
-    try {
-        await SB.from("post_likes").select("*").limit(1);
-    } catch(e) {
-        console.log("Please run SQL to create tables: post_likes, post_dislikes, comment_likes, comment_dislikes, reply_likes, reply_dislikes");
-    }
-}
-
-// ============================================
-// INIT
-// ============================================
 async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
-createTablesIfNeeded();
 initStorage();
 handleMagicLink();
 checkAuth();
