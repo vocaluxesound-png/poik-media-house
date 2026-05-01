@@ -6,312 +6,244 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
-    
-    .header {
-        position: sticky;
-        top: 0;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(10px);
-        padding: 12px 16px;
-        z-index: 100;
-        border-bottom: 1px solid #222;
-    }
-    .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .header-icons { display: flex; gap: 16px; align-items: center; }
-    .header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
-    
-    .top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
-    .nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
-    .nav-item:hover { color: white; }
-    .nav-item.active { color: white; }
-    .nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
-    
-    .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
-    .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
-    .post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-    .post-header-left { display: flex; align-items: center; gap: 10px; }
-    
-    .m-logo {
-        width: 40px;
-        height: 40px;
-        background: black;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 2px;
-        padding: 5px 3px;
-        border-radius: 8px;
-    }
-    .tri { width: 7px; background: #00ff88; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
-    .tri1 { height: 14px; }
-    .tri2 { height: 24px; }
-    .tri3 { height: 28px; }
-    .tri4 { height: 18px; }
-    
-    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .post-username { font-weight: 600; font-size: 14px; }
-    .post-image { width: 100%; display: block; cursor: pointer; }
-    .post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
-    
-    .post-actions-right {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        z-index: 10;
-        align-items: center;
-    }
-    @media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
-    @media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
-    
-    .action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
-    .action-icon i { font-size: 24px; color: white; transition: all 0.2s; }
-    .action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
-    .action-icon:hover i { transform: scale(1.1); }
-    .action-icon.liked i { color: #FE2C55; }
-    
-    .share-icon i {
-        font-size: 22px;
-        color: white;
-    }
-    
-    .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
-    .privacy-public { background: #00ff88; color: black; }
-    .privacy-friends { background: #ffaa00; color: black; }
-    .privacy-private { background: #ff4444; color: white; }
-    
-    .post-privacy-menu { position: relative; }
-    .post-menu-dropdown { display: none; position: absolute; right: 0; top: 35px; background: #1a1a1a; border-radius: 12px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #333; overflow: hidden; }
-    .post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
-    .post-menu-option:hover { background: #333; }
-    .delete-option { color: #ff4444; }
-    .delete-option:hover { background: #ff4444; color: white; }
-    
-    .share-modal { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 20px 20px 0 0; padding: 20px; z-index: 200; animation: slideUp 0.3s ease; }
-    .share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
-    .share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
-    .share-option i { font-size: 30px; display: block; }
-    .share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
-    .share-option:hover { background: #333; }
-    
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(0,0,0,0.95);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid #222;
-        padding: 8px 20px;
-        z-index: 100;
-    }
-    .bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
-    .bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
-    .bottom-nav-item i { font-size: 22px; }
-    .bottom-nav-item span { font-size: 10px; }
-    .bottom-nav-item.active { color: #00ff88; }
-    .bottom-nav-item:hover { color: #ccc; }
-    .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
-    .plus-circle i { color: black; font-size: 24px; }
-    
-    /* Comments Section */
-    .comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; position: relative; }
-    .comments-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-    .comments-title { font-size: 14px; color: #888; }
-    .close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
-    .close-comments:hover { color: #ff4444; }
-    
-    .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
-    .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
-    .comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .comment-username { font-weight: bold; font-size: 13px; color: #00ff88; cursor: pointer; }
-    .comment-text { font-size: 13px; margin-left: 42px; margin-bottom: 5px; word-break: break-word; }
-    .comment-actions { display: flex; gap: 12px; margin-left: 42px; font-size: 11px; }
-    .comment-action { 
-        color: white;
-        cursor: pointer; 
-        display: inline-flex; 
-        align-items: center; 
-        gap: 4px;
-        background: transparent;
-        border: none;
-        padding: 2px 6px;
-        font-size: 11px;
-        transition: color 0.15s ease;
-    }
-    .comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
-    .comment-action.liked { color: #FE2C55; }
-    .comment-action.liked i { color: #FE2C55; }
-    .comment-action.disliked { color: #FFC107; }
-    .comment-action.disliked i { color: #FFC107; }
-    .comment-menu { position: absolute; right: 5px; top: 5px; }
-    .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
-    .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-    .comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
-    .comment-menu-option:hover { background: #333; }
-    .comment-menu-option.delete { color: #ff4444; }
-    
-    .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
-    
-    .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
-    .reply-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-    .reply-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-    .reply-username { font-weight: bold; font-size: 11px; color: #00ff88; cursor: pointer; }
-    .reply-text { font-size: 11px; margin-left: 32px; margin-bottom: 3px; word-break: break-word; }
-    .reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 10px; }
-    .reply-action { 
-        color: white;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        background: transparent;
-        border: none;
-        padding: 1px 5px;
-        font-size: 10px;
-        transition: color 0.15s ease;
-    }
-    .reply-action i { font-size: 10px; color: white; transition: color 0.15s ease; }
-    .reply-action.liked { color: #FE2C55; }
-    .reply-action.liked i { color: #FE2C55; }
-    .reply-action.disliked { color: #FFC107; }
-    .reply-action.disliked i { color: #FFC107; }
-    .reply-menu { position: absolute; right: 5px; top: 5px; }
-    .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
-    .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
-    .reply-menu-option { padding: 5px 8px; cursor: pointer; font-size: 10px; color: white; }
-    .reply-menu-option:hover { background: #333; }
-    .reply-menu-option.delete { color: #ff4444; }
-    
-    .reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 32px; }
-    .reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 11px; }
-    .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 10px; }
-    
-    .comment-input { display: flex; gap: 8px; margin-top: 12px; }
-    .comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
-    .comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
-    
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
-    .modal img { max-width: 100%; max-height: 100%; }
-    .close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
-    
-    .upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
-    .upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
-    .upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
-    .upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
-    
-    .loading { text-align: center; padding: 50px; color: #888; }
-    
-    .profile-header { text-align: center; padding: 30px 20px; }
-    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
-    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
-    .profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
-    .edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
-    
-    .edit-profile-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; align-items: center; justify-content: center; }
-    .edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-    .edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-    .edit-profile-box textarea { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; resize: none; font-family: inherit; }
-    .edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .save-profile-btn { background: #00ff88; color: black; border: none; }
-    .cancel-edit-btn { background: #222; color: white; border: none; }
-    
-    .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
-    .auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-    .auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-    .auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .magic-btn { background: #00ff88; color: black; border: none; }
-    .cancel-btn { background: #222; color: white; border: none; }
-    
-    #avatarInput { display: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
+
+.header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 16px; z-index: 100; border-bottom: 1px solid #222; }
+.header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.header-icons { display: flex; gap: 16px; align-items: center; }
+.header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
+
+.top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
+.nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
+.nav-item:hover { color: white; }
+.nav-item.active { color: white; }
+.nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
+
+.feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
+.post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; }
+.post-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.post-header-left { display: flex; align-items: center; gap: 10px; }
+.m-logo { width: 40px; height: 40px; background: black; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 5px 3px; border-radius: 8px; }
+.tri { width: 7px; background: #00ff88; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+.tri1 { height: 14px; }
+.tri2 { height: 24px; }
+.tri3 { height: 28px; }
+.tri4 { height: 18px; }
+.user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.post-username { font-weight: 600; font-size: 14px; }
+.post-image { width: 100%; display: block; cursor: pointer; }
+.post-caption { padding: 12px; font-size: 14px; padding-right: 70px; }
+
+.post-actions-right { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 16px; z-index: 10; align-items: center; }
+@media (max-width: 640px) { .post-actions-right { right: 10px; gap: 14px; } }
+@media (min-width: 641px) { .post-actions-right { right: 16px; gap: 18px; } }
+.action-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
+.action-icon i { font-size: 24px; color: white; transition: all 0.2s; }
+.action-icon span { font-size: 11px; color: #ddd; margin-top: 4px; }
+.action-icon:hover i { transform: scale(1.1); }
+.action-icon.liked i { color: #FE2C55; }
+.share-icon i { font-size: 22px; color: white; }
+
+.privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
+.privacy-public { background: #00ff88; color: black; }
+.privacy-friends { background: #ffaa00; color: black; }
+.privacy-private { background: #ff4444; color: white; }
+.post-privacy-menu { position: relative; }
+.post-menu-dropdown { display: none; position: absolute; right: 0; top: 35px; background: #1a1a1a; border-radius: 12px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #333; overflow: hidden; }
+.post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
+.post-menu-option:hover { background: #333; }
+.delete-option { color: #ff4444; }
+.delete-option:hover { background: #ff4444; color: white; }
+
+.share-modal { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 20px 20px 0 0; padding: 20px; z-index: 200; animation: slideUp 0.3s ease; }
+.share-options { display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
+.share-option { text-align: center; cursor: pointer; padding: 10px; border-radius: 12px; min-width: 70px; }
+.share-option i { font-size: 30px; display: block; }
+.share-option span { font-size: 12px; margin-top: 5px; color: #ccc; }
+.share-option:hover { background: #333; }
+
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); border-top: 1px solid #222; padding: 8px 20px; z-index: 100; }
+.bottom-nav-items { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; }
+.bottom-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #888; cursor: pointer; }
+.bottom-nav-item i { font-size: 22px; }
+.bottom-nav-item span { font-size: 10px; }
+.bottom-nav-item.active { color: #00ff88; }
+.bottom-nav-item:hover { color: #ccc; }
+.plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
+.plus-circle i { color: black; font-size: 24px; }
+
+/* Comments Section */
+.comments-section { padding: 12px; background: #060606; border-radius: 0 0 16px 16px; position: relative; }
+.comments-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.comments-title { font-size: 14px; color: #888; }
+.close-comments { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 0 8px; }
+.close-comments:hover { color: #ff4444; }
+
+.comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
+.comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; flex-wrap: wrap; }
+.comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.comment-username { font-weight: bold; font-size: 13px; color: #00ff88; cursor: pointer; }
+.comment-time { font-size: 10px; color: #666; margin-left: auto; }
+.comment-text { font-size: 13px; margin-left: 42px; margin-bottom: 5px; word-break: break-word; }
+.comment-actions { display: flex; gap: 12px; margin-left: 42px; font-size: 11px; }
+.comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
+.comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
+.comment-action.liked { color: #FE2C55; }
+.comment-action.liked i { color: #FE2C55; }
+.comment-action.disliked { color: #FFC107; }
+.comment-action.disliked i { color: #FFC107; }
+.comment-menu { position: absolute; right: 5px; top: 5px; }
+.comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
+.comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
+.comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
+.comment-menu-option:hover { background: #333; }
+.comment-menu-option.delete { color: #ff4444; }
+
+.replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
+.reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
+.reply-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+.reply-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.reply-username { font-weight: bold; font-size: 11px; color: #00ff88; cursor: pointer; }
+.reply-time { font-size: 9px; color: #666; margin-left: auto; }
+.reply-text { font-size: 11px; margin-left: 32px; margin-bottom: 3px; word-break: break-word; }
+.reply-actions { display: flex; gap: 10px; margin-left: 32px; font-size: 10px; }
+.reply-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; background: transparent; border: none; padding: 1px 5px; font-size: 10px; transition: color 0.15s ease; }
+.reply-action i { font-size: 10px; color: white; transition: color 0.15s ease; }
+.reply-action.liked { color: #FE2C55; }
+.reply-action.liked i { color: #FE2C55; }
+.reply-action.disliked { color: #FFC107; }
+.reply-action.disliked i { color: #FFC107; }
+.reply-menu { position: absolute; right: 5px; top: 5px; }
+.reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
+.reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
+.reply-menu-option { padding: 5px 8px; cursor: pointer; font-size: 10px; color: white; }
+.reply-menu-option:hover { background: #333; }
+.reply-menu-option.delete { color: #ff4444; }
+
+.reply-input { display: flex; gap: 8px; margin-top: 8px; margin-left: 32px; }
+.reply-input input { flex: 1; padding: 6px; border-radius: 16px; border: none; background: #222; color: white; font-size: 11px; }
+.reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 10px; }
+.comment-input { display: flex; gap: 8px; margin-top: 12px; }
+.comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
+.comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
+
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
+.modal img { max-width: 100%; max-height: 100%; }
+.close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
+
+.upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
+.upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
+.upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
+.upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
+
+.loading { text-align: center; padding: 50px; color: #888; }
+
+.profile-header { text-align: center; padding: 30px 20px; }
+.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
+.profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
+.edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
+
+.edit-profile-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; align-items: center; justify-content: center; }
+.edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+.edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+.edit-profile-box textarea { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; resize: none; font-family: inherit; }
+.edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.save-profile-btn { background: #00ff88; color: black; border: none; }
+.cancel-edit-btn { background: #222; color: white; border: none; }
+
+.auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
+.auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+.auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+.auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.magic-btn { background: #00ff88; color: black; border: none; }
+.cancel-btn { background: #222; color: white; border: none; }
+
+#avatarInput { display: none; }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="header-content">
-        <div class="logo">POIK POIK</div>
-        <div class="header-icons">
-            <i class="fas fa-plus" onclick="openUploadModal()"></i>
-            <i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444;" title="Logout"></i>
-            <i class="far fa-user-circle" onclick="openAuthModal()"></i>
-        </div>
-    </div>
+<div class="header-content">
+<div class="logo">POIK POIK</div>
+<div class="header-icons">
+<i class="fas fa-plus" onclick="openUploadModal()"></i>
+<i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444;" title="Logout"></i>
+<i class="far fa-user-circle" onclick="openAuthModal()"></i>
+</div>
+</div>
 </div>
 
 <div class="top-nav">
-    <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
-    <button class="nav-item" onclick="switchTab('explore')">Explore</button>
-    <button class="nav-item" onclick="switchTab('following')">Following</button>
+<button class="nav-item active" onclick="switchTab('feed')">Feed</button>
+<button class="nav-item" onclick="switchTab('explore')">Explore</button>
+<button class="nav-item" onclick="switchTab('following')">Following</button>
 </div>
 
 <div id="feed" class="feed"><div class="loading">Loading...</div></div>
 
 <div class="bottom-nav">
-    <div class="bottom-nav-items">
-        <button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
-        <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
-        <div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
-        <button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
-        <button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
-    </div>
+<div class="bottom-nav-items">
+<button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
+<button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
+<div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
+<button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
+<button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
+</div>
 </div>
 
 <div id="uploadModal" class="upload-modal">
-    <h3>Upload</h3>
-    <input type="file" id="uploadFile" accept="image/*">
-    <input type="text" id="uploadCaption" placeholder="Caption...">
-    <select id="uploadPrivacy" class="privacy-select">
-        <option value="public">🌍 Public</option>
-        <option value="friends">👥 Friends Only</option>
-        <option value="private">🔒 Only Me</option>
-    </select>
-    <button onclick="uploadPost()">Post</button>
-    <button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
+<h3>Upload</h3>
+<input type="file" id="uploadFile" accept="image/*">
+<input type="text" id="uploadCaption" placeholder="Caption...">
+<select id="uploadPrivacy" class="privacy-select">
+<option value="public">🌍 Public</option>
+<option value="friends">👥 Friends Only</option>
+<option value="private">🔒 Only Me</option>
+</select>
+<button onclick="uploadPost()">Post</button>
+<button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
 </div>
 
 <div id="shareModal" class="share-modal">
-    <h3 style="text-align:center;">Share to</h3>
-    <div class="share-options">
-        <div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
-        <div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
-        <div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
-        <div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
-        <div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
-    </div>
-    <button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
+<h3 style="text-align:center;">Share to</h3>
+<div class="share-options">
+<div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
+<div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
+<div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
+<div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
+<div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
+</div>
+<button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
 </div>
 
 <div id="imageModal" class="modal" onclick="closeModal()">
-    <span class="close-modal" onclick="closeModal()">&times;</span>
-    <img id="modalImage">
+<span class="close-modal" onclick="closeModal()">&times;</span>
+<img id="modalImage">
 </div>
 
 <div id="authModal" class="auth-modal">
-    <div class="auth-box">
-        <h3 style="margin-bottom:20px;">Join Poik Poik</h3>
-        <p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a magic login link</p>
-        <input type="email" id="authEmail" placeholder="Email">
-        <button id="magicLoginBtn" class="magic-btn">Send Magic Link</button>
-        <button id="closeAuthBtn" class="cancel-btn">Cancel</button>
-    </div>
+<div class="auth-box">
+<h3 style="margin-bottom:20px;">Join Poik Poik</h3>
+<p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a magic login link</p>
+<input type="email" id="authEmail" placeholder="Email">
+<button id="magicLoginBtn" class="magic-btn">Send Magic Link</button>
+<button id="closeAuthBtn" class="cancel-btn">Cancel</button>
+</div>
 </div>
 
 <div id="editProfileModal" class="edit-profile-modal">
-    <div class="edit-profile-box">
-        <h3 style="margin-bottom:20px;">Edit Profile</h3>
-        <input type="text" id="editUsername" placeholder="Username">
-        <textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
-        <button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
-        <button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
-    </div>
+<div class="edit-profile-box">
+<h3 style="margin-bottom:20px;">Edit Profile</h3>
+<input type="text" id="editUsername" placeholder="Username">
+<textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
+<button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
+<button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
+</div>
 </div>
 
 <input type="file" id="avatarInput" accept="image/*">
@@ -325,6 +257,7 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 
+// Sets for storing user's likes/dislikes (using Numbers for consistent comparison)
 let userLikedPosts = new Set();
 let userLikedComments = new Set();
 let userDislikedComments = new Set();
@@ -333,9 +266,24 @@ let userDislikedReplies = new Set();
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-// ============================================
-// AUTH
-// ============================================
+// ========== TIME AGO FUNCTION (FIX #4) ==========
+function timeAgo(dateString) {
+    if (!dateString) return '';
+    const now = new Date();
+    const then = new Date(dateString);
+    const seconds = Math.floor((now - then) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'yesterday';
+    return `${days}d ago`;
+}
+
+// ========== AUTH ==========
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
@@ -359,9 +307,7 @@ async function handleMagicLink() {
 }
 async function checkAuth() { const { data: { user } } = await SB.auth.getUser(); USER = user; const userIcon = document.querySelector('.fa-user-circle'); if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); } else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); } return user; }
 
-// ============================================
-// PROFILE
-// ============================================
+// ========== PROFILE ==========
 async function uploadAvatar(file) {
     if (!USER) return;
     const fileName = `${USER.id}_${Date.now()}.jpg`;
@@ -382,21 +328,21 @@ async function saveProfile() {
     document.getElementById('editProfileModal').style.display = 'none';
     loadProfile(); loadFeed();
 }
-function openEditProfile() { document.getElementById('editUsername').value = USER?.user_metadata?.username || ''; document.getElementById('editBio').value = USER?.user_metadata?.bio || ''; document.getElementById('editProfileModal').style.display = 'flex'; }
+function openEditProfile() {
+    document.getElementById('editUsername').value = USER?.user_metadata?.username || '';
+    document.getElementById('editBio').value = USER?.user_metadata?.bio || '';
+    document.getElementById('editProfileModal').style.display = 'flex';
+}
 document.getElementById('closeEditModal').onclick = () => document.getElementById('editProfileModal').style.display = 'none';
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
-// ============================================
-// POST MENU
-// ============================================
+// ========== POST MENU ==========
 function togglePostMenu(postId) { const menu = document.getElementById(`post-menu-${postId}`); document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
 async function changePostPrivacy(postId, newPrivacy) { await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); loadFeed(); }
 async function deletePost(postId) { if (confirm('Delete this post?')) { await SB.from("posts").delete().eq("id", postId); loadFeed(); if (CURRENT_TAB === 'profile') loadProfile(); } }
 document.addEventListener('click', (e) => { if (!e.target.closest('.post-privacy-menu')) { document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none'); } });
 
-// ============================================
-// SHARE
-// ============================================
+// ========== SHARE ==========
 function openShareModal(url) { SHARE_URL = url; document.getElementById('shareModal').style.display = 'block'; }
 function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
 function shareTo(platform) {
@@ -411,15 +357,11 @@ function shareTo(platform) {
 }
 function copyLink() { navigator.clipboard.writeText(SHARE_URL); alert('Link copied!'); closeShareModal(); }
 
-// ============================================
-// UI
-// ============================================
+// ========== UI ==========
 function openModal(img) { document.getElementById('modalImage').src = img; document.getElementById('imageModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
-
 function openUploadModal() { if (!USER) { alert('Please login first'); openAuthModal(); return; } document.getElementById('uploadModal').style.display = 'block'; }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('uploadFile').value = ''; document.getElementById('uploadCaption').value = ''; }
-
 function switchTab(tab) { CURRENT_TAB = tab; loadFeed(); }
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
@@ -427,14 +369,10 @@ function bottomNav(page) {
     if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
 }
 
-// ============================================
-// POST LIKE
-// ============================================
+// ========== POST LIKE ==========
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    
     const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    
     if (existing && existing.length > 0) {
         await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
         userLikedPosts.delete(Number(postId));
@@ -442,21 +380,14 @@ async function likePost(postId) {
         await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
         userLikedPosts.add(Number(postId));
     }
-    
     const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const likeSpan = document.getElementById(`likes-${postId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
-    
     const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (existing && existing.length > 0) likeBtn.classList.remove('liked');
-        else likeBtn.classList.add('liked');
-    }
+    if (likeBtn) { if (existing && existing.length > 0) likeBtn.classList.remove('liked'); else likeBtn.classList.add('liked'); }
 }
 
-// ============================================
-// COMMENT FUNCTIONS
-// ============================================
+// ========== COMMENT FUNCTIONS ==========
 async function addComment(postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to comment'); openAuthModal(); return; }
@@ -471,33 +402,24 @@ async function addComment(postId) {
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
 }
-
 function toggleComments(postId) {
     const section = document.getElementById(`comments-${postId}`);
-    if (section) {
-        const isHidden = section.style.display === 'none';
-        section.style.display = isHidden ? 'block' : 'none';
-        if (isHidden) { loadCommentsOnly(postId); }
-    }
+    if (section) { const isHidden = section.style.display === 'none'; section.style.display = isHidden ? 'block' : 'none'; if (isHidden) { loadCommentsOnly(postId); } }
 }
 
-// ============================================
-// COMMENT LIKE/DISLIKE (Fixed with Number() conversion)
-// ============================================
+// ========== COMMENT LIKE/DISLIKE (FIX #1) ==========
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
     commentId = Number(commentId);
-    
-    const isCurrentlyLiked = userLikedComments.has(commentId);
-    
+    // Remove dislike first (mutually exclusive)
     if (userDislikedComments.has(commentId)) {
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
         const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
         if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     }
-    
-    if (isCurrentlyLiked) {
+    // Toggle like
+    if (userLikedComments.has(commentId)) {
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
@@ -508,7 +430,7 @@ async function likeComment(commentId) {
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
         if (likeBtn) likeBtn.classList.add('liked');
     }
-    
+    // Update counts
     const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const likeSpan = document.getElementById(`comment-like-${commentId}`);
@@ -516,21 +438,18 @@ async function likeComment(commentId) {
     const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
-
 async function dislikeComment(commentId) {
     if (!USER) { alert('Login to dislike'); return; }
     commentId = Number(commentId);
-    
-    const isCurrentlyDisliked = userDislikedComments.has(commentId);
-    
+    // Remove like first (mutually exclusive)
     if (userLikedComments.has(commentId)) {
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
         if (likeBtn) likeBtn.classList.remove('liked');
     }
-    
-    if (isCurrentlyDisliked) {
+    // Toggle dislike
+    if (userDislikedComments.has(commentId)) {
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
         const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
@@ -541,7 +460,7 @@ async function dislikeComment(commentId) {
         const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
         if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
-    
+    // Update counts
     const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const likeSpan = document.getElementById(`comment-like-${commentId}`);
@@ -550,9 +469,7 @@ async function dislikeComment(commentId) {
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
-// ============================================
-// REPLY FUNCTIONS
-// ============================================
+// ========== REPLY FUNCTIONS ==========
 async function addReplyToComment(commentId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
@@ -564,7 +481,6 @@ async function addReplyToComment(commentId, postId) {
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
     await loadCommentsOnly(postId);
 }
-
 async function addReplyToReply(commentId, parentReplyId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
@@ -575,21 +491,16 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     input.value = '';
     await loadCommentsOnly(postId);
 }
-
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
     replyId = Number(replyId);
-    
-    const isCurrentlyLiked = userLikedReplies.has(replyId);
-    
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     }
-    
-    if (isCurrentlyLiked) {
+    if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
@@ -600,26 +511,20 @@ async function likeReply(replyId) {
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.add('liked');
     }
-    
     const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const likeSpan = document.getElementById(`reply-like-${replyId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
 }
-
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
     replyId = Number(replyId);
-    
-    const isCurrentlyDisliked = userDislikedReplies.has(replyId);
-    
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.remove('liked');
     }
-    
-    if (isCurrentlyDisliked) {
+    if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
@@ -630,15 +535,12 @@ async function dislikeReply(replyId) {
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
-    
     const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
     if (dislikeSpan) dislikeSpan.innerText = count || 0;
 }
 
-// ============================================
-// DELETE FUNCTIONS
-// ============================================
+// ========== DELETE FUNCTIONS (FIX #2) ==========
 async function deleteComment(commentId, postId) {
     if (!confirm('Delete this comment?')) return;
     await SB.from("comments").delete().eq("id", commentId);
@@ -648,48 +550,29 @@ async function deleteComment(commentId, postId) {
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
 }
-
 async function deleteReply(replyId, postId) {
     if (!confirm('Delete this reply?')) return;
     await SB.from("comment_replies").delete().eq("id", replyId);
     await loadCommentsOnly(postId);
 }
 
-// ============================================
-// UI MENU FUNCTIONS
-// ============================================
-function toggleCommentMenu(commentId) {
-    const menu = document.getElementById(`comment-menu-${commentId}`);
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-
-function toggleReplyMenu(replyId) {
-    const menu = document.getElementById(`reply-menu-${replyId}`);
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-
+// ========== UI MENU FUNCTIONS ==========
+function toggleCommentMenu(commentId) { const menu = document.getElementById(`comment-menu-${commentId}`); if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
+function toggleReplyMenu(replyId) { const menu = document.getElementById(`reply-menu-${replyId}`); if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; }
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.comment-menu')) {
-        document.querySelectorAll('.comment-menu-dropdown').forEach(m => m.style.display = 'none');
-    }
-    if (!e.target.closest('.reply-menu')) {
-        document.querySelectorAll('.reply-menu-dropdown').forEach(m => m.style.display = 'none');
-    }
+    if (!e.target.closest('.comment-menu')) { document.querySelectorAll('.comment-menu-dropdown').forEach(m => m.style.display = 'none'); }
+    if (!e.target.closest('.reply-menu')) { document.querySelectorAll('.reply-menu-dropdown').forEach(m => m.style.display = 'none'); }
 });
 
-// ============================================
-// REPLY INPUT TOGGLE
-// ============================================
+// ========== REPLY INPUT TOGGLE ==========
 let activeReplyCommentId = null;
 let activeReplyReplyId = null;
-
 function showReplyInputForComment(commentId, postId) {
     if (activeReplyCommentId) { const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); if (prev) prev.style.display = 'none'; }
     if (activeReplyReplyId) { const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); if (prev) prev.style.display = 'none'; }
     const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
     if (replyDiv) { replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; activeReplyCommentId = commentId; activeReplyReplyId = null; }
 }
-
 function showReplyInputForReply(commentId, replyId, postId) {
     if (activeReplyReplyId) { const prev = document.getElementById(`reply-input-${activeReplyReplyId}`); if (prev) prev.style.display = 'none'; }
     if (activeReplyCommentId) { const prev = document.getElementById(`reply-comment-input-${activeReplyCommentId}`); if (prev) prev.style.display = 'none'; }
@@ -697,9 +580,7 @@ function showReplyInputForReply(commentId, replyId, postId) {
     if (replyDiv) { replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none'; activeReplyReplyId = replyId; activeReplyCommentId = null; }
 }
 
-// ============================================
-// UPLOAD POST
-// ============================================
+// ========== UPLOAD POST ==========
 async function uploadPost() {
     if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
@@ -713,9 +594,7 @@ async function uploadPost() {
     alert("Posted!"); closeUploadModal(); loadFeed();
 }
 
-// ============================================
-// LOAD PROFILE
-// ============================================
+// ========== LOAD PROFILE ==========
 async function loadProfile() {
     if (!USER) { alert('Please login'); openAuthModal(); return; }
     const feedDiv = document.getElementById("feed");
@@ -734,78 +613,61 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
-// ============================================
-// LOAD COMMENTS ONLY (FIXED - Number conversion for IDs)
-// ============================================
+// ========== LOAD COMMENTS ONLY (FIX #3 & #4) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
-    const { data: comments } = await SB.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+    // Fetch comments with profile data for avatars
+    const { data: comments } = await SB.from("comments").select(`*, profiles(username, avatar_url)`).eq("post_id", postId).order("created_at", { ascending: true });
     if (!comments || comments.length === 0) { commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>'; return; }
     
-    const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
-    let profiles = {};
-    if (userIds.length > 0) {
-        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
-        if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
-    }
-    
-    const commentIds = comments.map(c => c.id);
-    let allReplies = [];
-    if (commentIds.length > 0) {
-        const { data: replies } = await SB.from("comment_replies").select("*").in("comment_id", commentIds).order("created_at", { ascending: true });
-        if (replies) allReplies = replies;
-    }
+    // Fetch all replies with profile data for avatars
+    const { data: allReplies } = await SB.from("comment_replies").select(`*, profiles(username, avatar_url)`).eq("post_id", postId).order("created_at", { ascending: true });
+    const replies = allReplies || [];
     
     let html = '';
     for (const c of comments) {
         const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-        
-        // FIXED: Use Number() for Set lookups
         let isLiked = userLikedComments.has(Number(c.id));
         let isDisliked = userDislikedComments.has(Number(c.id));
-        
         const isOwner = USER && USER.id === c.user_id;
-        const profile = profiles[c.user_id];
-        const username = profile?.username || 'User';
-        const avatarUrl = profile?.avatar_url;
+        const commenterName = c.profiles?.username || 'User';
+        const commenterAvatar = c.profiles?.avatar_url;
+        const commentTime = timeAgo(c.created_at);
+        const commentReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
         
-        const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
         let repliesHtml = '';
         for (const r of commentReplies) {
             const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
             const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-            
-            // FIXED: Use Number() for Set lookups
             let isReplyLiked = userLikedReplies.has(Number(r.id));
             let isReplyDisliked = userDislikedReplies.has(Number(r.id));
             const isReplyOwner = USER && USER.id === r.user_id;
-            const replyProfile = profiles[r.user_id];
-            const replyUsername = replyProfile?.username || 'User';
-            const replyAvatarUrl = replyProfile?.avatar_url;
+            const replyerName = r.profiles?.username || 'User';
+            const replyerAvatar = r.profiles?.avatar_url;
+            const replyTime = timeAgo(r.created_at);
             
-            const nestedReplies = allReplies.filter(nr => nr.parent_reply_id === r.id);
+            // Nested replies (replies to replies)
+            const nestedReplies = replies.filter(nr => nr.parent_reply_id === r.id);
             let nestedHtml = '';
             for (const nr of nestedReplies) {
                 const { count: nrLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
                 const { count: nrDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
-                
-                // FIXED: Use Number() for Set lookups
                 let isNestedLiked = userLikedReplies.has(Number(nr.id));
                 let isNestedDisliked = userDislikedReplies.has(Number(nr.id));
                 const isNestedOwner = USER && USER.id === nr.user_id;
-                const nestedProfile = profiles[nr.user_id];
-                const nestedUsername = nestedProfile?.username || 'User';
-                const nestedAvatarUrl = nestedProfile?.avatar_url;
-                
+                const nestedName = nr.profiles?.username || 'User';
+                const nestedAvatar = nr.profiles?.avatar_url;
+                const nestedTime = timeAgo(nr.created_at);
                 nestedHtml += `
                     <div class="reply" style="margin-left: 25px;">
                         <div class="reply-header">
-                            ${nestedAvatarUrl ? `<img src="${nestedAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                            <span class="reply-username">${escapeHtml(nestedUsername)}</span>
+                            ${nestedAvatar ? `<img src="${nestedAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
+                            <span class="reply-username">${escapeHtml(nestedName)}</span>
+                            <span class="reply-time">${nestedTime}</span>
                         </div>
                         <div class="reply-text">${escapeHtml(nr.text)}</div>
                         <div class="reply-actions">
@@ -823,17 +685,16 @@ async function loadCommentsOnly(postId) {
                             <div id="reply-menu-${nr.id}" class="reply-menu-dropdown" style="display:none;">
                                 <div class="reply-menu-option delete" onclick="deleteReply(${nr.id}, ${postId})">Delete</div>
                             </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                `;
+                        </div>` : ''}
+                    </div>`;
             }
             
             repliesHtml += `
                 <div class="reply">
                     <div class="reply-header">
-                        ${replyAvatarUrl ? `<img src="${replyAvatarUrl}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                        <span class="reply-username">${escapeHtml(replyUsername)}</span>
+                        ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
+                        <span class="reply-username">${escapeHtml(replyerName)}</span>
+                        <span class="reply-time">${replyTime}</span>
                     </div>
                     <div class="reply-text">${escapeHtml(r.text)}</div>
                     <div class="reply-actions">
@@ -852,21 +713,16 @@ async function loadCommentsOnly(postId) {
                         <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
                             <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
                         </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
+                    </div>` : ''}
+                </div>`;
         }
-        
-        const totalRepliesCount = allReplies.filter(r => r.comment_id === c.id).length;
-        const avatarDisplay = avatarUrl ? `<img src="${avatarUrl}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`;
         
         html += `
             <div class="comment">
                 <div class="comment-header">
-                    ${avatarDisplay}
-                    <span class="comment-username">${escapeHtml(username)}</span>
-                    <span style="font-size: 11px; color: #555;">💬 ${totalRepliesCount}</span>
+                    ${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
+                    <span class="comment-username">${escapeHtml(commenterName)}</span>
+                    <span class="comment-time">${commentTime}</span>
                 </div>
                 <div class="comment-text">${escapeHtml(c.text)}</div>
                 <div class="comment-actions">
@@ -885,35 +741,26 @@ async function loadCommentsOnly(postId) {
                     <div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;">
                         <div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
                     </div>
-                </div>
-                ` : ''}
-            </div>
-        `;
+                </div>` : ''}
+            </div>`;
     }
     commentsList.innerHTML = html;
 }
 
-// ============================================
-// LOAD FEED (FIXED - Number conversion for Sets)
-// ============================================
+// ========== LOAD FEED ==========
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // Load user likes/dislikes (FIXED: Store as Numbers)
     if (USER) {
         const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
         if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
-        
         const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
         if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
-        
         const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
         if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
-        
         const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
         if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
-        
         const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
         if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
     }
@@ -932,14 +779,12 @@ async function loadFeed() {
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         const isLiked = userLikedPosts.has(Number(p.id));
-        
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
         let totalCommentCount = commentsData.length;
         for (const c of commentsData) {
             const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             totalCommentCount += replyCount;
         }
-        
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
@@ -955,17 +800,7 @@ async function loadFeed() {
                     ${avatarHtml}
                     <div class="post-username">${escapeHtml(displayName)}</div>
                 </div>
-                ${isOwner ? `
-                <div class="post-privacy-menu">
-                    <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button>
-                    <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;">
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div>
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div>
-                        <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div>
-                        <div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div>
-                    </div>
-                </div>
-                ` : ''}
+                ${isOwner ? `<div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div>` : ''}
             </div>
             <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
             <div class="post-caption">${escapeHtml(p.caption || 'Fashion visual')}</div>
