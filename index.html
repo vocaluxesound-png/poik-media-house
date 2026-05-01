@@ -9,11 +9,25 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: black; color: white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px; }
     
-    .header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 16px; z-index: 100; border-bottom: 1px solid #222; }
+    .header {
+        position: sticky;
+        top: 0;
+        background: rgba(0,0,0,0.9);
+        backdrop-filter: blur(10px);
+        padding: 12px 16px;
+        z-index: 100;
+        border-bottom: 1px solid #222;
+    }
     .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .header-icons { display: flex; gap: 16px; align-items: center; }
     .header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
+    
+    .top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
+    .nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
+    .nav-item:hover { color: white; }
+    .nav-item.active { color: white; }
+    .nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
     
     .feed { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
     .post { background: #0a0a0a; margin-bottom: 20px; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid #111; }
@@ -74,7 +88,7 @@
     
     .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
     .auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-    .auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
+    .auth-box input {宽度: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
     .auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .magic-btn { background: #00ff88; color: black; border: none; }
     
@@ -98,11 +112,17 @@
     .plus-circle { background: white; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-top: -20px; cursor: pointer; }
     .plus-circle i { color: black; font-size: 24px; }
     
-    .top-nav { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-around; padding: 12px 16px; position: sticky; top: 60px; background: transparent; z-index: 99; }
-    .nav-item { background: none; border: none; color: #aaa; font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; position: relative; }
-    .nav-item:hover { color: white; }
-    .nav-item.active { color: white; }
-    .nav-item.active::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 2px; background-color: #00ff88; border-radius: 2px; }
+    .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
+    .privacy-public { background: #00ff88; color: black; }
+    .privacy-friends { background: #ffaa00; color: black; }
+    .privacy-private { background: #ff4444; color: white; }
+    
+    .post-privacy-menu { position: relative; }
+    .post-menu-dropdown { display: none; position: absolute; right: 0; top: 35px; background: #1a1a1a; border-radius: 12px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #333; overflow: hidden; }
+    .post-menu-option { padding: 12px 16px; cursor: pointer; font-size: 14px; color: white; border-bottom: 1px solid #333; }
+    .post-menu-option:hover { background: #333; }
+    .delete-option { color: #ff4444; }
+    .delete-option:hover { background: #ff4444; color: white; }
     
     .profile-header { text-align: center; padding: 30px 20px; }
     .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
@@ -210,6 +230,8 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 
+function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+
 // Helper: Get user's profile
 async function getUserProfile(userId) {
     const { data } = await SB.from("profiles").select("*").eq("id", userId).single();
@@ -231,8 +253,6 @@ function timeAgo(dateString) {
     if (days === 1) return 'yesterday';
     return `${days}d ago`;
 }
-
-function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
 // ============================================
 // AUTH
@@ -431,6 +451,31 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     await loadComments(postId);
 }
 
+function toggleMenu(btn) {
+    const dropdown = btn.nextElementSibling;
+    if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+function showReplyInputForComment(commentId) {
+    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
+    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+}
+
+function showReplyInputForReply(commentId, replyId) {
+    const replyDiv = document.getElementById(`reply-input-${replyId}`);
+    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function deleteComment(commentId, postId) {
+    if (!confirm('Delete this comment?')) return;
+    await SB.from("comments").delete().eq("id", commentId);
+    await SB.from("comment_replies").delete().eq("comment_id", commentId);
+    await loadComments(postId);
+    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const countSpan = document.getElementById(`comment-count-${postId}`);
+    if (countSpan) countSpan.innerText = count || 0;
+}
+
 // ============================================
 // LOAD COMMENTS (FIXED all issues)
 // ============================================
@@ -606,31 +651,6 @@ async function loadComments(postId) {
     container.innerHTML = html;
 }
 
-function toggleMenu(btn) {
-    const dropdown = btn.nextElementSibling;
-    if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-}
-
-function showReplyInputForComment(commentId) {
-    const replyDiv = document.getElementById(`reply-comment-input-${commentId}`);
-    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
-}
-
-function showReplyInputForReply(commentId, replyId) {
-    const replyDiv = document.getElementById(`reply-input-${replyId}`);
-    if (replyDiv) replyDiv.style.display = replyDiv.style.display === 'none' ? 'flex' : 'none';
-}
-
-async function deleteComment(commentId, postId) {
-    if (!confirm('Delete this comment?')) return;
-    await SB.from("comments").delete().eq("id", commentId);
-    await SB.from("comment_replies").delete().eq("comment_id", commentId);
-    await loadComments(postId);
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
-}
-
 // ============================================
 // UPLOAD POST
 // ============================================
@@ -682,30 +702,62 @@ async function loadFeed() {
         if (postLikes) postLikes.forEach(l => userLikedPosts.add(l.post_id));
     }
     
-    const { data: posts, error } = await SB.from("posts").select("*, profiles(username, avatar_url)").order("id", { ascending: false });
-    if (error || !posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
+    // Simple query to get all posts - FIXED
+    const { data: posts, error } = await SB
+        .from("posts")
+        .select("*")
+        .order("id", { ascending: false });
+    
+    console.log("Posts loaded:", posts?.length);
+    console.log("Error:", error);
+    
+    if (error) {
+        feedDiv.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+        return;
+    }
+    
+    if (!posts || posts.length === 0) {
+        feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>';
+        return;
+    }
+    
+    // Get profile info for each user
+    const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
+    let profiles = {};
+    if (userIds.length > 0) {
+        const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
+        if (profileData) {
+            profileData.forEach(p => { profiles[p.id] = p; });
+        }
+    }
     
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         const isLiked = userLikedPosts.has(p.id);
-        const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
-        let totalCommentCount = commentsData.length;
-        for (const c of commentsData) {
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            totalCommentCount += replyCount;
-        }
         const isOwner = USER && USER.id === p.user_id;
+        
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
+        
         let displayName = 'Poik Poik';
         let avatarHtml = '';
-        if (p.is_ai) { displayName = 'Poik Poik'; avatarHtml = `<div class="user-avatar">🤖</div>`; }
-        else if (p.user_id && p.profiles) { 
-            displayName = p.profiles.username || 'Member'; 
-            avatarHtml = p.profiles.avatar_url ? `<img src="${p.profiles.avatar_url}" class="user-avatar">` : `<div class="user-avatar">👤</div>`; 
+        
+        if (p.is_ai) {
+            displayName = 'Poik Poik';
+            avatarHtml = `<div class="user-avatar">🤖</div>`;
+        } else if (p.user_id && profiles[p.user_id]) {
+            displayName = profiles[p.user_id].username || 'Member';
+            avatarHtml = profiles[p.user_id].avatar_url 
+                ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` 
+                : `<div class="user-avatar">👤</div>`;
+        } else {
+            displayName = 'Member';
+            avatarHtml = `<div class="user-avatar">👤</div>`;
         }
-        else { displayName = 'Member'; avatarHtml = `<div class="user-avatar">👤</div>`; }
+        
+        // Get comment count
+        const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         
         html += `<div class="post">
             <div class="post-header">
@@ -734,7 +786,7 @@ async function loadFeed() {
                 </div>
                 <div class="action-icon" onclick="toggleComments(${p.id})">
                     <i class="far fa-comment-dots"></i>
-                    <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
+                    <span id="comment-count-${p.id}">${commentCount || 0}</span>
                 </div>
                 <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
                     <i class="fas fa-paper-plane"></i>
@@ -747,10 +799,10 @@ async function loadFeed() {
             </div>
             <div class="comments-section" id="comments-${p.id}" style="display:none">
                 <div class="comments-header" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
+                    <span class="comments-title">💬 Comments (${commentCount || 0})</span>
                     <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'" style="background:none; border:none; color:#888; font-size:18px; cursor:pointer;">✕</button>
                 </div>
-                <div id="comments-list-${p.id}">Loading comments...</div>
+                <div id="comments-list-${p.id}">Click to load comments</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="postComment(${p.id})">Post</button>
