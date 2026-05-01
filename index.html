@@ -623,7 +623,7 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
-// ========== LOAD COMMENTS ONLY (FIXED - WORKS) ==========
+// ========== LOAD COMMENTS ONLY (FIXED) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -631,141 +631,84 @@ async function loadCommentsOnly(postId) {
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
     try {
-        // Fetch comments directly (no join first to see if data exists)
-        const { data: comments, error: commentsError } = await SB
+        // Fetch comments
+        const { data: comments } = await SB
             .from("comments")
             .select("*")
             .eq("post_id", postId)
             .order("created_at", { ascending: true });
-        
-        console.log("Comments found:", comments?.length || 0);
-        
-        if (commentsError) {
-            console.error("Comments error:", commentsError);
-            commentsList.innerHTML = '<div class="comment">Error loading comments</div>';
-            return;
-        }
         
         if (!comments || comments.length === 0) {
             commentsList.innerHTML = '<div class="comment">No comments yet. Be the first!</div>';
             return;
         }
         
-        // Get unique user IDs from comments
+        // Get user IDs
         const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
         
-        // Fetch profiles for these users
+        // Fetch profiles
         let profiles = {};
         if (userIds.length > 0) {
             const { data: profileData } = await SB
                 .from("profiles")
                 .select("id, username, avatar_url")
                 .in("id", userIds);
-            if (profileData) {
-                profileData.forEach(p => { profiles[p.id] = p; });
-            }
+            if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
         }
         
-        // Fetch replies for this post
-        const { data: allReplies } = await SB
-            .from("comment_replies")
-            .select("*")
-            .eq("post_id", postId)
-            .order("created_at", { ascending: true });
-        
-        const replies = allReplies || [];
+        // Fetch replies using comment_ids (NOT post_id)
+        const commentIds = comments.map(c => c.id);
+        let allReplies = [];
+        if (commentIds.length > 0) {
+            const { data: replies } = await SB
+                .from("comment_replies")
+                .select("*")
+                .in("comment_id", commentIds)
+                .order("created_at", { ascending: true });
+            allReplies = replies || [];
+        }
         
         // Get reply user IDs
-        const replyUserIds = [...new Set(replies.map(r => r.user_id).filter(id => id))];
+        const replyUserIds = [...new Set(allReplies.map(r => r.user_id).filter(id => id))];
         if (replyUserIds.length > 0) {
             const { data: replyProfileData } = await SB
                 .from("profiles")
                 .select("id, username, avatar_url")
                 .in("id", replyUserIds);
-            if (replyProfileData) {
-                replyProfileData.forEach(p => { if (!profiles[p.id]) profiles[p.id] = p; });
-            }
+            if (replyProfileData) replyProfileData.forEach(p => { if (!profiles[p.id]) profiles[p.id] = p; });
         }
         
         let html = '';
         for (const c of comments) {
-            // Get like/dislike counts
             const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             
             const isLiked = userLikedComments.has(Number(c.id));
             const isDisliked = userDislikedComments.has(Number(c.id));
             const isOwner = USER && USER.id === c.user_id;
-            
             const profile = profiles[c.user_id];
             const commenterName = profile?.username || 'User';
             const commenterAvatar = profile?.avatar_url;
-            const commentTimestamp = c.created_at;
             
-            // Get replies for this comment (top-level only)
-            const commentReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
+            const commentReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
             
             let repliesHtml = '';
             for (const r of commentReplies) {
                 const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
                 const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                
                 const isReplyLiked = userLikedReplies.has(Number(r.id));
                 const isReplyDisliked = userDislikedReplies.has(Number(r.id));
                 const isReplyOwner = USER && USER.id === r.user_id;
-                
                 const replyProfile = profiles[r.user_id];
                 const replyerName = replyProfile?.username || 'User';
                 const replyerAvatar = replyProfile?.avatar_url;
-                const replyTimestamp = r.created_at;
-                
-                // Nested replies
-                const nestedReplies = replies.filter(nr => nr.parent_reply_id === r.id);
-                let nestedHtml = '';
-                for (const nr of nestedReplies) {
-                    const { count: nrLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
-                    const { count: nrDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
-                    const isNestedLiked = userLikedReplies.has(Number(nr.id));
-                    const isNestedDisliked = userDislikedReplies.has(Number(nr.id));
-                    const isNestedOwner = USER && USER.id === nr.user_id;
-                    const nestedProfile = profiles[nr.user_id];
-                    const nestedName = nestedProfile?.username || 'User';
-                    const nestedAvatar = nestedProfile?.avatar_url;
-                    const nestedTimestamp = nr.created_at;
-                    
-                    nestedHtml += `
-                        <div class="reply" style="margin-left: 25px;">
-                            <div class="reply-header">
-                                ${nestedAvatar ? `<img src="${nestedAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                                <span class="reply-username">${escapeHtml(nestedName)}</span>
-                                <span class="reply-time" data-timestamp="${nestedTimestamp}">${timeAgo(nestedTimestamp)}</span>
-                            </div>
-                            <div class="reply-text">${escapeHtml(nr.text)}</div>
-                            <div class="reply-actions">
-                                <span id="reply-like-btn-${nr.id}" class="reply-action ${isNestedLiked ? 'liked' : ''}" onclick="likeReply(${nr.id})">❤️ <span id="reply-like-${nr.id}">${nrLikes || 0}</span></span>
-                                <span id="reply-dislike-btn-${nr.id}" class="reply-action ${isNestedDisliked ? 'disliked' : ''}" onclick="dislikeReply(${nr.id})">👍 <span id="reply-dislike-${nr.id}">${nrDislikes || 0}</span></span>
-                                <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${nr.id}, ${postId})">💬 Reply</span>
-                            </div>
-                            <div id="reply-input-${nr.id}" class="reply-input" style="display:none;">
-                                <input type="text" id="reply-text-${nr.id}" placeholder="Write a reply...">
-                                <button onclick="addReplyToReply(${c.id}, ${nr.id}, ${postId})">Reply</button>
-                            </div>
-                            ${isNestedOwner ? `
-                            <div class="reply-menu">
-                                <button class="reply-menu-btn" onclick="toggleReplyMenu(${nr.id})">⋮</button>
-                                <div id="reply-menu-${nr.id}" class="reply-menu-dropdown" style="display:none;">
-                                    <div class="reply-menu-option delete" onclick="deleteReply(${nr.id}, ${postId})">Delete</div>
-                                </div>
-                            </div>` : ''}
-                        </div>`;
-                }
                 
                 repliesHtml += `
                     <div class="reply">
                         <div class="reply-header">
                             ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
                             <span class="reply-username">${escapeHtml(replyerName)}</span>
-                            <span class="reply-time" data-timestamp="${replyTimestamp}">${timeAgo(replyTimestamp)}</span>
+                            <span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span>
                         </div>
                         <div class="reply-text">${escapeHtml(r.text)}</div>
                         <div class="reply-actions">
@@ -777,7 +720,6 @@ async function loadCommentsOnly(postId) {
                             <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
                             <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
                         </div>
-                        ${nestedHtml}
                         ${isReplyOwner ? `
                         <div class="reply-menu">
                             <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
@@ -793,7 +735,7 @@ async function loadCommentsOnly(postId) {
                     <div class="comment-header">
                         ${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
                         <span class="comment-username">${escapeHtml(commenterName)}</span>
-                        <span class="comment-time" data-timestamp="${commentTimestamp}">${timeAgo(commentTimestamp)}</span>
+                        <span class="comment-time" data-timestamp="${c.created_at}">${timeAgo(c.created_at)}</span>
                     </div>
                     <div class="comment-text">${escapeHtml(c.text)}</div>
                     <div class="comment-actions">
@@ -920,7 +862,7 @@ async function loadFeed() {
                     <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
                     <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
                 </div>
-                <div id="comments-list-${p.id}">Click to load comments...</div>
+                <div id="comments-list-${p.id}">Loading comments...</div>
                 <div class="comment-input">
                     <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
                     <button onclick="addComment(${p.id})">Post</button>
