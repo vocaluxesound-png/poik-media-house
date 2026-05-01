@@ -76,7 +76,6 @@
     .action-icon:hover i { transform: scale(1.1); }
     .action-icon.liked i { color: #FE2C55; }
     
-    /* Share icon - clean flat arrow, no rotation */
     .share-icon i {
         font-size: 22px;
         color: white;
@@ -438,10 +437,10 @@ async function likePost(postId) {
     
     if (existing && existing.length > 0) {
         await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(postId);
+        userLikedPosts.delete(Number(postId));
     } else {
         await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(postId);
+        userLikedPosts.add(Number(postId));
     }
     
     const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
@@ -483,14 +482,14 @@ function toggleComments(postId) {
 }
 
 // ============================================
-// COMMENT LIKE/DISLIKE (White default, colored only for YOU)
+// COMMENT LIKE/DISLIKE (Fixed with Number() conversion)
 // ============================================
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
+    commentId = Number(commentId);
     
     const isCurrentlyLiked = userLikedComments.has(commentId);
     
-    // Remove dislike first (mutually exclusive)
     if (userDislikedComments.has(commentId)) {
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
@@ -499,13 +498,11 @@ async function likeComment(commentId) {
     }
     
     if (isCurrentlyLiked) {
-        // Unlike
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
         if (likeBtn) likeBtn.classList.remove('liked');
     } else {
-        // Like
         await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
         userLikedComments.add(commentId);
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
@@ -522,10 +519,10 @@ async function likeComment(commentId) {
 
 async function dislikeComment(commentId) {
     if (!USER) { alert('Login to dislike'); return; }
+    commentId = Number(commentId);
     
     const isCurrentlyDisliked = userDislikedComments.has(commentId);
     
-    // Remove like first (mutually exclusive)
     if (userLikedComments.has(commentId)) {
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
@@ -534,13 +531,11 @@ async function dislikeComment(commentId) {
     }
     
     if (isCurrentlyDisliked) {
-        // Un-dislike
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
         const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
         if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     } else {
-        // Dislike
         await SB.from("comment_dislikes").insert({ comment_id: commentId, user_id: USER.id });
         userDislikedComments.add(commentId);
         const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
@@ -583,10 +578,10 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
 
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
+    replyId = Number(replyId);
     
     const isCurrentlyLiked = userLikedReplies.has(replyId);
     
-    // Remove dislike first
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
@@ -613,10 +608,10 @@ async function likeReply(replyId) {
 
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
+    replyId = Number(replyId);
     
     const isCurrentlyDisliked = userDislikedReplies.has(replyId);
     
-    // Remove like first
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
@@ -740,7 +735,7 @@ async function loadProfile() {
 }
 
 // ============================================
-// LOAD COMMENTS ONLY
+// LOAD COMMENTS ONLY (FIXED - Number conversion for IDs)
 // ============================================
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
@@ -769,8 +764,9 @@ async function loadCommentsOnly(postId) {
         const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
         
-        let isLiked = userLikedComments.has(c.id);
-        let isDisliked = userDislikedComments.has(c.id);
+        // FIXED: Use Number() for Set lookups
+        let isLiked = userLikedComments.has(Number(c.id));
+        let isDisliked = userDislikedComments.has(Number(c.id));
         
         const isOwner = USER && USER.id === c.user_id;
         const profile = profiles[c.user_id];
@@ -783,8 +779,9 @@ async function loadCommentsOnly(postId) {
             const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
             const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
             
-            let isReplyLiked = userLikedReplies.has(r.id);
-            let isReplyDisliked = userDislikedReplies.has(r.id);
+            // FIXED: Use Number() for Set lookups
+            let isReplyLiked = userLikedReplies.has(Number(r.id));
+            let isReplyDisliked = userDislikedReplies.has(Number(r.id));
             const isReplyOwner = USER && USER.id === r.user_id;
             const replyProfile = profiles[r.user_id];
             const replyUsername = replyProfile?.username || 'User';
@@ -796,8 +793,9 @@ async function loadCommentsOnly(postId) {
                 const { count: nrLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
                 const { count: nrDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", nr.id);
                 
-                let isNestedLiked = userLikedReplies.has(nr.id);
-                let isNestedDisliked = userDislikedReplies.has(nr.id);
+                // FIXED: Use Number() for Set lookups
+                let isNestedLiked = userLikedReplies.has(Number(nr.id));
+                let isNestedDisliked = userDislikedReplies.has(Number(nr.id));
                 const isNestedOwner = USER && USER.id === nr.user_id;
                 const nestedProfile = profiles[nr.user_id];
                 const nestedUsername = nestedProfile?.username || 'User';
@@ -896,28 +894,28 @@ async function loadCommentsOnly(postId) {
 }
 
 // ============================================
-// LOAD FEED
+// LOAD FEED (FIXED - Number conversion for Sets)
 // ============================================
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
-    // Load user likes/dislikes
+    // Load user likes/dislikes (FIXED: Store as Numbers)
     if (USER) {
         const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
-        if (postLikes) postLikes.forEach(l => userLikedPosts.add(l.post_id));
+        if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
         
         const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
-        if (commentLikes) commentLikes.forEach(l => userLikedComments.add(l.comment_id));
+        if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
         
         const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
-        if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(d.comment_id));
+        if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
         
         const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
-        if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(l.reply_id));
+        if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
         
         const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
-        if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(d.reply_id));
+        if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
     }
     
     const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
@@ -933,7 +931,7 @@ async function loadFeed() {
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-        const isLiked = userLikedPosts.has(p.id);
+        const isLiked = userLikedPosts.has(Number(p.id));
         
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
         let totalCommentCount = commentsData.length;
