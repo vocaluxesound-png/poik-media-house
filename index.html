@@ -76,12 +76,10 @@
     .action-icon:hover i { transform: scale(1.1); }
     .action-icon.liked i { color: #FE2C55; }
     
-    /* Share icon - curved arrow pointing right */
+    /* Share icon - clean flat arrow, no rotation */
     .share-icon i {
-        font-size: 24px;
+        font-size: 22px;
         color: white;
-        transform: rotate(-45deg);
-        display: inline-block;
     }
     
     .privacy-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: none; }
@@ -146,11 +144,12 @@
         border: none;
         padding: 2px 6px;
         font-size: 11px;
+        transition: color 0.15s ease;
     }
+    .comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
     .comment-action.liked { color: #FE2C55; }
-    .comment-action.disliked { color: #FFC107; }
-    .comment-action i { font-size: 11px; color: white; }
     .comment-action.liked i { color: #FE2C55; }
+    .comment-action.disliked { color: #FFC107; }
     .comment-action.disliked i { color: #FFC107; }
     .comment-menu { position: absolute; right: 5px; top: 5px; }
     .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
@@ -177,11 +176,12 @@
         border: none;
         padding: 1px 5px;
         font-size: 10px;
+        transition: color 0.15s ease;
     }
+    .reply-action i { font-size: 10px; color: white; transition: color 0.15s ease; }
     .reply-action.liked { color: #FE2C55; }
-    .reply-action.disliked { color: #FFC107; }
-    .reply-action i { font-size: 10px; color: white; }
     .reply-action.liked i { color: #FE2C55; }
+    .reply-action.disliked { color: #FFC107; }
     .reply-action.disliked i { color: #FFC107; }
     .reply-menu { position: absolute; right: 5px; top: 5px; }
     .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
@@ -483,64 +483,76 @@ function toggleComments(postId) {
 }
 
 // ============================================
-// COMMENT LIKE/DISLIKE (Fixed - Default white)
+// COMMENT LIKE/DISLIKE (White default, colored only for YOU)
 // ============================================
 async function likeComment(commentId) {
     if (!USER) { alert('Login to like'); return; }
     
-    await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-    userDislikedComments.delete(commentId);
+    const isCurrentlyLiked = userLikedComments.has(commentId);
     
-    const { data: existing } = await SB.from("comment_likes").select("*").eq("comment_id", commentId).eq("user_id", USER.id);
+    // Remove dislike first (mutually exclusive)
+    if (userDislikedComments.has(commentId)) {
+        await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
+        userDislikedComments.delete(commentId);
+        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
+        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+    }
     
-    if (existing && existing.length > 0) {
+    if (isCurrentlyLiked) {
+        // Unlike
         await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userLikedComments.delete(commentId);
+        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
+        if (likeBtn) likeBtn.classList.remove('liked');
     } else {
+        // Like
         await SB.from("comment_likes").insert({ comment_id: commentId, user_id: USER.id });
         userLikedComments.add(commentId);
+        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
+        if (likeBtn) likeBtn.classList.add('liked');
     }
     
     const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
+    const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const likeSpan = document.getElementById(`comment-like-${commentId}`);
     if (likeSpan) likeSpan.innerText = likeCount || 0;
-    
-    const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-    const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-    if (likeBtn) {
-        if (existing && existing.length > 0) likeBtn.classList.remove('liked');
-        else likeBtn.classList.add('liked');
-    }
-    if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+    const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
+    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
 async function dislikeComment(commentId) {
     if (!USER) { alert('Login to dislike'); return; }
     
-    await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
-    userLikedComments.delete(commentId);
+    const isCurrentlyDisliked = userDislikedComments.has(commentId);
     
-    const { data: existing } = await SB.from("comment_dislikes").select("*").eq("comment_id", commentId).eq("user_id", USER.id);
+    // Remove like first (mutually exclusive)
+    if (userLikedComments.has(commentId)) {
+        await SB.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
+        userLikedComments.delete(commentId);
+        const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
+        if (likeBtn) likeBtn.classList.remove('liked');
+    }
     
-    if (existing && existing.length > 0) {
+    if (isCurrentlyDisliked) {
+        // Un-dislike
         await SB.from("comment_dislikes").delete().eq("comment_id", commentId).eq("user_id", USER.id);
         userDislikedComments.delete(commentId);
+        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
+        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     } else {
+        // Dislike
         await SB.from("comment_dislikes").insert({ comment_id: commentId, user_id: USER.id });
         userDislikedComments.add(commentId);
+        const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
+        if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
     
+    const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
+    const likeSpan = document.getElementById(`comment-like-${commentId}`);
+    if (likeSpan) likeSpan.innerText = likeCount || 0;
     const dislikeSpan = document.getElementById(`comment-dislike-${commentId}`);
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
-    
-    const dislikeBtn = document.getElementById(`comment-dislike-btn-${commentId}`);
-    const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
-    if (dislikeBtn) {
-        if (existing && existing.length > 0) dislikeBtn.classList.remove('disliked');
-        else dislikeBtn.classList.add('disliked');
-    }
-    if (likeBtn) likeBtn.classList.remove('liked');
 }
 
 // ============================================
@@ -572,59 +584,61 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
     
-    await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-    userDislikedReplies.delete(replyId);
+    const isCurrentlyLiked = userLikedReplies.has(replyId);
     
-    const { data: existing } = await SB.from("reply_likes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    // Remove dislike first
+    if (userDislikedReplies.has(replyId)) {
+        await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+        userDislikedReplies.delete(replyId);
+        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
+        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+    }
     
-    if (existing && existing.length > 0) {
+    if (isCurrentlyLiked) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
+        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
+        if (likeBtn) likeBtn.classList.remove('liked');
     } else {
         await SB.from("reply_likes").insert({ reply_id: replyId, user_id: USER.id });
         userLikedReplies.add(replyId);
+        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
+        if (likeBtn) likeBtn.classList.add('liked');
     }
     
     const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const likeSpan = document.getElementById(`reply-like-${replyId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
-    
-    const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-    const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-    if (likeBtn) {
-        if (existing && existing.length > 0) likeBtn.classList.remove('liked');
-        else likeBtn.classList.add('liked');
-    }
-    if (dislikeBtn) dislikeBtn.classList.remove('disliked');
 }
 
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
     
-    await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
-    userLikedReplies.delete(replyId);
+    const isCurrentlyDisliked = userDislikedReplies.has(replyId);
     
-    const { data: existing } = await SB.from("reply_dislikes").select("*").eq("reply_id", replyId).eq("user_id", USER.id);
+    // Remove like first
+    if (userLikedReplies.has(replyId)) {
+        await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
+        userLikedReplies.delete(replyId);
+        const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
+        if (likeBtn) likeBtn.classList.remove('liked');
+    }
     
-    if (existing && existing.length > 0) {
+    if (isCurrentlyDisliked) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
+        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
+        if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     } else {
         await SB.from("reply_dislikes").insert({ reply_id: replyId, user_id: USER.id });
         userDislikedReplies.add(replyId);
+        const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
+        if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
     
     const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
     if (dislikeSpan) dislikeSpan.innerText = count || 0;
-    
-    const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
-    const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
-    if (dislikeBtn) {
-        if (existing && existing.length > 0) dislikeBtn.classList.remove('disliked');
-        else dislikeBtn.classList.add('disliked');
-    }
-    if (likeBtn) likeBtn.classList.remove('liked');
 }
 
 // ============================================
@@ -967,7 +981,7 @@ async function loadFeed() {
                     <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
                 </div>
                 <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                    <i class="fas fa-share-alt"></i>
+                    <i class="fas fa-paper-plane"></i>
                     <span>Share</span>
                 </div>
                 <div class="action-icon" onclick="alert('Saved!')">
