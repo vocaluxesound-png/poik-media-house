@@ -74,10 +74,10 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .close-comments:hover { color: #ff4444; }
 
 .comment { margin-bottom: 15px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; position: relative; }
-.comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; justify-content: space-between; }
+.comment-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 5px; }
 .comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 .comment-username { font-weight: bold; font-size: 12px; color: #00ff88; cursor: pointer; }
-.comment-time { font-size: 10px; color: #666; margin-left: auto; }
+.comment-time { font-size: 10px; color: #666; }
 .comment-text { font-size: 13px; margin-left: 36px; margin-bottom: 5px; word-break: break-word; }
 .comment-actions { display: flex; gap: 12px; margin-left: 36px; font-size: 11px; }
 .comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
@@ -86,7 +86,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-action.liked i { color: #FE2C55; }
 .comment-action.disliked { color: #FFC107; }
 .comment-action.disliked i { color: #FFC107; }
-.comment-menu { position: absolute; right: 5px; top: 5px; }
+.comment-menu { margin-left: auto; }
 .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
 .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
 .comment-menu-option { padding: 8px 12px; cursor: pointer; font-size: 12px; color: white; }
@@ -95,10 +95,10 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 
 .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
 .reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
-.reply-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; justify-content: space-between; }
+.reply-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 3px; }
 .reply-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 .reply-username { font-weight: bold; font-size: 10px; color: #00ff88; cursor: pointer; }
-.reply-time { font-size: 9px; color: #666; margin-left: auto; }
+.reply-time { font-size: 9px; color: #666; }
 .reply-text { font-size: 11px; margin-left: 26px; margin-bottom: 3px; word-break: break-word; }
 .reply-actions { display: flex; gap: 8px; margin-left: 26px; font-size: 9px; }
 .reply-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; background: transparent; border: none; padding: 1px 5px; font-size: 9px; transition: color 0.15s ease; }
@@ -107,7 +107,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .reply-action.liked i { color: #FE2C55; }
 .reply-action.disliked { color: #FFC107; }
 .reply-action.disliked i { color: #FFC107; }
-.reply-menu { position: absolute; right: 5px; top: 5px; }
+.reply-menu { margin-left: auto; }
 .reply-menu-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 0 3px; }
 .reply-menu-dropdown { display: none; position: absolute; right: 0; top: 18px; background: #1a1a1a; border-radius: 6px; z-index: 100; min-width: 70px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
 .reply-menu-option { padding: 5px 8px; cursor: pointer; font-size: 10px; color: white; }
@@ -119,39 +119,4 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .reply-input button { padding: 6px 12px; border-radius: 16px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; font-size: 10px; }
 .comment-input { display: flex; gap: 8px; margin-top: 12px; }
 .comment-input input { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #222; color: white; }
-.comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
-
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; justify-content: center; align-items: center; }
-.modal img { max-width: 100%; max-height: 100%; }
-.close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
-
-.upload-modal { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a1a; padding: 20px; border-radius: 20px; z-index: 200; width: 90%; max-width: 350px; text-align: center; }
-.upload-modal .privacy-select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; background: #333; color: white; border: none; }
-.upload-modal input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: none; background: #333; color: white; }
-.upload-modal button { background: #00ff88; color: black; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; cursor: pointer; margin: 5px; }
-
-.loading { text-align: center; padding: 50px; color: #888; }
-
-.profile-header { text-align: center; padding: 30px 20px; }
-.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; overflow: hidden; }
-.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-stats { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
-.profile-bio { color: #888; font-size: 14px; margin: 10px 0; }
-.edit-profile-btn { background: #333; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
-
-.edit-profile-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; align-items: center; justify-content: center; }
-.edit-profile-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-.edit-profile-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-.edit-profile-box textarea { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; resize: none; font-family: inherit; }
-.edit-profile-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-.save-profile-btn { background: #00ff88; color: black; border: none; }
-.cancel-edit-btn { background: #222; color: white; border: none; }
-
-.auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
-.auth-box { background: #111; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-.auth-box input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #333; border-radius: 10px; color: white; }
-.auth-box button { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-.magic-btn { background: #00ff88; color: black; border: none; }
-.cancel-btn { background: #222; color: white; border: none; }
-
-#avatarInput { display: none; }
+.comment-input button { padding: 8px 16px; border-radius: 20px; border: none; background: #00ff88
