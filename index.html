@@ -85,7 +85,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
 .comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 .comment-username { font-weight: bold; font-size: 12px; color: #00ff88; cursor: pointer; }
-.comment-time { font-size: 10px; color: #666; }
+.comment-time { font-size: 10px; color: #666; margin-left: auto; }
 .comment-text { font-size: 13px; margin-left: 36px; margin-bottom: 5px; word-break: break-word; }
 .comment-actions { display: flex; gap: 12px; margin-left: 36px; font-size: 11px; }
 .comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
@@ -106,7 +106,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .reply-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
 .reply-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 .reply-username { font-weight: bold; font-size: 10px; color: #00ff88; cursor: pointer; }
-.reply-time { font-size: 9px; color: #666; }
+.reply-time { font-size: 9px; color: #666; margin-left: auto; }
 .reply-text { font-size: 11px; margin-left: 26px; margin-bottom: 3px; word-break: break-word; }
 .reply-actions { display: flex; gap: 8px; margin-left: 26px; font-size: 9px; }
 .reply-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; background: transparent; border: none; padding: 1px 5px; font-size: 9px; transition: color 0.15s ease; }
@@ -266,34 +266,28 @@ let userDislikedReplies = new Set();
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-// FIXED TIMEAGO - shows "1 day ago" instead of "yesterday"
+// ========== FIX #1: REAL-TIME TIMEAGO ==========
 function timeAgo(dateString) {
     if (!dateString) return '';
-    const now = new Date();
-    const then = new Date(dateString);
-    const seconds = Math.floor((now - then) / 1000);
-    
+    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
     if (seconds < 60) return 'just now';
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
     const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    return `${Math.floor(days / 7)}w ago`;
+    return days + 'd ago';
 }
 
-function updateAllTimestamps() {
-    document.querySelectorAll('.comment-time, .reply-time').forEach(el => {
-        const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) el.textContent = timeAgo(timestamp);
-    });
-}
-
+// Auto-update timestamps every minute
 function startTimestampUpdater() {
     if (timestampInterval) clearInterval(timestampInterval);
-    timestampInterval = setInterval(updateAllTimestamps, 60000);
+    timestampInterval = setInterval(() => {
+        document.querySelectorAll('[data-time]').forEach(el => {
+            const timestamp = el.getAttribute('data-time');
+            if (timestamp) el.textContent = timeAgo(timestamp);
+        });
+    }, 60000);
 }
 
 // ========== AUTH ==========
@@ -479,37 +473,58 @@ async function dislikeComment(commentId) {
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
-// ========== REPLY FUNCTIONS ==========
+// ========== FIX #2 & #3: DELETE REPLY & LIKE/DISLIKE FIXED ==========
 async function addReplyToComment(commentId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-comment-text-${commentId}`);
     const text = input.value.trim();
     if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, user_id: user.id, text: text });
+    const { error } = await SB.from("comment_replies").insert({ comment_id: commentId, user_id: user.id, text: text });
+    if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
     await loadCommentsOnly(postId);
 }
+
 async function addReplyToReply(commentId, parentReplyId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-text-${parentReplyId}`);
     const text = input.value.trim();
     if (!text) return;
-    await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: user.id, text: text });
+    const { error } = await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: user.id, text: text });
+    if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     await loadCommentsOnly(postId);
 }
+
+// FIXED: Delete Reply - Now works
+async function deleteReply(replyId, postId) {
+    if (!confirm('Delete this reply?')) return;
+    const { error } = await SB.from("comment_replies").delete().eq("id", replyId);
+    if (error) {
+        console.error("Delete reply error:", error);
+        alert("Failed to delete: " + error.message);
+        return;
+    }
+    await loadCommentsOnly(postId);
+}
+
+// FIXED: Reply Like/Dislike with proper color toggling
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
     replyId = Number(replyId);
+    
+    // Remove dislike if exists
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     }
+    
+    // Toggle like
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
@@ -521,19 +536,26 @@ async function likeReply(replyId) {
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.add('liked');
     }
-    const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
+    
+    // Update counts
+    const { count: likeCount } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const likeSpan = document.getElementById(`reply-like-${replyId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
+    if (likeSpan) likeSpan.innerText = likeCount || 0;
 }
+
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
     replyId = Number(replyId);
+    
+    // Remove like if exists
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.remove('liked');
     }
+    
+    // Toggle dislike
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
@@ -545,12 +567,13 @@ async function dislikeReply(replyId) {
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
-    const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
+    
+    // Update counts
+    const { count: dislikeCount } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
-    if (dislikeSpan) dislikeSpan.innerText = count || 0;
+    if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
-// FIXED DELETE REPLY FUNCTION WITH PROPER ERROR HANDLING
 async function deleteComment(commentId, postId) {
     if (!confirm('Delete this comment?')) return;
     const { error } = await SB.from("comments").delete().eq("id", commentId);
@@ -560,17 +583,6 @@ async function deleteComment(commentId, postId) {
     const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const countSpan = document.getElementById(`comment-count-${postId}`);
     if (countSpan) countSpan.innerText = count || 0;
-}
-
-async function deleteReply(replyId, postId) {
-    if (!confirm('Delete this reply?')) return;
-    const { error } = await SB.from("comment_replies").delete().eq("id", replyId);
-    if (error) {
-        console.error("Delete reply error:", error);
-        alert("Failed to delete: " + error.message);
-        return;
-    }
-    await loadCommentsOnly(postId);
 }
 
 // ========== UI MENU FUNCTIONS ==========
@@ -660,7 +672,7 @@ async function loadProfile() {
     feedDiv.innerHTML = html;
 }
 
-// ========== LOAD COMMENTS ONLY (FIXED - All issues resolved) ==========
+// ========== FIX #4: LOAD COMMENTS ONLY WITH COUNT FIX ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -680,8 +692,16 @@ async function loadCommentsOnly(postId) {
             return;
         }
         
-        // Get unique user IDs
-        const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
+        // FIX #4: Filter valid comments (with user_id)
+        const validComments = comments.filter(c => c.user_id);
+        
+        if (validComments.length === 0) {
+            commentsList.innerHTML = '<div class="comment">No valid comments found</div>';
+            return;
+        }
+        
+        // Get unique user IDs from valid comments
+        const userIds = [...new Set(validComments.map(c => c.user_id).filter(id => id))];
         
         // Fetch profiles
         let profiles = {};
@@ -696,7 +716,7 @@ async function loadCommentsOnly(postId) {
         }
         
         // Fetch replies
-        const commentIds = comments.map(c => c.id);
+        const commentIds = validComments.map(c => c.id);
         let allReplies = [];
         if (commentIds.length > 0) {
             const { data: replies } = await SB
@@ -720,18 +740,19 @@ async function loadCommentsOnly(postId) {
         }
         
         let html = '';
-        for (const c of comments) {
+        for (const c of validComments) {
             // Get like/dislike counts
             const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             
-            // FIXED: Only show liked/disliked if user ACTUALLY interacted
+            // Only show liked/disliked if USER actually interacted
             const isLiked = USER && userLikedComments.has(Number(c.id));
             const isDisliked = USER && userDislikedComments.has(Number(c.id));
             const isOwner = USER && USER.id === c.user_id;
             
             const profile = profiles[c.user_id];
-            const commenterName = profile?.username || 'User';
+            // FIX #4: Show "Deleted User" if profile missing
+            const commenterName = profile?.username || 'Deleted User';
             const commenterAvatar = profile?.avatar_url;
             
             // Get replies for this comment
@@ -742,13 +763,12 @@ async function loadCommentsOnly(postId) {
                 const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
                 const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
                 
-                // FIXED: Only show liked/disliked if user ACTUALLY interacted
                 const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
                 const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
                 const isReplyOwner = USER && USER.id === r.user_id;
                 
                 const replyProfile = profiles[r.user_id];
-                const replyerName = replyProfile?.username || 'User';
+                const replyerName = replyProfile?.username || 'Deleted User';
                 const replyerAvatar = replyProfile?.avatar_url;
                 
                 repliesHtml += `
@@ -756,7 +776,7 @@ async function loadCommentsOnly(postId) {
                         <div class="reply-header">
                             ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
                             <span class="reply-username">${escapeHtml(replyerName)}</span>
-                            <span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span>
+                            <span class="reply-time" data-time="${r.created_at}">${timeAgo(r.created_at)}</span>
                         </div>
                         <div class="reply-text">${escapeHtml(r.text)}</div>
                         <div class="reply-actions">
@@ -783,7 +803,7 @@ async function loadCommentsOnly(postId) {
                     <div class="comment-header">
                         ${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
                         <span class="comment-username">${escapeHtml(commenterName)}</span>
-                        <span class="comment-time" data-timestamp="${c.created_at}">${timeAgo(c.created_at)}</span>
+                        <span class="comment-time" data-time="${c.created_at}">${timeAgo(c.created_at)}</span>
                     </div>
                     <div class="comment-text">${escapeHtml(c.text)}</div>
                     <div class="comment-actions">
@@ -807,7 +827,6 @@ async function loadCommentsOnly(postId) {
         }
         
         commentsList.innerHTML = html;
-        updateAllTimestamps();
         
     } catch (err) {
         console.error("Load comments error:", err);
@@ -863,10 +882,14 @@ async function loadFeed() {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         const isLiked = userLikedPosts.has(Number(p.id));
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
-        let totalCommentCount = commentsData.length;
+        // FIX #4: Count only valid comments
+        const validCommentsCount = commentsData.filter(c => c.user_id).length;
+        let totalCommentCount = validCommentsCount;
         for (const c of commentsData) {
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            totalCommentCount += replyCount;
+            if (c.user_id) {
+                const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
+                totalCommentCount += replyCount;
+            }
         }
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
