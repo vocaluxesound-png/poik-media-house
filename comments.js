@@ -163,7 +163,7 @@ async function deleteReply(replyId, postId) {
     await loadCommentsOnly(postId);
 }
 
-// ========== LOAD COMMENTS ONLY ==========
+// ========== LOAD COMMENTS ONLY (FIXED LAYOUT) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -209,9 +209,35 @@ async function loadCommentsOnly(postId) {
                 const replyProfile = profiles[r.user_id];
                 const replyerName = replyProfile?.username || 'User';
                 const replyerAvatar = replyProfile?.avatar_url;
-                repliesHtml += `<div class="reply"><div class="reply-header">${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}<span class="reply-username">${escapeHtml(replyerName)}</span><span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span></div><div class="reply-text">${escapeHtml(r.text)}</div><div class="reply-actions"><span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">❤️ <span id="reply-like-${r.id}">${rLikes || 0}</span></span><span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👍 <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span><span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})">💬 Reply</span></div><div id="reply-input-${r.id}" class="reply-input" style="display:none;"><input type="text" id="reply-text-${r.id}" placeholder="Write a reply..."><button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button></div>${isReplyOwner ? `<div class="reply-menu"><button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button><div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;"><div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div></div></div>` : ''}</div>`;
+                repliesHtml += `<div class="reply"><div class="reply-header"><div style="display:flex; align-items:center; gap:6px;">${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}<span class="reply-username">${escapeHtml(replyerName)}</span><span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span></div>${isReplyOwner ? `<div class="reply-menu"><button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button><div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;"><div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div></div></div>` : ''}</div><div class="reply-text">${escapeHtml(r.text)}</div><div class="reply-actions"><span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">❤️ <span id="reply-like-${r.id}">${rLikes || 0}</span></span><span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👍 <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span><span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})">💬 Reply</span></div><div id="reply-input-${r.id}" class="reply-input" style="display:none;"><input type="text" id="reply-text-${r.id}" placeholder="Write a reply..."><button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button></div></div>`;
             }
-            html += `<div class="comment"><div class="comment-header">${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}<span class="comment-username">${escapeHtml(commenterName)}</span><span class="comment-time" data-timestamp="${c.created_at}">${timeAgo(c.created_at)}</span></div><div class="comment-text">${escapeHtml(c.text)}</div><div class="comment-actions"><span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">❤️ <span id="comment-like-${c.id}">${likeCount || 0}</span></span><span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})">👍 <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span><span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})">💬 Reply</span></div><div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;"><input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply..."><button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button></div><div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>${isOwner ? `<div class="comment-menu"><button class="comment-menu-btn" onclick="toggleCommentMenu(${c.id})">⋮</button><div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;"><div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div></div></div>` : ''}</div>`;
+            // FIXED: Three dots menu INSIDE comment-header on the right
+            html += `<div class="comment">
+                <div class="comment-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        ${commenterAvatar ? `<img src="${commenterAvatar}" class="comment-avatar">` : `<div class="comment-avatar">👤</div>`}
+                        <span class="comment-username">${escapeHtml(commenterName)}</span>
+                        <span class="comment-time" data-timestamp="${c.created_at}">${timeAgo(c.created_at)}</span>
+                    </div>
+                    ${isOwner ? `<div class="comment-menu">
+                        <button class="comment-menu-btn" onclick="toggleCommentMenu(${c.id})">⋮</button>
+                        <div id="comment-menu-${c.id}" class="comment-menu-dropdown" style="display:none;">
+                            <div class="comment-menu-option delete" onclick="deleteComment(${c.id}, ${postId})">Delete</div>
+                        </div>
+                    </div>` : ''}
+                </div>
+                <div class="comment-text">${escapeHtml(c.text)}</div>
+                <div class="comment-actions">
+                    <span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">❤️ <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
+                    <span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})">👍 <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span>
+                    <span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})">💬 Reply</span>
+                </div>
+                <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
+                    <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
+                    <button onclick="addReplyToComment(${c.id}, ${postId})">Reply</button>
+                </div>
+                <div id="replies-container-${c.id}" class="replies">${repliesHtml}</div>
+            </div>`;
         }
         commentsList.innerHTML = html;
         updateAllTimestamps();
