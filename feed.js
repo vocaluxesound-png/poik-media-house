@@ -7,8 +7,7 @@ async function loadFeed() {
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
     try {
-        // THIS IS THE FIX - Load user interactions FIRST
-        await loadUserInteractions();
+        // REMOVED: await loadUserInteractions(); - function doesn't exist
         
         const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
         
@@ -358,4 +357,4 @@ window.uploadPost = uploadPost;
 window.togglePostMenu = togglePostMenu;
 window.changePostPrivacy = changePostPrivacy;
 window.deletePost = deletePost;
-window.loadUserInteractions = loadUserInteractions;
+// Removed: window.loadUserInteractions = loadUserInteractions;
