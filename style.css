@@ -165,3 +165,50 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .cancel-btn { background: #222; color: white; border: none; }
 
 #avatarInput { display: none; }
+/* Nested replies indentation */
+.reply {
+    transition: margin-left 0.2s ease;
+}
+
+/* Reply actions styling */
+.reply-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: 26px;
+    font-size: 10px;
+}
+
+.reply-action {
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 1px 5px;
+    font-size: 10px;
+    transition: color 0.15s ease;
+}
+
+.reply-action i {
+    font-size: 10px;
+    color: white;
+    transition: color 0.15s ease;
+}
+
+.reply-action.liked {
+    color: #FE2C55;
+}
+
+.reply-action.liked i {
+    color: #FE2C55;
+}
+
+.reply-action.disliked {
+    color: #FFC107;
+}
+
+.reply-action.disliked i {
+    color: #FFC107;
+}
