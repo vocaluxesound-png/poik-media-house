@@ -7,6 +7,9 @@ async function loadFeed() {
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
     try {
+        // Load user's likes/dislikes from database FIRST
+        await loadUserInteractions();
+        
         const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
         
         if (error) throw error;
