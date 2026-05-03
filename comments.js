@@ -76,7 +76,7 @@ async function dislikeComment(commentId) {
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
-// ========== REPLY FUNCTIONS (ALL FIXED) ==========
+// ========== REPLY FUNCTIONS ==========
 async function addReplyToComment(commentId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
@@ -102,20 +102,15 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     await loadCommentsOnly(postId);
 }
 
-// FIXED: Like Reply with proper color toggling
 async function likeReply(replyId) {
     if (!USER) { alert('Login to like'); return; }
     replyId = Number(replyId);
-    
-    // Remove dislike if exists
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.remove('disliked');
     }
-    
-    // Toggle like
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
@@ -127,27 +122,20 @@ async function likeReply(replyId) {
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.add('liked');
     }
-    
-    // Update counts
     const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const likeSpan = document.getElementById(`reply-like-${replyId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
 }
 
-// FIXED: Dislike Reply with proper color toggling
 async function dislikeReply(replyId) {
     if (!USER) { alert('Login to dislike'); return; }
     replyId = Number(replyId);
-    
-    // Remove like if exists
     if (userLikedReplies.has(replyId)) {
         await SB.from("reply_likes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userLikedReplies.delete(replyId);
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.remove('liked');
     }
-    
-    // Toggle dislike
     if (userDislikedReplies.has(replyId)) {
         await SB.from("reply_dislikes").delete().eq("reply_id", replyId).eq("user_id", USER.id);
         userDislikedReplies.delete(replyId);
@@ -159,14 +147,11 @@ async function dislikeReply(replyId) {
         const dislikeBtn = document.getElementById(`reply-dislike-btn-${replyId}`);
         if (dislikeBtn) dislikeBtn.classList.add('disliked');
     }
-    
-    // Update counts
     const { count } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const dislikeSpan = document.getElementById(`reply-dislike-${replyId}`);
     if (dislikeSpan) dislikeSpan.innerText = count || 0;
 }
 
-// FIXED: Delete Comment
 async function deleteComment(commentId, postId) {
     if (!confirm('Delete this comment?')) return;
     const { error } = await SB.from("comments").delete().eq("id", commentId);
@@ -178,30 +163,15 @@ async function deleteComment(commentId, postId) {
     if (countSpan) countSpan.innerText = count || 0;
 }
 
-// FIXED: Delete Reply (WORKING)
 async function deleteReply(replyId, postId) {
-    console.log("Delete reply - ID:", replyId, "Post ID:", postId);
-    
-    if (!replyId) {
-        alert("Cannot delete: Reply ID missing");
-        return;
-    }
-    
+    if (!replyId) { alert("Cannot delete: Reply ID missing"); return; }
     if (!confirm('Delete this reply?')) return;
-    
     const { error } = await SB.from("comment_replies").delete().eq("id", replyId);
-    
-    if (error) {
-        console.error("Delete reply error:", error);
-        alert("Failed to delete: " + error.message);
-        return;
-    }
-    
-    console.log("Reply deleted successfully!");
+    if (error) { alert("Failed to delete: " + error.message); return; }
     await loadCommentsOnly(postId);
 }
 
-// ========== LOAD COMMENTS ONLY (COMPLETE FIXED VERSION) ==========
+// ========== LOAD COMMENTS ONLY (WITH FONT AWESOME ICONS) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -235,6 +205,7 @@ async function loadCommentsOnly(postId) {
         for (const c of comments) {
             const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
+            
             const isLiked = USER && userLikedComments.has(Number(c.id));
             const isDisliked = USER && userDislikedComments.has(Number(c.id));
             const isOwner = USER && USER.id === c.user_id;
@@ -247,6 +218,7 @@ async function loadCommentsOnly(postId) {
             for (const r of commentReplies) {
                 const { count: rLikes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
                 const { count: rDislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
+                
                 const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
                 const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
                 const isReplyOwner = USER && USER.id === r.user_id;
@@ -270,9 +242,9 @@ async function loadCommentsOnly(postId) {
                     </div>
                     <div class="reply-text">${escapeHtml(r.text)}</div>
                     <div class="reply-actions">
-                        <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})">❤️ <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
-                        <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})">👍 <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
-                        <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})">💬 Reply</span>
+                        <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})"><i class="fas fa-heart"></i> <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
+                        <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})"><i class="fas fa-thumbs-down"></i> <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
+                        <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})"><i class="fas fa-reply"></i> Reply</span>
                     </div>
                     <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
                         <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
@@ -297,9 +269,9 @@ async function loadCommentsOnly(postId) {
                 </div>
                 <div class="comment-text">${escapeHtml(c.text)}</div>
                 <div class="comment-actions">
-                    <span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})">❤️ <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
-                    <span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})">👍 <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span>
-                    <span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})">💬 Reply</span>
+                    <span id="comment-like-btn-${c.id}" class="comment-action ${isLiked ? 'liked' : ''}" onclick="likeComment(${c.id})"><i class="fas fa-heart"></i> <span id="comment-like-${c.id}">${likeCount || 0}</span></span>
+                    <span id="comment-dislike-btn-${c.id}" class="comment-action ${isDisliked ? 'disliked' : ''}" onclick="dislikeComment(${c.id})"><i class="fas fa-thumbs-down"></i> <span id="comment-dislike-${c.id}">${dislikeCount || 0}</span></span>
+                    <span class="comment-action" onclick="showReplyInputForComment(${c.id}, ${postId})"><i class="fas fa-reply"></i> Reply</span>
                 </div>
                 <div id="reply-comment-input-${c.id}" class="reply-input" style="display:none;">
                     <input type="text" id="reply-comment-text-${c.id}" placeholder="Write a reply...">
