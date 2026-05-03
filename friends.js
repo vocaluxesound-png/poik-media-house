@@ -15,7 +15,7 @@ async function loadFriends() {
         // Get all users except current user
         const { data: allUsers } = await SB.from("profiles").select("*").neq("id", USER.id);
         
-        // Get users you follow (using 'follower' and 'following' columns)
+        // Get users you follow (using 'follower' and 'following' - no _id)
         const { data: followingData } = await SB.from("follows").select("following").eq("follower", USER.id);
         const followingIds = new Set(followingData?.map(f => f.following) || []);
         
@@ -140,6 +140,7 @@ async function toggleFollow(userId) {
     if (!USER) { alert('Login to follow'); openAuthModal(); return; }
     if (userId === USER.id) { alert("You can't follow yourself"); return; }
     
+    // Using 'follower' and 'following' column names (no _id)
     const { data: existing } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
     
     if (existing && existing.length > 0) {
