@@ -71,7 +71,7 @@ const totalCount = commentCount + replyCount;
                         </div>
                         <div class="action-icon" onclick="toggleComments(${p.id})">
                             <i class="far fa-comment-dots"></i>
-                            <span id="comment-count-${p.id}">${commentCount || 0}</span>
+                            <span id="comment-count-${p.id}">${totalCount || 0}</span>
                         </div>
                         <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
                             <i class="fas fa-paper-plane"></i>
