@@ -59,7 +59,13 @@ document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
-    const { error } = await SB.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
+   const { error } = await SB.auth.signInWithOtp({ 
+    email: email.trim(), 
+    options: { 
+        emailRedirectTo: window.location.origin,
+        shouldCreateUser: true
+    } 
+});
     if (error) { alert('Error: ' + error.message); } else { alert('Magic link sent! Check your email.'); closeAuthModal(); document.getElementById('authEmail').value = ''; }
 };
 
