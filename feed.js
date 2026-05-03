@@ -33,7 +33,6 @@ async function loadFeed() {
             const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             
-            // Get comment count
             const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
             const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
             const totalCount = commentCount + replyCount;
@@ -105,7 +104,7 @@ async function loadFeed() {
     }
 }
 
-// ========== VIEW PROFILE FUNCTION ==========
+// ========== VIEW PROFILE ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) { 
