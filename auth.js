@@ -106,7 +106,6 @@ async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser(); 
     USER = user; 
     if (USER) {
-        await loadUserInteractions();
     }
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
