@@ -35,6 +35,8 @@ async function loadFeed() {
             
             // Get comment count
             const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
+const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
+const totalCount = commentCount + replyCount;
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
