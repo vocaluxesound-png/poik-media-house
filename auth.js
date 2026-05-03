@@ -22,7 +22,13 @@ function timeAgo(dateString) {
     if (!dateString) return '';
     const now = new Date();
     const then = new Date(dateString);
-    const seconds = Math.floor((now - then) / 1000);
+    
+    // Get UTC time for both
+    const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    const thenUTC = Date.UTC(then.getUTCFullYear(), then.getUTCMonth(), then.getUTCDate(), then.getUTCHours(), then.getUTCMinutes(), then.getUTCSeconds());
+    
+    const seconds = Math.floor((nowUTC - thenUTC) / 1000);
+    
     if (seconds < 60) return 'just now';
     const mins = Math.floor(seconds / 60);
     if (mins < 60) return `${mins}m ago`;
