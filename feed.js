@@ -100,11 +100,13 @@ async function loadFeed() {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         const isLiked = userLikedPosts.has(Number(p.id));
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
-        let totalCommentCount = commentsData.length;
-        for (const c of commentsData) {
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-            totalCommentCount += replyCount;
-        }
+// FIX: Only count comments that have a valid user_id (not orphaned)
+const validComments = commentsData.filter(c => c.user_id);
+let totalCommentCount = validComments.length;
+for (const c of validComments) {
+    const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
+    totalCommentCount += replyCount;
+}
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
