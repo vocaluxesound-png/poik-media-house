@@ -355,3 +355,4 @@ window.uploadPost = uploadPost;
 window.togglePostMenu = togglePostMenu;
 window.changePostPrivacy = changePostPrivacy;
 window.deletePost = deletePost;
+window.loadUserInteractions = loadUserInteractions;
