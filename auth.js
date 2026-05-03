@@ -105,6 +105,9 @@ async function handleMagicLink() {
 async function checkAuth() { 
     const { data: { user } } = await SB.auth.getUser(); 
     USER = user; 
+    if (USER) {
+        await loadUserInteractions();
+    }
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
         if (userIcon) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
