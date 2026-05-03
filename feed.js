@@ -82,40 +82,87 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// ========== LOAD FEED ==========
+// ========== LOAD FEED (FIXED COMMENT COUNT) ==========
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     await loadUserInteractions();
+    
     const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
     if (error || !posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">No posts yet. AI Ghost is creating...</div>'; return; }
+    
     const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
     let profiles = {};
     if (userIds.length > 0) {
         const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
         if (profileData) profileData.forEach(p => { profiles[p.id] = p; });
     }
+    
     let html = '';
     for (const p of posts) {
         const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
         const isLiked = userLikedPosts.has(Number(p.id));
+        
+        // FIXED: Only count comments that have a valid user_id (not orphaned)
         const { data: commentsData } = await SB.from("comments").select("*").eq("post_id", p.id);
-// FIX: Only count comments that have a valid user_id (not orphaned)
-const validComments = commentsData.filter(c => c.user_id);
-let totalCommentCount = validComments.length;
-for (const c of validComments) {
-    const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
-    totalCommentCount += replyCount;
-}
+        const validComments = commentsData.filter(c => c.user_id);
+        let totalCommentCount = validComments.length;
+        
+        for (const c of validComments) {
+            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
+            totalCommentCount += replyCount;
+        }
+        
         const isOwner = USER && USER.id === p.user_id;
         let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
         let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
         let displayName = 'Poik Poik';
         let avatarHtml = '';
+        
         if (p.is_ai) { displayName = 'Poik Poik'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
         else if (p.user_id && profiles[p.user_id]) { displayName = profiles[p.user_id].username || 'Member'; avatarHtml = profiles[p.user_id].avatar_url ? `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
         else { displayName = 'Member'; avatarHtml = `<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>`; }
-        html += `<div class="post"><div class="post-header"><div class="post-header-left">${avatarHtml}<div class="post-username">${escapeHtml(displayName)}</div></div>${isOwner ? `<div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div>` : ''}</div><img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy"><div class="post-caption">${escapeHtml(p.caption || 'Fashion visual')}</div><div class="post-actions-right"><div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})"><i class="fas fa-heart"></i><span id="likes-${p.id}">${likeCount || 0}</span></div><div class="action-icon" onclick="toggleComments(${p.id})"><i class="far fa-comment-dots"></i><span id="comment-count-${p.id}">${totalCommentCount || 0}</span></div><div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')"><i class="fas fa-paper-plane"></i><span>Share</span></div><div class="action-icon" onclick="alert('Saved!')"><i class="far fa-bookmark"></i><span>Save</span></div></div><div class="comments-section" id="comments-${p.id}" style="display:none"><div class="comments-header"><span class="comments-title">💬 Comments (${totalCommentCount || 0})</span><button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button></div><div id="comments-list-${p.id}">Loading comments...</div><div class="comment-input"><input type="text" id="comment-input-${p.id}" placeholder="Add comment..."><button onclick="addComment(${p.id})">Post</button></div></div></div>`;
+        
+        html += `<div class="post">
+            <div class="post-header">
+                <div class="post-header-left">
+                    ${avatarHtml}
+                    <div class="post-username">${escapeHtml(displayName)}</div>
+                </div>
+                ${isOwner ? `<div class="post-privacy-menu"><button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})">${privacyIcon} ${privacyText}</button><div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none;"><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')">🌍 Public</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')">👥 Friends Only</div><div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')">🔒 Only Me</div><div class="post-menu-option delete-option" onclick="deletePost(${p.id})">🗑️ Delete</div></div></div>` : ''}
+            </div>
+            <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
+            <div class="post-caption">${escapeHtml(p.caption || 'Fashion visual')}</div>
+            <div class="post-actions-right">
+                <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
+                    <i class="fas fa-heart"></i>
+                    <span id="likes-${p.id}">${likeCount || 0}</span>
+                </div>
+                <div class="action-icon" onclick="toggleComments(${p.id})">
+                    <i class="far fa-comment-dots"></i>
+                    <span id="comment-count-${p.id}">${totalCommentCount || 0}</span>
+                </div>
+                <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Share</span>
+                </div>
+                <div class="action-icon" onclick="alert('Saved!')">
+                    <i class="far fa-bookmark"></i>
+                    <span>Save</span>
+                </div>
+            </div>
+            <div class="comments-section" id="comments-${p.id}" style="display:none">
+                <div class="comments-header">
+                    <span class="comments-title">💬 Comments (${totalCommentCount || 0})</span>
+                    <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
+                </div>
+                <div id="comments-list-${p.id}">Loading comments...</div>
+                <div class="comment-input">
+                    <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
+                    <button onclick="addComment(${p.id})">Post</button>
+                </div>
+            </div>
+        </div>`;
     }
     feedDiv.innerHTML = html;
     startTimestampUpdater();
