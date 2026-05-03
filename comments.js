@@ -182,7 +182,7 @@ async function deleteReply(replyId, postId) {
     await loadCommentsOnly(postId);
 }
 
-// ========== LOAD COMMENTS ONLY (WITH FULL NESTED REPLIES) ==========
+// ========== LOAD COMMENTS ONLY (SIMPLE WORKING VERSION) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -202,7 +202,7 @@ async function loadCommentsOnly(postId) {
             return;
         }
         
-        // Get all user profiles for these comments
+        // Get all user profiles
         const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
         let profiles = {};
         if (userIds.length > 0) {
@@ -236,71 +236,11 @@ async function loadCommentsOnly(postId) {
             }
         }
         
-        // Recursive function to build nested replies
-        function buildNestedReplies(replyList, parentId = null, level = 0) {
-            const children = replyList.filter(r => r.parent_reply_id === parentId);
-            if (children.length === 0) return '';
-            
-            let html = '';
-            for (const r of children) {
-                const isReplyOwner = USER && USER.id === r.user_id;
-                const replyProfile = profiles[r.user_id];
-                const replyerName = replyProfile?.username || 'User';
-                const replyerAvatar = replyProfile?.avatar_url;
-                
-                const marginLeft = 26 + (level * 20);
-                
-                // Get like/dislike counts for this reply
-                let rLikes = 0, rDislikes = 0;
-                try {
-                    const { count: likes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                    const { count: dislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                    rLikes = likes || 0;
-                    rDislikes = dislikes || 0;
-                } catch(e) {}
-                
-                const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
-                const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
-                
-                html += `
-                    <div class="reply" style="margin-left: ${marginLeft}px;">
-                        <div class="reply-header">
-                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
-                                <span class="reply-username">${escapeHtml(replyerName)}</span>
-                                <span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span>
-                            </div>
-                            ${isReplyOwner ? `
-                            <div class="reply-menu">
-                                <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
-                                <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
-                                    <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                        <div class="reply-text">${escapeHtml(r.text)}</div>
-                        <div class="reply-actions">
-                            <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})"><i class="fas fa-heart"></i> <span id="reply-like-${r.id}">${rLikes}</span></span>
-                            <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})"><i class="fas fa-thumbs-down"></i> <span id="reply-dislike-${r.id}">${rDislikes}</span></span>
-                            <span class="reply-action" onclick="showReplyInputForReply(${r.comment_id}, ${r.id}, ${postId})"><i class="fas fa-reply"></i> Reply</span>
-                        </div>
-                        <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
-                            <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
-                            <button onclick="addReplyToReply(${r.comment_id}, ${r.id}, ${postId})">Reply</button>
-                        </div>
-                        ${buildNestedReplies(replyList, r.id, level + 1)}
-                    </div>
-                `;
-            }
-            return html;
-        }
-        
         // Build HTML
         let html = '';
         
         for (const c of comments) {
-            // Get like/dislike counts for this comment
+            // Get like/dislike counts
             const { count: likeCount } = await SB
                 .from("comment_likes")
                 .select("*", { count: 'exact', head: true })
@@ -318,9 +258,58 @@ async function loadCommentsOnly(postId) {
             const commenterName = profile?.username || 'User';
             const commenterAvatar = profile?.avatar_url;
             
-            // Get top-level replies (parent_reply_id = null) for this comment
-            const topLevelReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
-            const repliesHtml = buildNestedReplies(topLevelReplies, null, 0);
+            // Get replies for this comment (top level only for now)
+            const commentReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
+            
+            let repliesHtml = '';
+            for (const r of commentReplies) {
+                const { count: rLikes } = await SB
+                    .from("reply_likes")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("reply_id", r.id);
+                const { count: rDislikes } = await SB
+                    .from("reply_dislikes")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("reply_id", r.id);
+                
+                const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
+                const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
+                const isReplyOwner = USER && USER.id === r.user_id;
+                
+                const replyProfile = profiles[r.user_id];
+                const replyerName = replyProfile?.username || 'User';
+                const replyerAvatar = replyProfile?.avatar_url;
+                
+                repliesHtml += `
+                    <div class="reply">
+                        <div class="reply-header">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                ${replyerAvatar ? `<img src="${replyerAvatar}" class="reply-avatar">` : `<div class="reply-avatar">👤</div>`}
+                                <span class="reply-username">${escapeHtml(replyerName)}</span>
+                                <span class="reply-time" data-timestamp="${r.created_at}">${timeAgo(r.created_at)}</span>
+                            </div>
+                            ${isReplyOwner ? `
+                            <div class="reply-menu">
+                                <button class="reply-menu-btn" onclick="toggleReplyMenu(${r.id})">⋮</button>
+                                <div id="reply-menu-${r.id}" class="reply-menu-dropdown" style="display:none;">
+                                    <div class="reply-menu-option delete" onclick="deleteReply(${r.id}, ${postId})">Delete</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="reply-text">${escapeHtml(r.text)}</div>
+                        <div class="reply-actions">
+                            <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})"><i class="fas fa-heart"></i> <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
+                            <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})"><i class="fas fa-thumbs-down"></i> <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
+                            <span class="reply-action" onclick="showReplyInputForReply(${c.id}, ${r.id}, ${postId})"><i class="fas fa-reply"></i> Reply</span>
+                        </div>
+                        <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
+                            <input type="text" id="reply-text-${r.id}" placeholder="Write a reply...">
+                            <button onclick="addReplyToReply(${c.id}, ${r.id}, ${postId})">Reply</button>
+                        </div>
+                    </div>
+                `;
+            }
             
             html += `
                 <div class="comment">
