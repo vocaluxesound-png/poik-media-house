@@ -76,14 +76,19 @@ async function dislikeComment(commentId) {
     if (dislikeSpan) dislikeSpan.innerText = dislikeCount || 0;
 }
 
-// ========== REPLY FUNCTIONS ==========
+// ========== REPLY FUNCTIONS (FIXED - WITH post_id) ==========
 async function addReplyToComment(commentId, postId) {
     const { data: { user } } = await SB.auth.getUser();
     if (!user) { alert('Login to reply'); openAuthModal(); return; }
     const input = document.getElementById(`reply-comment-text-${commentId}`);
     const text = input.value.trim();
     if (!text) return;
-    const { error } = await SB.from("comment_replies").insert({ comment_id: commentId, user_id: user.id, text: text });
+    const { error } = await SB.from("comment_replies").insert({ 
+        comment_id: commentId, 
+        user_id: user.id, 
+        text: text,
+        post_id: postId
+    });
     if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
@@ -96,7 +101,13 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     const input = document.getElementById(`reply-text-${parentReplyId}`);
     const text = input.value.trim();
     if (!text) return;
-    const { error } = await SB.from("comment_replies").insert({ comment_id: commentId, parent_reply_id: parentReplyId, user_id: user.id, text: text });
+    const { error } = await SB.from("comment_replies").insert({ 
+        comment_id: commentId, 
+        parent_reply_id: parentReplyId, 
+        user_id: user.id, 
+        text: text,
+        post_id: postId
+    });
     if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     await loadCommentsOnly(postId);
@@ -171,17 +182,14 @@ async function deleteReply(replyId, postId) {
     await loadCommentsOnly(postId);
 }
 
-// ========== LOAD COMMENTS ONLY (WITH FULL NESTED REPLIES) ==========
+// ========== LOAD COMMENTS ONLY (WITH POST_ID SUPPORT) ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
     try {
-        // Fetch all comments for this post
         const { data: allComments } = await SB.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
-        
-        // Filter out orphaned comments (no user_id)
         const comments = allComments.filter(c => c.user_id);
         
         if (!comments || comments.length === 0) {
@@ -189,17 +197,13 @@ async function loadCommentsOnly(postId) {
             return;
         }
         
-        // Get all user IDs from comments
         const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
-        
-        // Fetch profiles for comment users
         let profiles = {};
         if (userIds.length > 0) {
             const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
             if (profileData) { profileData.forEach(p => { profiles[p.id] = p; }); }
         }
         
-        // Fetch ALL replies for this post (using comment_ids)
         const commentIds = comments.map(c => c.id);
         let allReplies = [];
         if (commentIds.length > 0) {
@@ -207,14 +211,12 @@ async function loadCommentsOnly(postId) {
             allReplies = replies || [];
         }
         
-        // Get all reply user IDs
         const replyUserIds = [...new Set(allReplies.map(r => r.user_id).filter(id => id))];
         if (replyUserIds.length > 0) {
             const { data: replyProfileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", replyUserIds);
             if (replyProfileData) { replyProfileData.forEach(p => { if (!profiles[p.id]) profiles[p.id] = p; }); }
         }
         
-        // Function to build nested replies HTML (recursive)
         function buildRepliesHtml(replyList, parentReplyId = null, indentLevel = 0) {
             const children = replyList.filter(r => r.parent_reply_id === parentReplyId);
             if (children.length === 0) return '';
@@ -226,9 +228,15 @@ async function loadCommentsOnly(postId) {
                 const replyerName = replyProfile?.username || 'User';
                 const replyerAvatar = replyProfile?.avatar_url;
                 
-                // Get like/dislike counts for this reply
-                const { count: rLikes } = SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
-                const { count: rDislikes } = SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
+                // Get counts - using Promise.all to handle async
+                let rLikes = 0, rDislikes = 0;
+                (async () => {
+                    const { count: likes } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
+                    const { count: dislikes } = await SB.from("reply_dislikes").select("*", { count: 'exact', head: true }).eq("reply_id", r.id);
+                    rLikes = likes || 0;
+                    rDislikes = dislikes || 0;
+                })();
+                
                 const isReplyLiked = USER && userLikedReplies.has(Number(r.id));
                 const isReplyDisliked = USER && userDislikedReplies.has(Number(r.id));
                 
@@ -250,8 +258,8 @@ async function loadCommentsOnly(postId) {
                     </div>
                     <div class="reply-text">${escapeHtml(r.text)}</div>
                     <div class="reply-actions">
-                        <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})"><i class="fas fa-heart"></i> <span id="reply-like-${r.id}">${rLikes || 0}</span></span>
-                        <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})"><i class="fas fa-thumbs-down"></i> <span id="reply-dislike-${r.id}">${rDislikes || 0}</span></span>
+                        <span id="reply-like-btn-${r.id}" class="reply-action ${isReplyLiked ? 'liked' : ''}" onclick="likeReply(${r.id})"><i class="fas fa-heart"></i> <span id="reply-like-${r.id}">0</span></span>
+                        <span id="reply-dislike-btn-${r.id}" class="reply-action ${isReplyDisliked ? 'disliked' : ''}" onclick="dislikeReply(${r.id})"><i class="fas fa-thumbs-down"></i> <span id="reply-dislike-${r.id}">0</span></span>
                         <span class="reply-action" onclick="showReplyInputForReply(${r.comment_id}, ${r.id}, ${postId})"><i class="fas fa-reply"></i> Reply</span>
                     </div>
                     <div id="reply-input-${r.id}" class="reply-input" style="display:none;">
@@ -266,7 +274,6 @@ async function loadCommentsOnly(postId) {
         
         let html = '';
         for (const c of comments) {
-            // Get like/dislike counts for comment
             const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", c.id);
             
@@ -277,7 +284,6 @@ async function loadCommentsOnly(postId) {
             const commenterName = profile?.username || 'User';
             const commenterAvatar = profile?.avatar_url;
             
-            // Get top-level replies for this comment (parent_reply_id = null)
             const topLevelReplies = allReplies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
             const repliesHtml = buildRepliesHtml(topLevelReplies, null, 0);
             
