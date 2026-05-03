@@ -104,7 +104,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-menu-option.delete { color: #ff4444; }
 
 .replies { margin-left: 30px; margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
-.reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; }
+.reply { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a1a; position: relative; transition: margin-left 0.2s ease; }
 .reply-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 3px; }
 .reply-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 .reply-username { font-weight: bold; font-size: 10px; color: #00ff88; cursor: pointer; }
