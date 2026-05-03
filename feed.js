@@ -27,8 +27,26 @@ function closeUploadModal() { document.getElementById('uploadModal').style.displ
 function switchTab(tab) { CURRENT_TAB = tab; loadFeed(); }
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    if (page === 'home') { document.querySelector('.bottom-nav-item:first-child').classList.add('active'); switchTab('feed'); }
-    if (page === 'profile') { document.querySelector('.bottom-nav-item:last-child').classList.add('active'); loadProfile(); }
+    
+    if (page === 'home') { 
+        document.querySelector('.bottom-nav-item:first-child').classList.add('active'); 
+        switchTab('feed'); 
+    }
+    
+    if (page === 'friends') { 
+        document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active'); 
+        if (typeof loadFriends === 'function') {
+            loadFriends(); 
+        } else {
+            console.error("loadFriends not found");
+            document.getElementById("feed").innerHTML = '<div class="loading">Friends feature loading...</div>';
+        }
+    }
+    
+    if (page === 'profile') { 
+        document.querySelector('.bottom-nav-item:last-child').classList.add('active'); 
+        loadProfile(); 
+    }
 }
 
 // ========== POST LIKE ==========
