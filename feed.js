@@ -7,8 +7,6 @@ async function loadFeed() {
     feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     
     try {
-        // REMOVED: await loadUserInteractions(); - function doesn't exist
-        
         const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
         
         if (error) throw error;
@@ -120,14 +118,11 @@ async function viewProfile(userId) {
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
     try {
-        // Get profile data
         const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
         if (error) throw error;
         
-        // Get user's posts
         const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("id", { ascending: false });
         
-        // Check if current user follows this profile
         let isFollowing = false;
         if (USER && userId !== USER.id) {
             const { data: followCheck } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
@@ -141,26 +136,22 @@ async function viewProfile(userId) {
         let html = `
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <button onclick="loadFeed()" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 20px; margin-bottom: 20px; cursor: pointer;">← Back to Feed</button>
-                
                 <div style="text-align: center; background: #0a0a0a; border-radius: 20px; padding: 30px; margin-bottom: 20px;">
                     <div style="width: 100px; height: 100px; margin: 0 auto 15px;">${avatarHtml}</div>
                     <h2>${escapeHtml(profile?.username || 'User')}</h2>
                     <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(profile?.username || 'user')}</div>
                     <div style="color: #aaa; margin-bottom: 20px;">${escapeHtml(profile?.bio || 'No bio yet')}</div>
-                    
                     <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
                         <div><strong>${posts?.length || 0}</strong><br>posts</div>
                         <div><strong>0</strong><br>followers</div>
                         <div><strong>0</strong><br>following</div>
                     </div>
-                    
                     ${userId !== USER?.id ? `
                         <button id="profile-follow-btn" onclick="toggleFollowFromProfile('${userId}')" style="background: ${isFollowing ? '#333' : '#00ff88'}; color: ${isFollowing ? '#fff' : '#000'}; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">
                             ${isFollowing ? 'Following' : 'Follow'}
                         </button>
                     ` : ''}
                 </div>
-                
                 <div style="margin-top: 20px;">
                     <h3 style="margin-bottom: 15px; padding-left: 10px;">Posts</h3>
                     ${posts?.length === 0 ? '<div style="color: #888; text-align: center; padding: 40px;">No posts yet</div>' : ''}
@@ -357,4 +348,3 @@ window.uploadPost = uploadPost;
 window.togglePostMenu = togglePostMenu;
 window.changePostPrivacy = changePostPrivacy;
 window.deletePost = deletePost;
-// Removed: window.loadUserInteractions = loadUserInteractions;
