@@ -119,17 +119,23 @@ async function performSearch(query) {
 }
 
 function viewPost(postId) {
-    // Scroll to the post in feed
     const post = document.getElementById(`post-${postId}`);
     if (post) {
         post.scrollIntoView({ behavior: 'smooth' });
+        closeSearchModal();
     } else {
-        // Load feed and then scroll
         loadFeed().then(() => {
             setTimeout(() => {
                 const post = document.getElementById(`post-${postId}`);
-                if (post) post.scrollIntoView({ behavior: 'smooth' });
+                if (post) {
+                    post.scrollIntoView({ behavior: 'smooth' });
+                    closeSearchModal();
+                }
             }, 500);
         });
     }
 }
+
+// Make functions global
+window.openSearchModal = openSearchModal;
+window.closeSearchModal = closeSearchModal;
