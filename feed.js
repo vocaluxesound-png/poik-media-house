@@ -1,5 +1,8 @@
 // ========== FEED FUNCTIONS ==========
 
+// Make sure loadCommentsOnly is available (from comments.js)
+window.loadCommentsOnly = loadCommentsOnly;
+
 async function loadFeed() {
     const feedDiv = document.getElementById("feed");
     if (!feedDiv) return;
@@ -33,6 +36,9 @@ async function loadFeed() {
             const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             
+            // Get comment count
+            const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
+            
             let displayName = 'Poik Poik';
             let avatarHtml = '';
             
@@ -42,7 +48,7 @@ async function loadFeed() {
             } else if (p.user_id && profiles[p.user_id]) {
                 displayName = profiles[p.user_id].username || 'Member';
                 avatarHtml = profiles[p.user_id].avatar_url ? 
-                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar">` : 
+                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">` : 
                     '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else {
                 displayName = 'Member';
@@ -54,7 +60,7 @@ async function loadFeed() {
                     <div class="post-header">
                         <div class="post-header-left">
                             ${avatarHtml}
-                            <div class="post-username">${escapeHtml(displayName)}</div>
+                            <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
                         </div>
                     </div>
                     <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
@@ -66,7 +72,7 @@ async function loadFeed() {
                         </div>
                         <div class="action-icon" onclick="toggleComments(${p.id})">
                             <i class="far fa-comment-dots"></i>
-                            <span id="comment-count-${p.id}">0</span>
+                            <span id="comment-count-${p.id}">${commentCount || 0}</span>
                         </div>
                         <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
                             <i class="fas fa-paper-plane"></i>
@@ -79,7 +85,7 @@ async function loadFeed() {
                     </div>
                     <div class="comments-section" id="comments-${p.id}" style="display:none">
                         <div class="comments-header">
-                            <span class="comments-title">💬 Comments</span>
+                            <span class="comments-title">💬 Comments (${commentCount || 0})</span>
                             <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
                         </div>
                         <div id="comments-list-${p.id}">Click to load comments</div>
@@ -100,157 +106,88 @@ async function loadFeed() {
     }
 }
 
-// ========== POST LIKE ==========
-async function likePost(postId) {
-    if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    if (existing && existing.length > 0) {
-        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(Number(postId));
-    } else {
-        await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(Number(postId));
-    }
-    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
-        else likeBtn.classList.remove('liked');
-    }
-}
-
-// ========== POST MENU ==========
-function togglePostMenu(postId) { 
-    const menu = document.getElementById(`post-menu-${postId}`); 
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
-}
-
-async function changePostPrivacy(postId, newPrivacy) { 
-    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); 
-    loadFeed(); 
-}
-
-async function deletePost(postId) { 
-    if (confirm('Delete this post?')) { 
-        await SB.from("posts").delete().eq("id", postId); 
-        loadFeed(); 
-    } 
-}
-
-// ========== SHARE ==========
-function openShareModal(url) { 
-    SHARE_URL = url; 
-    document.getElementById('shareModal').style.display = 'block'; 
-}
-
-function closeShareModal() { 
-    document.getElementById('shareModal').style.display = 'none'; 
-}
-
-function shareTo(platform) {
-    const url = encodeURIComponent(SHARE_URL);
-    let link = '';
-    if (platform === 'facebook') link = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-    if (platform === 'whatsapp') link = `https://wa.me/?text=${url}`;
-    if (platform === 'twitter') link = `https://twitter.com/intent/tweet?url=${url}`;
-    if (platform === 'instagram') { alert('Save image first, then post manually.'); closeShareModal(); return; }
-    if (link) window.open(link, '_blank');
-    closeShareModal();
-}
-
-function copyLink() { 
-    navigator.clipboard.writeText(SHARE_URL); 
-    alert('Link copied!'); 
-    closeShareModal(); 
-}
-
-// ========== UI ==========
-function openModal(img) { 
-    document.getElementById('modalImage').src = img; 
-    document.getElementById('imageModal').style.display = 'flex'; 
-}
-
-function closeModal() { 
-    document.getElementById('imageModal').style.display = 'none'; 
-}
-
-function openUploadModal() { 
-    if (!USER) { alert('Please login first'); openAuthModal(); return; } 
-    document.getElementById('uploadModal').style.display = 'block'; 
-}
-
-function closeUploadModal() { 
-    document.getElementById('uploadModal').style.display = 'none'; 
-    document.getElementById('uploadFile').value = ''; 
-    document.getElementById('uploadCaption').value = ''; 
-}
-
-function switchTab(tab) { 
-    CURRENT_TAB = tab; 
-    loadFeed(); 
-}
-
-function bottomNav(page) {
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+// View Profile function
+async function viewProfile(userId) {
+    if (!USER) { alert('Please login'); openAuthModal(); return; }
     
-    if (page === 'home') { 
-        document.querySelector('.bottom-nav-item:first-child').classList.add('active'); 
-        switchTab('feed'); 
-    }
+    const feedDiv = document.getElementById("feed");
+    feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    if (page === 'friends') { 
-        document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active'); 
-        if (typeof loadFriends === 'function') {
-            loadFriends(); 
-        } else {
-            document.getElementById("feed").innerHTML = '<div class="loading">Loading friends...</div>';
+    try {
+        const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
+        if (error) throw error;
+        
+        const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("id", { ascending: false });
+        
+        const avatarHtml = profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` : '👤';
+        
+        let html = `
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <button onclick="loadFeed()" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 20px; margin-bottom: 20px; cursor: pointer;">← Back to Feed</button>
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; margin: 0 auto 15px;">${avatarHtml}</div>
+                    <h2>${escapeHtml(profile?.username || 'User')}</h2>
+                    <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(profile?.username || 'user')}</div>
+                    <div style="color: #aaa; margin-bottom: 20px;">${escapeHtml(profile?.bio || 'No bio yet')}</div>
+                    <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
+                        <div><strong>${posts?.length || 0}</strong><br>posts</div>
+                        <div><strong>0</strong><br>followers</div>
+                        <div><strong>0</strong><br>following</div>
+                    </div>
+                    ${userId !== USER?.id ? `
+                        <button id="profile-follow-btn" onclick="toggleFollowFromProfile('${userId}')" style="background: #00ff88; color: black; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">Follow</button>
+                    ` : ''}
+                </div>
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 15px;">Posts</h3>
+                    ${posts?.length === 0 ? '<div style="color: #888; text-align: center;">No posts yet</div>' : ''}
+                    ${posts?.map(p => `<div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+                        <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')">
+                        <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                    </div>`).join('') || ''}
+                </div>
+            </div>
+        `;
+        
+        feedDiv.innerHTML = html;
+        
+        // Update follow button state
+        if (userId !== USER?.id) {
+            const { data: follows } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
+            const btn = document.getElementById('profile-follow-btn');
+            if (btn && follows && follows.length > 0) {
+                btn.innerText = 'Following';
+                btn.style.background = '#333';
+                btn.style.color = 'white';
+            }
         }
-    }
-    
-    if (page === 'inbox') { 
-        document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active'); 
-        document.getElementById("feed").innerHTML = '<div class="loading">Inbox coming soon...</div>';
-    }
-    
-    if (page === 'profile') { 
-        document.querySelector('.bottom-nav-item:last-child').classList.add('active'); 
-        loadProfile(); 
+        
+    } catch (err) {
+        console.error("View profile error:", err);
+        feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile</div>`;
     }
 }
 
-// ========== UPLOAD POST ==========
-async function uploadPost() {
-    if (!USER) { alert('Login first'); return; }
-    const file = document.getElementById("uploadFile").files[0];
-    const caption = document.getElementById("uploadCaption").value;
-    const privacy = document.getElementById("uploadPrivacy").value;
-    if (!file) { alert("Select an image"); return; }
-    const fileName = `${USER.id}_${Date.now()}.jpg`;
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
-    await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
-    alert("Posted!"); 
-    closeUploadModal(); 
-    loadFeed();
+async function toggleFollowFromProfile(userId) {
+    const btn = document.getElementById('profile-follow-btn');
+    if (!btn) return;
+    
+    const { data: existing } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
+    
+    if (existing && existing.length > 0) {
+        await SB.from("follows").delete().eq("follower", USER.id).eq("following", userId);
+        btn.innerText = 'Follow';
+        btn.style.background = '#00ff88';
+        btn.style.color = 'black';
+    } else {
+        await SB.from("follows").insert({ follower: USER.id, following: userId });
+        btn.innerText = 'Following';
+        btn.style.background = '#333';
+        btn.style.color = 'white';
+    }
 }
 
 // Make sure functions are global
 window.loadFeed = loadFeed;
-window.likePost = likePost;
-window.toggleComments = toggleComments;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.openShareModal = openShareModal;
-window.closeShareModal = closeShareModal;
-window.shareTo = shareTo;
-window.copyLink = copyLink;
-window.openUploadModal = openUploadModal;
-window.closeUploadModal = closeUploadModal;
-window.switchTab = switchTab;
-window.bottomNav = bottomNav;
-window.uploadPost = uploadPost;
-window.togglePostMenu = togglePostMenu;
-window.changePostPrivacy = changePostPrivacy;
-window.deletePost = deletePost;
+window.viewProfile = viewProfile;
+window.toggleFollowFromProfile = toggleFollowFromProfile;
