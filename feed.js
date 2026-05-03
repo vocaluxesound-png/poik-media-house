@@ -35,8 +35,8 @@ async function loadFeed() {
             
             // Get comment count
             const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-const totalCount = commentCount + replyCount;
+            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
+            const totalCount = commentCount + replyCount;
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
@@ -84,7 +84,7 @@ const totalCount = commentCount + replyCount;
                     </div>
                     <div class="comments-section" id="comments-${p.id}" style="display:none">
                         <div class="comments-header">
-                            <span class="comments-title">💬 Comments (${commentCount || 0})</span>
+                            <span class="comments-title">💬 Comments (${totalCount || 0})</span>
                             <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
                         </div>
                         <div id="comments-list-${p.id}">Click to load comments</div>
