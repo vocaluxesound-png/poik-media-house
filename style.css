@@ -81,11 +81,21 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-text { font-size: 13px; margin-left: 36px; margin-bottom: 5px; word-break: break-word; }
 .comment-actions { display: flex; gap: 12px; margin-left: 36px; font-size: 11px; }
 .comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
-.comment-action i { font-size: 11px; color: white; transition: color 0.15s ease; }
+/* Comment actions */
+.comment-action i { font-size: 11px; margin-right: 4px; transition: color 0.15s ease; }
+.comment-action { color: white; transition: color 0.15s ease; }
 .comment-action.liked { color: #FE2C55; }
 .comment-action.liked i { color: #FE2C55; }
 .comment-action.disliked { color: #FFC107; }
 .comment-action.disliked i { color: #FFC107; }
+
+/* Reply actions - ADD THIS */
+.reply-action i { font-size: 9px; margin-right: 3px; transition: color 0.15s ease; }
+.reply-action { color: white; transition: color 0.15s ease; }
+.reply-action.liked { color: #FE2C55; }
+.reply-action.liked i { color: #FE2C55; }
+.reply-action.disliked { color: #FFC107; }
+.reply-action.disliked i { color: #FFC107; }
 .comment-menu { margin-left: auto; }
 .comment-menu-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 5px; }
 .comment-menu-dropdown { display: none; position: absolute; right: 0; top: 20px; background: #1a1a1a; border-radius: 8px; z-index: 100; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #333; }
