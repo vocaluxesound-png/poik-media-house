@@ -15,9 +15,9 @@ async function loadFriends() {
         // Get all users except current user
         const { data: allUsers } = await SB.from("profiles").select("*").neq("id", USER.id);
         
-        // Get users you follow
-        const { data: followingData } = await SB.from("follows").select("following_id").eq("follower_id", USER.id);
-        const followingIds = new Set(followingData?.map(f => f.following_id) || []);
+        // Get users you follow (using 'follower' and 'following' columns)
+        const { data: followingData } = await SB.from("follows").select("following").eq("follower", USER.id);
+        const followingIds = new Set(followingData?.map(f => f.following) || []);
         
         // Get detailed following users
         let following = [];
@@ -27,8 +27,8 @@ async function loadFriends() {
         }
         
         // Get users who follow you
-        const { data: followersData } = await SB.from("follows").select("follower_id").eq("following_id", USER.id);
-        const followerIds = new Set(followersData?.map(f => f.follower_id) || []);
+        const { data: followersData } = await SB.from("follows").select("follower").eq("following", USER.id);
+        const followerIds = new Set(followersData?.map(f => f.follower) || []);
         
         let followers = [];
         if (followerIds.size > 0) {
@@ -140,10 +140,10 @@ async function toggleFollow(userId) {
     if (!USER) { alert('Login to follow'); openAuthModal(); return; }
     if (userId === USER.id) { alert("You can't follow yourself"); return; }
     
-    const { data: existing } = await SB.from("follows").select("*").eq("follower_id", USER.id).eq("following_id", userId);
+    const { data: existing } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
     
     if (existing && existing.length > 0) {
-        await SB.from("follows").delete().eq("follower_id", USER.id).eq("following_id", userId);
+        await SB.from("follows").delete().eq("follower", USER.id).eq("following", userId);
         const btn = document.getElementById(`follow-btn-${userId}`);
         if (btn) {
             btn.innerText = "Follow";
@@ -151,7 +151,7 @@ async function toggleFollow(userId) {
             btn.style.color = "#000";
         }
     } else {
-        await SB.from("follows").insert({ follower_id: USER.id, following_id: userId });
+        await SB.from("follows").insert({ follower: USER.id, following: userId });
         const btn = document.getElementById(`follow-btn-${userId}`);
         if (btn) {
             btn.innerText = "Following";
