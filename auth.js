@@ -80,3 +80,14 @@ async function handleMagicLink() {
     }
 }
 async function checkAuth() { const { data: { user } } = await SB.auth.getUser(); USER = user; const userIcon = document.querySelector('.fa-user-circle'); if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); } else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); } return user; }
+// Keep session alive
+async function refreshSession() {
+    const { data: { session } } = await SB.auth.getSession();
+    if (session) {
+        const { error } = await SB.auth.refreshSession();
+        if (error) console.log("Session refresh error:", error);
+    }
+}
+
+// Refresh session every 30 minutes
+setInterval(refreshSession, 30 * 60 * 1000);
