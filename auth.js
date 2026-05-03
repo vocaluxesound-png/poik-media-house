@@ -17,7 +17,7 @@ let userDislikedReplies = new Set();
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-// ========== TIME AGO FUNCTION ==========
+// ========== FIXED TIME AGO FUNCTION ==========
 function timeAgo(dateString) {
     if (!dateString) return '';
     const now = new Date();
@@ -40,7 +40,9 @@ function timeAgo(dateString) {
 function updateAllTimestamps() {
     document.querySelectorAll('.comment-time, .reply-time').forEach(el => {
         const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) el.textContent = timeAgo(timestamp);
+        if (timestamp) {
+            el.textContent = timeAgo(timestamp);
+        }
     });
 }
 
