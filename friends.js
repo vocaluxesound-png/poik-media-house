@@ -71,7 +71,7 @@ async function loadFriends() {
                         <div style="display: flex; align-items: center; gap: 12px;">
                             ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>`}
                             <div>
-                                <div style="font-weight: bold;">${escapeHtml(user.username || 'User')}</div>
+                               <div style="font-weight: bold; cursor: pointer;" onclick="viewProfile('${user.id}')">${escapeHtml(user.username || 'User')}</div>
                                 <div style="font-size: 12px; color: #888;">@${escapeHtml(user.username || 'user')}</div>
                             </div>
                         </div>
