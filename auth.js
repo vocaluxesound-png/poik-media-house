@@ -17,14 +17,12 @@ let userDislikedReplies = new Set();
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-// ========== FIXED TIME AGO FUNCTION ==========
+// ========== TIME AGO FUNCTION ==========
 function timeAgo(dateString) {
     if (!dateString) return '';
     const now = new Date();
     const then = new Date(dateString);
-    
-    // Calculate difference in seconds
-    const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+    const seconds = Math.floor((now - then) / 1000);
     
     if (seconds < 60) return 'just now';
     const mins = Math.floor(seconds / 60);
@@ -40,9 +38,7 @@ function timeAgo(dateString) {
 function updateAllTimestamps() {
     document.querySelectorAll('.comment-time, .reply-time').forEach(el => {
         const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) {
-            el.textContent = timeAgo(timestamp);
-        }
+        if (timestamp) el.textContent = timeAgo(timestamp);
     });
 }
 
@@ -50,6 +46,31 @@ function startTimestampUpdater() {
     if (timestampInterval) clearInterval(timestampInterval);
     timestampInterval = setInterval(updateAllTimestamps, 60000);
 }
+
+// ========== HEADER AVATAR (NEW) ==========
+async function updateHeaderAvatar() {
+    const headerAvatar = document.getElementById('headerAvatar');
+    if (!headerAvatar) return;
+    
+    if (USER && USER.user_metadata?.avatar_url) {
+        headerAvatar.innerHTML = `<img src="${USER.user_metadata.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else if (USER && USER.avatar_url) {
+        headerAvatar.innerHTML = `<img src="${USER.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+        headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
+    }
+}
+
+// ========== SESSION PERSISTENCE (NEW) ==========
+async function refreshSession() {
+    const { data: { session } } = await SB.auth.getSession();
+    if (session) {
+        const { error } = await SB.auth.refreshSession();
+        if (error) console.log("Session refresh error:", error);
+    }
+}
+// Refresh session every 30 minutes
+setInterval(refreshSession, 30 * 60 * 1000);
 
 // ========== AUTH ==========
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
@@ -59,17 +80,18 @@ document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
-   const { error } = await SB.auth.signInWithOtp({ 
-    email: email.trim(), 
-    options: { 
-        emailRedirectTo: window.location.origin,
-        shouldCreateUser: true
-    } 
-});
+    const { error } = await SB.auth.signInWithOtp({ 
+        email: email.trim(), 
+        options: { 
+            emailRedirectTo: window.location.origin,
+            shouldCreateUser: true
+        } 
+    });
     if (error) { alert('Error: ' + error.message); } else { alert('Magic link sent! Check your email.'); closeAuthModal(); document.getElementById('authEmail').value = ''; }
 };
 
 async function logout() { await SB.auth.signOut(); USER = null; if (timestampInterval) clearInterval(timestampInterval); location.reload(); }
+
 async function handleMagicLink() {
     const hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
@@ -79,15 +101,23 @@ async function handleMagicLink() {
         if (access_token) { await SB.auth.setSession({ access_token, refresh_token }); window.location.href = window.location.pathname; }
     }
 }
-async function checkAuth() { const { data: { user } } = await SB.auth.getUser(); USER = user; const userIcon = document.querySelector('.fa-user-circle'); if (user) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); } else { userIcon.classList.remove('fas'); userIcon.classList.add('far'); } return user; }
-// Keep session alive
-async function refreshSession() {
-    const { data: { session } } = await SB.auth.getSession();
-    if (session) {
-        const { error } = await SB.auth.refreshSession();
-        if (error) console.log("Session refresh error:", error);
+
+async function checkAuth() { 
+    const { data: { user } } = await SB.auth.getUser(); 
+    USER = user; 
+    const userIcon = document.querySelector('.fa-user-circle');
+    if (user) { 
+        if (userIcon) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
+        updateHeaderAvatar();
+    } else { 
+        if (userIcon) { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
     }
+    return user; 
 }
 
-// Refresh session every 30 minutes
-setInterval(refreshSession, 30 * 60 * 1000);
+// Make functions global
+window.openAuthModal = openAuthModal;
+window.logout = logout;
+window.checkAuth = checkAuth;
+window.handleMagicLink = handleMagicLink;
+window.updateHeaderAvatar = updateHeaderAvatar;
