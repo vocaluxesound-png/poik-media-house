@@ -47,7 +47,7 @@ function startTimestampUpdater() {
     timestampInterval = setInterval(updateAllTimestamps, 60000);
 }
 
-// ========== HEADER AVATAR (NEW) ==========
+// ========== HEADER AVATAR ==========
 async function updateHeaderAvatar() {
     const headerAvatar = document.getElementById('headerAvatar');
     if (!headerAvatar) return;
@@ -61,7 +61,7 @@ async function updateHeaderAvatar() {
     }
 }
 
-// ========== SESSION PERSISTENCE (NEW) ==========
+// ========== SESSION PERSISTENCE ==========
 async function refreshSession() {
     const { data: { session } } = await SB.auth.getSession();
     if (session) {
@@ -69,7 +69,6 @@ async function refreshSession() {
         if (error) console.log("Session refresh error:", error);
     }
 }
-// Refresh session every 30 minutes
 setInterval(refreshSession, 30 * 60 * 1000);
 
 // ========== AUTH ==========
@@ -106,6 +105,7 @@ async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser(); 
     USER = user; 
     if (USER) {
+        await loadUserInteractions();
     }
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
@@ -117,9 +117,36 @@ async function checkAuth() {
     return user; 
 }
 
+// ========== LOAD USER INTERACTIONS ==========
+async function loadUserInteractions() {
+    if (!USER) return;
+    
+    userLikedPosts.clear();
+    userLikedComments.clear();
+    userDislikedComments.clear();
+    userLikedReplies.clear();
+    userDislikedReplies.clear();
+    
+    const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
+    if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
+    
+    const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
+    if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
+    
+    const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
+    if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
+    
+    const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
+    if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
+    
+    const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
+    if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
+}
+
 // Make functions global
 window.openAuthModal = openAuthModal;
 window.logout = logout;
 window.checkAuth = checkAuth;
 window.handleMagicLink = handleMagicLink;
 window.updateHeaderAvatar = updateHeaderAvatar;
+window.loadUserInteractions = loadUserInteractions;
