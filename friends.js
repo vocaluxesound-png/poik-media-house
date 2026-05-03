@@ -15,7 +15,7 @@ async function loadFriends() {
         // Get all users except current user
         const { data: allUsers } = await SB.from("profiles").select("*").neq("id", USER.id);
         
-        // Get users you follow (using 'follower' and 'following' - no _id)
+        // Get users you follow
         const { data: followingData } = await SB.from("follows").select("following").eq("follower", USER.id);
         const followingIds = new Set(followingData?.map(f => f.following) || []);
         
@@ -69,9 +69,9 @@ async function loadFriends() {
                 html += `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #222;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>`}
+                            ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="viewProfile('${user.id}')">` : `<div style="width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer;" onclick="viewProfile('${user.id}')">👤</div>`}
                             <div>
-                               <div style="font-weight: bold; cursor: pointer;" onclick="viewProfile('${user.id}')">${escapeHtml(user.username || 'User')}</div>
+                                <div style="font-weight: bold; cursor: pointer;" onclick="viewProfile('${user.id}')">${escapeHtml(user.username || 'User')}</div>
                                 <div style="font-size: 12px; color: #888;">@${escapeHtml(user.username || 'user')}</div>
                             </div>
                         </div>
@@ -107,7 +107,7 @@ async function loadFriends() {
                                     <div style="display: flex; align-items: center; gap: 12px;">
                                         ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="viewProfile('${user.id}')">` : `<div style="width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer;" onclick="viewProfile('${user.id}')">👤</div>`}
                                         <div>
-                                            <div style="font-weight: bold;">${escapeHtml(user.username || 'User')}</div>
+                                            <div style="font-weight: bold; cursor: pointer;" onclick="viewProfile('${user.id}')">${escapeHtml(user.username || 'User')}</div>
                                             <div style="font-size: 12px; color: #888;">@${escapeHtml(user.username || 'user')}</div>
                                         </div>
                                     </div>
@@ -140,7 +140,6 @@ async function toggleFollow(userId) {
     if (!USER) { alert('Login to follow'); openAuthModal(); return; }
     if (userId === USER.id) { alert("You can't follow yourself"); return; }
     
-    // Using 'follower' and 'following' column names (no _id)
     const { data: existing } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
     
     if (existing && existing.length > 0) {
@@ -162,3 +161,8 @@ async function toggleFollow(userId) {
     }
     await loadFriends();
 }
+
+// Make sure functions are global
+window.loadFriends = loadFriends;
+window.switchFriendsTab = switchFriendsTab;
+window.toggleFollow = toggleFollow;
