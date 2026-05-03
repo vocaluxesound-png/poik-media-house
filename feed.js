@@ -38,9 +38,14 @@ function bottomNav(page) {
         if (typeof loadFriends === 'function') {
             loadFriends(); 
         } else {
-            console.error("loadFriends not found");
-            document.getElementById("feed").innerHTML = '<div class="loading">Friends feature loading...</div>';
+            console.error("loadFriends not found - check if friends.js is loaded");
+            document.getElementById("feed").innerHTML = '<div class="loading">Loading friends...</div>';
         }
+    }
+    
+    if (page === 'inbox') { 
+        document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active'); 
+        document.getElementById("feed").innerHTML = '<div class="loading">Inbox coming soon...</div>';
     }
     
     if (page === 'profile') { 
