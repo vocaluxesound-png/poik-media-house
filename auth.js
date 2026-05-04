@@ -138,8 +138,7 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// ========== SESSION PERSISTENCE (Simple) ==========
-// Check for existing session on page load
+// ========== SESSION PERSISTENCE ==========
 window.addEventListener('load', async () => {
     const { data: { session } } = await SB.auth.getSession();
     if (session) {
