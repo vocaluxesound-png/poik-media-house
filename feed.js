@@ -18,12 +18,10 @@ async function loadFeed(reset = true) {
     isLoading = true;
     
     try {
-        // Load user interactions first (for like colors)
         if (typeof loadUserInteractions === 'function') {
             await loadUserInteractions();
         }
         
-        // FAST: Use RPC to get posts with likes and comments in ONE query
         const { data: postsData, error } = await SB
             .rpc('get_fast_feed', { 
                 limit_num: POSTS_PER_PAGE, 
@@ -37,8 +35,6 @@ async function loadFeed(reset = true) {
             posts = JSON.parse(postsData);
         } else if (Array.isArray(postsData)) {
             posts = postsData;
-        } else {
-            posts = [];
         }
         
         if (reset) {
@@ -54,7 +50,6 @@ async function loadFeed(reset = true) {
             return;
         }
         
-        // Get user profiles for these posts
         const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
         let profiles = {};
         
@@ -138,11 +133,9 @@ async function loadFeed(reset = true) {
         
         currentPage++;
         
-        // Check if we have more posts
         if (posts.length < POSTS_PER_PAGE) {
             hasMorePosts = false;
         } else {
-            // Add loading indicator at bottom
             let loadingDiv = document.getElementById('loading-more');
             if (!loadingDiv) {
                 loadingDiv = document.createElement('div');
@@ -163,7 +156,6 @@ async function loadFeed(reset = true) {
     isLoading = false;
 }
 
-// ========== INFINITE SCROLL ==========
 function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
@@ -178,7 +170,6 @@ function setupInfiniteScroll() {
     });
 }
 
-// ========== REFRESH FEED (without infinite loop) ==========
 function refreshFeed() {
     currentPage = 0;
     hasMorePosts = true;
@@ -186,7 +177,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== VIEW PROFILE ==========
+// ========== VIEW PROFILE (FIXED) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) { 
@@ -195,6 +186,15 @@ async function viewProfile(userId) {
         return; 
     }
     
+    // Update bottom nav to highlight Profile
+    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    const profileBtn = document.querySelector('.bottom-nav-item:last-child');
+    if (profileBtn) profileBtn.classList.add('active');
+    
+    // Hide top nav
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'none';
+    
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
@@ -202,7 +202,8 @@ async function viewProfile(userId) {
         const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
         if (error) throw error;
         
-        const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("id", { ascending: false });
+        // ONLY get this user's posts
+        const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
         
         let isFollowing = false;
         if (USER && userId !== USER.id) {
@@ -409,11 +410,16 @@ async function uploadPost() {
     refreshFeed();
 }
 
-// ========== GO TO HOME ==========
+// ========== GO TO HOME (FIXED) ==========
 function goToHome() {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
     if (homeBtn) homeBtn.classList.add('active');
+    
+    // Show top nav again
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'flex';
+    
     refreshFeed();
 }
 
