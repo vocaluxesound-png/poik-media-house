@@ -1,4 +1,4 @@
-// ========== FAST FEED WITH INFINITE SCROLL ==========
+// ========== FEED FUNCTIONS ==========
 let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
@@ -135,15 +135,6 @@ async function loadFeed(reset = true) {
         
         if (posts.length < POSTS_PER_PAGE) {
             hasMorePosts = false;
-        } else {
-            let loadingDiv = document.getElementById('loading-more');
-            if (!loadingDiv) {
-                loadingDiv = document.createElement('div');
-                loadingDiv.id = 'loading-more';
-                loadingDiv.className = 'loading-more';
-                loadingDiv.innerHTML = '<div class="loading">Loading more...</div>';
-                feedDiv.appendChild(loadingDiv);
-            }
         }
         
     } catch (err) {
@@ -177,7 +168,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== VIEW PROFILE (FIXED) ==========
+// ========== VIEW PROFILE (FIXED - ONLY SHOWS USER'S POSTS) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) { 
@@ -199,11 +190,14 @@ async function viewProfile(userId) {
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
     try {
+        // Get profile data
         const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
         if (error) throw error;
         
-        // ONLY get this user's posts
+        // CRITICAL FIX: ONLY get this user's posts
         const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+        
+        console.log(`Profile posts for user ${userId}:`, posts?.length); // Debug
         
         let isFollowing = false;
         if (USER && userId !== USER.id) {
@@ -224,7 +218,7 @@ async function viewProfile(userId) {
                     <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(profile?.username || 'user')}</div>
                     <div style="color: #aaa; margin-bottom: 20px;">${escapeHtml(profile?.bio || 'No bio yet')}</div>
                     <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
-                        <div><strong>${posts?.length || 0}</strong><br>posts</div>
+                        <div><strong id="profile-post-count">${posts?.length || 0}</strong><br>posts</div>
                         <div><strong>0</strong><br>followers</div>
                         <div><strong>0</strong><br>following</div>
                     </div>
@@ -236,13 +230,15 @@ async function viewProfile(userId) {
                 </div>
                 <div style="margin-top: 20px;">
                     <h3 style="margin-bottom: 15px; padding-left: 10px;">Posts</h3>
-                    ${posts?.length === 0 ? '<div style="color: #888; text-align: center; padding: 40px;">No posts yet</div>' : ''}
-                    ${posts?.map(p => `
-                        <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                            <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
-                            <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                        </div>
-                    `).join('') || ''}
+                    <div id="profile-posts-list">
+                        ${posts?.length === 0 ? '<div style="color: #888; text-align: center; padding: 40px;">No posts yet</div>' : ''}
+                        ${posts?.map(p => `
+                            <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+                                <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
+                                <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                            </div>
+                        `).join('') || ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -253,6 +249,21 @@ async function viewProfile(userId) {
         console.error("View profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
     }
+}
+
+// ========== GO TO HOME (FIXES BOTTOM NAV HIGHLIGHT) ==========
+function goToHome() {
+    // Update bottom nav to Home
+    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    const homeBtn = document.querySelector('.bottom-nav-item:first-child');
+    if (homeBtn) homeBtn.classList.add('active');
+    
+    // Show top nav again
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'flex';
+    
+    // Refresh feed
+    refreshFeed();
 }
 
 async function toggleFollowFromProfile(userId) {
@@ -407,19 +418,6 @@ async function uploadPost() {
     await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
     alert("Posted!"); 
     closeUploadModal(); 
-    refreshFeed();
-}
-
-// ========== GO TO HOME (FIXED) ==========
-function goToHome() {
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    const homeBtn = document.querySelector('.bottom-nav-item:first-child');
-    if (homeBtn) homeBtn.classList.add('active');
-    
-    // Show top nav again
-    const topNav = document.querySelector('.top-nav');
-    if (topNav) topNav.style.display = 'flex';
-    
     refreshFeed();
 }
 
