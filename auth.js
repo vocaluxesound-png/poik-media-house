@@ -17,13 +17,11 @@ let userDislikedReplies = new Set();
 
 function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-// ========== TIME AGO FUNCTION ==========
 function timeAgo(dateString) {
     if (!dateString) return '';
     const now = new Date();
     const then = new Date(dateString);
     const seconds = Math.floor((now - then) / 1000);
-    
     if (seconds < 60) return 'just now';
     const mins = Math.floor(seconds / 60);
     if (mins < 60) return `${mins}m ago`;
@@ -47,18 +45,22 @@ function startTimestampUpdater() {
     timestampInterval = setInterval(updateAllTimestamps, 60000);
 }
 
-// ========== HEADER AVATAR ==========
+// ========== HEADER AVATAR FIXED ==========
 async function updateHeaderAvatar() {
     const headerAvatar = document.getElementById('headerAvatar');
     if (!headerAvatar) return;
     
-    if (USER && USER.user_metadata?.avatar_url) {
-        headerAvatar.innerHTML = `<img src="${USER.user_metadata.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    } else if (USER && USER.avatar_url) {
-        headerAvatar.innerHTML = `<img src="${USER.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    } else {
-        headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
+    // Fetch fresh profile data from database
+    if (USER && USER.id) {
+        const { data: profile } = await SB.from("profiles").select("avatar_url").eq("id", USER.id).single();
+        if (profile && profile.avatar_url) {
+            headerAvatar.innerHTML = `<img src="${profile.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            return;
+        }
     }
+    
+    // Fallback to default
+    headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
 // ========== SESSION PERSISTENCE ==========
@@ -106,11 +108,11 @@ async function checkAuth() {
     USER = user; 
     if (USER) {
         await loadUserInteractions();
+        await updateHeaderAvatar();
     }
     const userIcon = document.querySelector('.fa-user-circle');
     if (user) { 
         if (userIcon) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
-        updateHeaderAvatar();
     } else { 
         if (userIcon) { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
     }
