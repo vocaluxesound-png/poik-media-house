@@ -1,10 +1,16 @@
-// Supabase Configuration
+// Supabase Configuration with FORCED localStorage
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+
+// Create client with persistent session storage
 const SB = window.supabase.createClient(API_URL, API_KEY, {
     auth: {
         persistSession: true,
-        storage: window.localStorage
+        storageKey: 'poik-poik-auth',
+        storage: window.localStorage,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce'
     }
 });
 
@@ -63,7 +69,6 @@ async function updateHeaderAvatar() {
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// ========== AUTH ==========
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
@@ -91,6 +96,8 @@ document.getElementById('magicLoginBtn').onclick = async () => {
 async function logout() { 
     await SB.auth.signOut(); 
     USER = null; 
+    localStorage.removeItem('poik-poik-auth');
+    sessionStorage.clear();
     if (timestampInterval) clearInterval(timestampInterval); 
     location.reload(); 
 }
@@ -103,6 +110,11 @@ async function handleMagicLink() {
         const refresh_token = params.get('refresh_token');
         if (access_token) { 
             await SB.auth.setSession({ access_token, refresh_token }); 
+            // Force save to localStorage
+            const { data: { session } } = await SB.auth.getSession();
+            if (session) {
+                localStorage.setItem('poik-poik-auth', JSON.stringify(session));
+            }
             window.location.href = window.location.pathname; 
         }
     }
@@ -114,6 +126,11 @@ async function checkAuth() {
     if (USER) {
         await loadUserInteractions();
         await updateHeaderAvatar();
+        // Save to localStorage
+        const { data: { session } } = await SB.auth.getSession();
+        if (session) {
+            localStorage.setItem('poik-poik-auth', JSON.stringify(session));
+        }
     }
     return user; 
 }
@@ -143,24 +160,33 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// ========== SESSION RESTORE (FIXES MOBILE AUTO-LOGOUT) ==========
-async function restoreSession() {
+// Auto restore session on every page load
+(async function autoRestore() {
+    console.log("Auto restoring session...");
+    const stored = localStorage.getItem('poik-poik-auth');
+    if (stored) {
+        try {
+            const session = JSON.parse(stored);
+            if (session && session.access_token) {
+                await SB.auth.setSession(session);
+                console.log("Session restored from localStorage");
+            }
+        } catch(e) {}
+    }
+    
     const { data: { session } } = await SB.auth.getSession();
     if (session) {
         USER = session.user;
         await loadUserInteractions();
         await updateHeaderAvatar();
-        if (typeof loadFeed === 'function') {
-            loadFeed();
-        }
-        console.log("Session restored for user:", USER?.email);
-        return true;
+        console.log("User logged in:", USER?.email);
     }
-    return false;
-}
-
-// Run session restore on page load
-restoreSession();
+    
+    // Load feed
+    if (typeof loadFeed === 'function') {
+        loadFeed();
+    }
+})();
 
 window.openAuthModal = openAuthModal;
 window.logout = logout;
@@ -168,4 +194,3 @@ window.checkAuth = checkAuth;
 window.handleMagicLink = handleMagicLink;
 window.updateHeaderAvatar = updateHeaderAvatar;
 window.loadUserInteractions = loadUserInteractions;
-window.restoreSession = restoreSession;
