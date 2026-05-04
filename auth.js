@@ -138,8 +138,8 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// ========== SESSION PERSISTENCE ==========
-window.addEventListener('load', async () => {
+// ========== SESSION RESTORE (FIXES MOBILE AUTO-LOGOUT) ==========
+async function restoreSession() {
     const { data: { session } } = await SB.auth.getSession();
     if (session) {
         USER = session.user;
@@ -148,8 +148,14 @@ window.addEventListener('load', async () => {
         if (typeof loadFeed === 'function') {
             loadFeed();
         }
+        console.log("Session restored for user:", USER?.email);
+        return true;
     }
-});
+    return false;
+}
+
+// Run session restore on page load
+restoreSession();
 
 window.openAuthModal = openAuthModal;
 window.logout = logout;
@@ -157,3 +163,4 @@ window.checkAuth = checkAuth;
 window.handleMagicLink = handleMagicLink;
 window.updateHeaderAvatar = updateHeaderAvatar;
 window.loadUserInteractions = loadUserInteractions;
+window.restoreSession = restoreSession;
