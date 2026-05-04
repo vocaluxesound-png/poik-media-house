@@ -9,24 +9,23 @@ async function loadFriends() {
         return; 
     }
     
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'none';
+    
     feedDiv.innerHTML = '<div class="loading">Loading friends...</div>';
     
     try {
-        // Get all users except current user
         const { data: allUsers } = await SB.from("profiles").select("*").neq("id", USER.id);
         
-        // Get users you follow
         const { data: followingData } = await SB.from("follows").select("following").eq("follower", USER.id);
         const followingIds = new Set(followingData?.map(f => f.following) || []);
         
-        // Get detailed following users
         let following = [];
         if (followingIds.size > 0) {
             const { data: followingUsers } = await SB.from("profiles").select("*").in("id", [...followingIds]);
             following = followingUsers || [];
         }
         
-        // Get users who follow you
         const { data: followersData } = await SB.from("follows").select("follower").eq("following", USER.id);
         const followerIds = new Set(followersData?.map(f => f.follower) || []);
         
@@ -36,7 +35,6 @@ async function loadFriends() {
             followers = followerUsers || [];
         }
         
-        // Get suggestions (users you don't follow)
         const suggestions = allUsers?.filter(u => !followingIds.has(u.id)) || [];
         
         let usersToShow = [];
@@ -46,9 +44,6 @@ async function loadFriends() {
         
         let html = `
             <div style="padding: 16px;">
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="searchUsersInput" placeholder="🔍 Search users..." style="width: 100%; padding: 12px; border-radius: 30px; border: none; background: #222; color: white; font-size: 16px;">
-                </div>
                 <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333;">
                     <button onclick="switchFriendsTab('following')" style="background: none; border: none; color: ${friendsCurrentTab === 'following' ? '#00ff88' : '#888'}; padding: 10px 20px; font-size: 16px; cursor: pointer; border-bottom: 2px solid ${friendsCurrentTab === 'following' ? '#00ff88' : 'transparent'};">Following (${following.length})</button>
                     <button onclick="switchFriendsTab('followers')" style="background: none; border: none; color: ${friendsCurrentTab === 'followers' ? '#00ff88' : '#888'}; padding: 10px 20px; font-size: 16px; cursor: pointer; border-bottom: 2px solid ${friendsCurrentTab === 'followers' ? '#00ff88' : 'transparent'};">Followers (${followers.length})</button>
@@ -88,43 +83,6 @@ async function loadFriends() {
         html += `</div></div>`;
         feedDiv.innerHTML = html;
         
-        // Search functionality
-        const searchInput = document.getElementById('searchUsersInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                const filtered = usersToShow.filter(u => (u.username || '').toLowerCase().includes(term));
-                const listDiv = document.getElementById('friendsList');
-                if (listDiv) {
-                    if (filtered.length === 0) {
-                        listDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">No users found</div>';
-                    } else {
-                        let newHtml = '';
-                        for (const user of filtered) {
-                            const isFollowing = followingIds.has(user.id);
-                            newHtml += `
-                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #222;">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="viewProfile('${user.id}')">` : `<div style="width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer;" onclick="viewProfile('${user.id}')">👤</div>`}
-                                        <div>
-                                            <div style="font-weight: bold; cursor: pointer;" onclick="viewProfile('${user.id}')">${escapeHtml(user.username || 'User')}</div>
-                                            <div style="font-size: 12px; color: #888;">@${escapeHtml(user.username || 'user')}</div>
-                                        </div>
-                                    </div>
-                                    ${user.id !== USER?.id ? `
-                                        <button onclick="toggleFollow('${user.id}')" style="background: ${isFollowing ? '#333' : '#00ff88'}; color: ${isFollowing ? '#fff' : '#000'}; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold;">
-                                            ${isFollowing ? 'Following' : 'Follow'}
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }
-                        listDiv.innerHTML = newHtml;
-                    }
-                }
-            });
-        }
-        
     } catch (err) {
         console.error("Friends error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error: ${err.message}</div>`;
@@ -162,7 +120,6 @@ async function toggleFollow(userId) {
     await loadFriends();
 }
 
-// Make sure functions are global
 window.loadFriends = loadFriends;
 window.switchFriendsTab = switchFriendsTab;
 window.toggleFollow = toggleFollow;
