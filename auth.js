@@ -17,6 +17,7 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 let timestampInterval = null;
+let sessionCheckInterval = null;
 
 let userLikedPosts = new Set();
 let userLikedComments = new Set();
@@ -68,7 +69,7 @@ async function updateHeaderAvatar() {
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// ========== EMAIL AUTOFILL ==========
+// Save email for autofill
 function saveEmail(email) {
     if (email) {
         localStorage.setItem('poik-poik-email', email);
@@ -86,37 +87,101 @@ function loadSavedEmail() {
     }
 }
 
+// Backup session to localStorage
+function backupSession(session) {
+    if (session && session.access_token) {
+        localStorage.setItem('poik-poik-auth-backup', JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at
+        }));
+    }
+}
+
+// ========== CRITICAL: Session restore for mobile ==========
+async function restoreSession() {
+    console.log("🔄 Restoring session...");
+    
+    const { data: { session } } = await SB.auth.getSession();
+    
+    if (session && session.user) {
+        USER = session.user;
+        await loadUserInteractions();
+        await updateHeaderAvatar();
+        console.log("✅ Session restored for:", USER?.email);
+        if (typeof loadFeed === 'function') loadFeed();
+        return true;
+    }
+    
+    // Try backup
+    const backup = localStorage.getItem('poik-poik-auth-backup');
+    if (backup) {
+        try {
+            const parsed = JSON.parse(backup);
+            const { data } = await SB.auth.setSession({
+                access_token: parsed.access_token,
+                refresh_token: parsed.refresh_token
+            });
+            if (data.session) {
+                USER = data.session.user;
+                await loadUserInteractions();
+                await updateHeaderAvatar();
+                console.log("✅ Session restored from backup");
+                if (typeof loadFeed === 'function') loadFeed();
+                return true;
+            }
+        } catch(e) {}
+    }
+    
+    console.log("❌ No session found");
+    return false;
+}
+
 // ========== AUTH ==========
 function openAuthModal() { 
     if (USER) return; 
     document.getElementById('authModal').style.display = 'flex';
-    loadSavedEmail(); // Auto-fill saved email
+    loadSavedEmail();
 }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
 
-// FIX #3: Change text from "Magic Link" to "One-time password"
-document.getElementById('magicLoginBtn').innerHTML = 'Send One-time password';
+document.getElementById('magicLoginBtn').innerHTML = 'Send Verification Email';
 
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
     
-    // Save email for next time (FIX #2)
     saveEmail(email);
     
+    // Try custom email via edge function first
+    try {
+        const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/functions/v1/send-login-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('Verification email sent! Check your inbox.');
+            closeAuthModal();
+            document.getElementById('authEmail').value = '';
+            return;
+        }
+    } catch(e) {
+        console.log("Custom email failed, using default:", e);
+    }
+    
+    // Fallback to default Supabase email
     const { error } = await SB.auth.signInWithOtp({ 
         email: email.trim(), 
-        options: { 
-            emailRedirectTo: window.location.origin
-        } 
+        options: { emailRedirectTo: window.location.origin }
     });
     
     if (error) { 
         alert('Error: ' + error.message); 
     } else { 
-        // FIX #3: Changed message from "Magic link" to "One-time password"
-        alert('One-time password sent! Check your email.'); 
+        alert('Verification email sent! Check your inbox.'); 
         closeAuthModal(); 
         document.getElementById('authEmail').value = ''; 
     }
@@ -126,8 +191,10 @@ async function logout() {
     await SB.auth.signOut(); 
     USER = null; 
     localStorage.removeItem('poik-poik-auth');
+    localStorage.removeItem('poik-poik-auth-backup');
     localStorage.removeItem('poik-poik-email');
     if (timestampInterval) clearInterval(timestampInterval); 
+    if (sessionCheckInterval) clearInterval(sessionCheckInterval);
     location.reload(); 
 }
 
@@ -138,7 +205,9 @@ async function handleMagicLink() {
         const access_token = params.get('access_token');
         const refresh_token = params.get('refresh_token');
         if (access_token) { 
-            await SB.auth.setSession({ access_token, refresh_token }); 
+            await SB.auth.setSession({ access_token, refresh_token });
+            const { data: { session } } = await SB.auth.getSession();
+            if (session) backupSession(session);
             window.location.href = window.location.pathname; 
         }
     }
@@ -150,6 +219,8 @@ async function checkAuth() {
     if (USER) {
         await loadUserInteractions();
         await updateHeaderAvatar();
+        const { data: { session } } = await SB.auth.getSession();
+        if (session) backupSession(session);
     }
     return user; 
 }
@@ -179,65 +250,42 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// FIX #1: Universal session restore that works on ALL devices
-async function restoreSession() {
-    console.log("Restoring session...");
-    
-    // Try multiple methods to restore session
-    let session = null;
-    
-    // Method 1: Get from Supabase
-    const { data: { session: supabaseSession } } = await SB.auth.getSession();
-    session = supabaseSession;
-    
-    // Method 2: Try manual localStorage
-    if (!session) {
-        const stored = localStorage.getItem('poik-poik-auth');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (parsed && parsed.currentSession) {
-                    session = parsed.currentSession;
-                }
-            } catch(e) {}
-        }
-    }
-    
-    if (session && session.user) {
-        USER = session.user;
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-        console.log("Session restored for:", USER?.email);
-        return true;
-    }
-    
-    console.log("No session found");
-    return false;
-}
-
-// Listen for auth state changes
+// Listen for auth changes
 SB.auth.onAuthStateChange(async (event, session) => {
     console.log("Auth Event:", event);
     if (session && session.user) {
         USER = session.user;
+        backupSession(session);
         await loadUserInteractions();
         await updateHeaderAvatar();
-        // Refresh feed
-        if (typeof loadFeed === 'function') {
-            loadFeed();
-        }
+        if (typeof loadFeed === 'function') loadFeed();
     } else if (event === 'SIGNED_OUT') {
         USER = null;
+        localStorage.removeItem('poik-poik-auth-backup');
     }
 });
 
-// Initialize on page load
+// Periodically check session
+function startSessionMonitor() {
+    if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+    sessionCheckInterval = setInterval(async () => {
+        const { data: { session } } = await SB.auth.getSession();
+        if (session && session.user && !USER) {
+            console.log("Session monitor restored user");
+            USER = session.user;
+            await loadUserInteractions();
+            await updateHeaderAvatar();
+            if (typeof loadFeed === 'function') loadFeed();
+        }
+    }, 30000);
+}
+
+// Initialize
 (async function init() {
     await handleMagicLink();
     await restoreSession();
-    if (typeof loadFeed === 'function') {
-        loadFeed();
-    }
+    startSessionMonitor();
+    if (typeof loadFeed === 'function') loadFeed();
 })();
 
 window.openAuthModal = openAuthModal;
