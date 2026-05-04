@@ -1,7 +1,15 @@
-// Supabase Configuration
+// Supabase Configuration with PERSISTENT SESSION (Fixes mobile logout)
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const SB = window.supabase.createClient(API_URL, API_KEY);
+const SB = window.supabase.createClient(API_URL, API_KEY, {
+    auth: {
+        persistSession: true,
+        storageKey: 'poik-poik-auth',
+        storage: window.localStorage,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+    }
+});
 
 let USER = null;
 let CURRENT_TAB = 'feed';
