@@ -82,11 +82,8 @@ function loadSavedEmail() {
     }
 }
 
-// ========== SIMPLE SESSION RESTORE ==========
 async function restoreAndLoad() {
     console.log("Restoring session...");
-    
-    // Get session from Supabase
     const { data: { session } } = await SB.auth.getSession();
     
     if (session && session.user) {
@@ -96,13 +93,11 @@ async function restoreAndLoad() {
         console.log("User restored:", USER.email);
     }
     
-    // Always load feed
     if (typeof loadFeed === 'function') {
         loadFeed();
     }
 }
 
-// ========== AUTH ==========
 function openAuthModal() { 
     if (USER) return; 
     document.getElementById('authModal').style.display = 'flex';
@@ -192,7 +187,6 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// Initialize
 handleMagicLink();
 restoreAndLoad();
 
