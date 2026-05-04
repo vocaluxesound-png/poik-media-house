@@ -1,10 +1,11 @@
-// Supabase Configuration
+// Supabase Configuration with PKCE for better mobile/Safari support
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 
-// Create client with persistent session
+// Create client with PKCE flow (best for mobile Safari)
 const SB = window.supabase.createClient(API_URL, API_KEY, {
     auth: {
+        flowType: 'pkce', // REQUIRED for better mobile/Safari reliability
         persistSession: true,
         storageKey: 'poik-poik-auth',
         storage: window.localStorage,
@@ -67,6 +68,25 @@ async function updateHeaderAvatar() {
     }
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
+
+// Listen for auth state changes (most reliable for Safari)
+SB.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth Event:", event);
+    if (session) {
+        USER = session.user;
+        await loadUserInteractions();
+        await updateHeaderAvatar();
+        console.log("Session active for:", session.user?.email);
+        
+        // Refresh feed if needed
+        if (typeof loadFeed === 'function') {
+            loadFeed();
+        }
+    } else if (event === 'SIGNED_OUT') {
+        USER = null;
+        console.log("User signed out");
+    }
+});
 
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
@@ -158,6 +178,15 @@ async function restoreSession() {
     }
     return false;
 }
+
+// Initialize auth on page load
+(async function init() {
+    await handleMagicLink();
+    await restoreSession();
+    if (typeof loadFeed === 'function') {
+        loadFeed();
+    }
+})();
 
 window.openAuthModal = openAuthModal;
 window.logout = logout;
