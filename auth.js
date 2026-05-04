@@ -1,11 +1,10 @@
-// Supabase Configuration with PKCE for better mobile/Safari support
+// Supabase Configuration
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 
-// Create client with PKCE flow (best for mobile Safari)
 const SB = window.supabase.createClient(API_URL, API_KEY, {
     auth: {
-        flowType: 'pkce', // REQUIRED for better mobile/Safari reliability
+        flowType: 'pkce',
         persistSession: true,
         storageKey: 'poik-poik-auth',
         storage: window.localStorage,
@@ -69,32 +68,42 @@ async function updateHeaderAvatar() {
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// Listen for auth state changes (most reliable for Safari)
-SB.auth.onAuthStateChange(async (event, session) => {
-    console.log("Auth Event:", event);
-    if (session) {
-        USER = session.user;
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-        console.log("Session active for:", session.user?.email);
-        
-        // Refresh feed if needed
-        if (typeof loadFeed === 'function') {
-            loadFeed();
-        }
-    } else if (event === 'SIGNED_OUT') {
-        USER = null;
-        console.log("User signed out");
+// ========== EMAIL AUTOFILL ==========
+function saveEmail(email) {
+    if (email) {
+        localStorage.setItem('poik-poik-email', email);
     }
-});
+}
 
-function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
+function getSavedEmail() {
+    return localStorage.getItem('poik-poik-email') || '';
+}
+
+function loadSavedEmail() {
+    const emailInput = document.getElementById('authEmail');
+    if (emailInput && getSavedEmail()) {
+        emailInput.value = getSavedEmail();
+    }
+}
+
+// ========== AUTH ==========
+function openAuthModal() { 
+    if (USER) return; 
+    document.getElementById('authModal').style.display = 'flex';
+    loadSavedEmail(); // Auto-fill saved email
+}
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
+
+// FIX #3: Change text from "Magic Link" to "One-time password"
+document.getElementById('magicLoginBtn').innerHTML = 'Send One-time password';
 
 document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
+    
+    // Save email for next time (FIX #2)
+    saveEmail(email);
     
     const { error } = await SB.auth.signInWithOtp({ 
         email: email.trim(), 
@@ -106,7 +115,8 @@ document.getElementById('magicLoginBtn').onclick = async () => {
     if (error) { 
         alert('Error: ' + error.message); 
     } else { 
-        alert('Magic link sent! Check your email.'); 
+        // FIX #3: Changed message from "Magic link" to "One-time password"
+        alert('One-time password sent! Check your email.'); 
         closeAuthModal(); 
         document.getElementById('authEmail').value = ''; 
     }
@@ -116,6 +126,7 @@ async function logout() {
     await SB.auth.signOut(); 
     USER = null; 
     localStorage.removeItem('poik-poik-auth');
+    localStorage.removeItem('poik-poik-email');
     if (timestampInterval) clearInterval(timestampInterval); 
     location.reload(); 
 }
@@ -168,18 +179,59 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
+// FIX #1: Universal session restore that works on ALL devices
 async function restoreSession() {
-    const { data: { session } } = await SB.auth.getSession();
-    if (session) {
+    console.log("Restoring session...");
+    
+    // Try multiple methods to restore session
+    let session = null;
+    
+    // Method 1: Get from Supabase
+    const { data: { session: supabaseSession } } = await SB.auth.getSession();
+    session = supabaseSession;
+    
+    // Method 2: Try manual localStorage
+    if (!session) {
+        const stored = localStorage.getItem('poik-poik-auth');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.currentSession) {
+                    session = parsed.currentSession;
+                }
+            } catch(e) {}
+        }
+    }
+    
+    if (session && session.user) {
         USER = session.user;
         await loadUserInteractions();
         await updateHeaderAvatar();
+        console.log("Session restored for:", USER?.email);
         return true;
     }
+    
+    console.log("No session found");
     return false;
 }
 
-// Initialize auth on page load
+// Listen for auth state changes
+SB.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth Event:", event);
+    if (session && session.user) {
+        USER = session.user;
+        await loadUserInteractions();
+        await updateHeaderAvatar();
+        // Refresh feed
+        if (typeof loadFeed === 'function') {
+            loadFeed();
+        }
+    } else if (event === 'SIGNED_OUT') {
+        USER = null;
+    }
+});
+
+// Initialize on page load
 (async function init() {
     await handleMagicLink();
     await restoreSession();
