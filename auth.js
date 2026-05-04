@@ -4,7 +4,6 @@ const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
 
 const SB = window.supabase.createClient(API_URL, API_KEY, {
     auth: {
-        flowType: 'pkce',
         persistSession: true,
         storageKey: 'poik-poik-auth',
         storage: window.localStorage,
@@ -17,7 +16,6 @@ let USER = null;
 let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 let timestampInterval = null;
-let sessionCheckInterval = null;
 
 let userLikedPosts = new Set();
 let userLikedComments = new Set();
@@ -69,11 +67,8 @@ async function updateHeaderAvatar() {
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// Save email for autofill
 function saveEmail(email) {
-    if (email) {
-        localStorage.setItem('poik-poik-email', email);
-    }
+    if (email) localStorage.setItem('poik-poik-email', email);
 }
 
 function getSavedEmail() {
@@ -87,56 +82,27 @@ function loadSavedEmail() {
     }
 }
 
-// Backup session
-function backupSession(session) {
-    if (session && session.access_token) {
-        localStorage.setItem('poik-poik-auth-backup', JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at: session.expires_at
-        }));
-    }
-}
-
-// Session restore for mobile
-async function restoreSession() {
-    console.log("🔄 Restoring session...");
+// ========== SIMPLE SESSION RESTORE ==========
+async function restoreAndLoad() {
+    console.log("Restoring session...");
     
+    // Get session from Supabase
     const { data: { session } } = await SB.auth.getSession();
     
     if (session && session.user) {
         USER = session.user;
         await loadUserInteractions();
         await updateHeaderAvatar();
-        console.log("✅ Session restored for:", USER?.email);
-        if (typeof loadFeed === 'function') loadFeed();
-        return true;
+        console.log("User restored:", USER.email);
     }
     
-    const backup = localStorage.getItem('poik-poik-auth-backup');
-    if (backup) {
-        try {
-            const parsed = JSON.parse(backup);
-            const { data } = await SB.auth.setSession({
-                access_token: parsed.access_token,
-                refresh_token: parsed.refresh_token
-            });
-            if (data.session) {
-                USER = data.session.user;
-                await loadUserInteractions();
-                await updateHeaderAvatar();
-                console.log("✅ Session restored from backup");
-                if (typeof loadFeed === 'function') loadFeed();
-                return true;
-            }
-        } catch(e) {}
+    // Always load feed
+    if (typeof loadFeed === 'function') {
+        loadFeed();
     }
-    
-    console.log("❌ No session found");
-    return false;
 }
 
-// ========== AUTH with CUSTOM EMAIL ==========
+// ========== AUTH ==========
 function openAuthModal() { 
     if (USER) return; 
     document.getElementById('authModal').style.display = 'flex';
@@ -153,8 +119,7 @@ document.getElementById('magicLoginBtn').onclick = async () => {
     
     saveEmail(email);
     
-    // First, get the magic link from Supabase
-    const { data, error } = await SB.auth.signInWithOtp({ 
+    const { error } = await SB.auth.signInWithOtp({ 
         email: email.trim(), 
         options: { 
             emailRedirectTo: window.location.origin
@@ -163,40 +128,10 @@ document.getElementById('magicLoginBtn').onclick = async () => {
     
     if (error) { 
         alert('Error: ' + error.message); 
-        return;
-    }
-    
-    // Try to send custom email via edge function
-    try {
-        // Get the magic link URL (Supabase generates it)
-        // For now, we'll just use the default email
-        // The custom email will be sent separately
-        
-        // Call edge function to send custom email
-        const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/functions/v1/send-login-email', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify({ 
-                email: email.trim(),
-                login_link: `${window.location.origin}`
-            })
-        });
-        
-        const result = await response.json();
-        console.log("Custom email result:", result);
-        
-        alert('Verification email sent! Check your inbox.');
-        closeAuthModal();
-        document.getElementById('authEmail').value = '';
-        
-    } catch(e) {
-        console.log("Custom email failed, using default:", e);
-        alert('Verification email sent! Check your inbox.');
-        closeAuthModal();
-        document.getElementById('authEmail').value = '';
+    } else { 
+        alert('Verification email sent! Check your inbox.'); 
+        closeAuthModal(); 
+        document.getElementById('authEmail').value = ''; 
     }
 };
 
@@ -204,10 +139,8 @@ async function logout() {
     await SB.auth.signOut(); 
     USER = null; 
     localStorage.removeItem('poik-poik-auth');
-    localStorage.removeItem('poik-poik-auth-backup');
     localStorage.removeItem('poik-poik-email');
     if (timestampInterval) clearInterval(timestampInterval); 
-    if (sessionCheckInterval) clearInterval(sessionCheckInterval);
     location.reload(); 
 }
 
@@ -219,8 +152,6 @@ async function handleMagicLink() {
         const refresh_token = params.get('refresh_token');
         if (access_token) { 
             await SB.auth.setSession({ access_token, refresh_token });
-            const { data: { session } } = await SB.auth.getSession();
-            if (session) backupSession(session);
             window.location.href = window.location.pathname; 
         }
     }
@@ -232,8 +163,6 @@ async function checkAuth() {
     if (USER) {
         await loadUserInteractions();
         await updateHeaderAvatar();
-        const { data: { session } } = await SB.auth.getSession();
-        if (session) backupSession(session);
     }
     return user; 
 }
@@ -263,43 +192,9 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// Listen for auth changes
-SB.auth.onAuthStateChange(async (event, session) => {
-    console.log("Auth Event:", event);
-    if (session && session.user) {
-        USER = session.user;
-        backupSession(session);
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-        if (typeof loadFeed === 'function') loadFeed();
-    } else if (event === 'SIGNED_OUT') {
-        USER = null;
-        localStorage.removeItem('poik-poik-auth-backup');
-    }
-});
-
-// Periodically check session
-function startSessionMonitor() {
-    if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-    sessionCheckInterval = setInterval(async () => {
-        const { data: { session } } = await SB.auth.getSession();
-        if (session && session.user && !USER) {
-            console.log("Session monitor restored user");
-            USER = session.user;
-            await loadUserInteractions();
-            await updateHeaderAvatar();
-            if (typeof loadFeed === 'function') loadFeed();
-        }
-    }, 30000);
-}
-
 // Initialize
-(async function init() {
-    await handleMagicLink();
-    await restoreSession();
-    startSessionMonitor();
-    if (typeof loadFeed === 'function') loadFeed();
-})();
+handleMagicLink();
+restoreAndLoad();
 
 window.openAuthModal = openAuthModal;
 window.logout = logout;
@@ -307,4 +202,3 @@ window.checkAuth = checkAuth;
 window.handleMagicLink = handleMagicLink;
 window.updateHeaderAvatar = updateHeaderAvatar;
 window.loadUserInteractions = loadUserInteractions;
-window.restoreSession = restoreSession;
