@@ -136,7 +136,7 @@ async function viewProfile(userId) {
         
         let html = `
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <button onclick="loadFeed()" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 20px; margin-bottom: 20px; cursor: pointer;">← Back to Feed</button>
+                <button onclick="goToHome()" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 20px; margin-bottom: 20px; cursor: pointer;">← Back to Feed</button>
                 <div style="text-align: center; background: #0a0a0a; border-radius: 20px; padding: 30px; margin-bottom: 20px;">
                     <div style="width: 100px; height: 100px; margin: 0 auto 15px;">${avatarHtml}</div>
                     <h2>${escapeHtml(profile?.username || 'User')}</h2>
@@ -328,6 +328,13 @@ async function uploadPost() {
     closeUploadModal(); 
     loadFeed();
 }
+// ========== GO TO HOME ==========
+function goToHome() {
+    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    const homeBtn = document.querySelector('.bottom-nav-item:first-child');
+    if (homeBtn) homeBtn.classList.add('active');
+    loadFeed();
+}
 
 // ========== MAKE FUNCTIONS GLOBAL ==========
 window.loadFeed = loadFeed;
@@ -349,3 +356,4 @@ window.uploadPost = uploadPost;
 window.togglePostMenu = togglePostMenu;
 window.changePostPrivacy = changePostPrivacy;
 window.deletePost = deletePost;
+window.goToHome = goToHome;
