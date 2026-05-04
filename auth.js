@@ -1,7 +1,12 @@
 // Supabase Configuration
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-const SB = window.supabase.createClient(API_URL, API_KEY);
+const SB = window.supabase.createClient(API_URL, API_KEY, {
+    auth: {
+        persistSession: true,
+        storage: window.localStorage
+    }
+});
 
 let USER = null;
 let CURRENT_TAB = 'feed';
