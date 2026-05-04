@@ -1,24 +1,66 @@
-// ========== FEED FUNCTIONS ==========
+// ========== FAST FEED WITH INFINITE SCROLL ==========
+let currentPage = 0;
+const POSTS_PER_PAGE = 10;
+let isLoading = false;
+let hasMorePosts = true;
+let allPostsLoaded = false;
 
-async function loadFeed() {
+async function loadFeed(reset = true) {
     const feedDiv = document.getElementById("feed");
     if (!feedDiv) return;
     
-    feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
+    if (reset) {
+        currentPage = 0;
+        hasMorePosts = true;
+        allPostsLoaded = false;
+        feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
+    }
+    
+    if (isLoading) return;
+    isLoading = true;
     
     try {
-        await loadUserInteractions();  // ADD THIS LINE
+        // Load user interactions first (for like colors)
+        if (typeof loadUserInteractions === 'function') {
+            await loadUserInteractions();
+        }
         
-        const { data: posts, error } = await SB.from("posts").select("*").order("id", { ascending: false });
+        // FAST: Use RPC to get posts with likes and comments in ONE query
+        const { data: postsData, error } = await SB
+            .rpc('get_fast_feed', { 
+                limit_num: POSTS_PER_PAGE, 
+                offset_num: currentPage * POSTS_PER_PAGE 
+            });
         
         if (error) throw error;
         
+        let posts = [];
+        if (postsData && typeof postsData === 'string') {
+            posts = JSON.parse(postsData);
+        } else if (Array.isArray(postsData)) {
+            posts = postsData;
+        } else {
+            posts = [];
+        }
+        
+        if (reset) {
+            feedDiv.innerHTML = '';
+        }
+        
         if (!posts || posts.length === 0) {
-            feedDiv.innerHTML = '<div class="loading">No posts yet. Create your first post!</div>';
+            if (reset) {
+                feedDiv.innerHTML = '<div class="loading">No posts yet. Create your first post!</div>';
+            } else {
+                hasMorePosts = false;
+                allPostsLoaded = true;
+                const loadingDiv = document.querySelector('.loading-more');
+                if (loadingDiv) loadingDiv.remove();
+            }
+            isLoading = false;
             return;
         }
         
-        // Get user profiles
+        // Get user profiles for these posts
         const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
         let profiles = {};
         
@@ -32,12 +74,8 @@ async function loadFeed() {
         let html = '';
         
         for (const p of posts) {
-            const { count: likeCount } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
             const isLiked = USER && userLikedPosts.has(Number(p.id));
-            
-            const { count: commentCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-            const totalCount = commentCount + replyCount;
+            const totalCount = (p.comments_count || 0);
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
@@ -48,7 +86,7 @@ async function loadFeed() {
             } else if (p.user_id && profiles[p.user_id]) {
                 displayName = profiles[p.user_id].username || 'Member';
                 avatarHtml = profiles[p.user_id].avatar_url ? 
-                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">` : 
+                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;" loading="lazy">` : 
                     '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else {
                 displayName = 'Member';
@@ -56,7 +94,7 @@ async function loadFeed() {
             }
             
             html += `
-                <div class="post">
+                <div class="post" data-post-id="${p.id}">
                     <div class="post-header">
                         <div class="post-header-left">
                             ${avatarHtml}
@@ -68,7 +106,7 @@ async function loadFeed() {
                     <div class="post-actions-right">
                         <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
                             <i class="fas fa-heart"></i>
-                            <span id="likes-${p.id}">${likeCount || 0}</span>
+                            <span id="likes-${p.id}">${p.likes_count || 0}</span>
                         </div>
                         <div class="action-icon" onclick="toggleComments(${p.id})">
                             <i class="far fa-comment-dots"></i>
@@ -98,12 +136,63 @@ async function loadFeed() {
             `;
         }
         
-        feedDiv.innerHTML = html;
+        if (reset) {
+            feedDiv.innerHTML = html;
+        } else {
+            feedDiv.insertAdjacentHTML('beforeend', html);
+        }
+        
+        currentPage++;
+        
+        // Check if we have more posts
+        if (posts.length < POSTS_PER_PAGE) {
+            hasMorePosts = false;
+            allPostsLoaded = true;
+        } else {
+            // Add loading trigger at bottom
+            const loadingTrigger = document.createElement('div');
+            loadingTrigger.className = 'loading-more';
+            loadingTrigger.innerHTML = '<div class="loading">Loading more...</div>';
+            loadingTrigger.id = 'loading-more';
+            
+            // Remove old trigger if exists
+            const oldTrigger = document.getElementById('loading-more');
+            if (oldTrigger) oldTrigger.remove();
+            
+            feedDiv.appendChild(loadingTrigger);
+        }
         
     } catch (err) {
         console.error("Feed error:", err);
-        feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error: ${err.message}</div>`;
+        if (reset) {
+            feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error: ${err.message}</div>`;
+        }
     }
+    
+    isLoading = false;
+}
+
+// ========== INFINITE SCROLL ==========
+function setupInfiniteScroll() {
+    window.addEventListener('scroll', () => {
+        if (isLoading) return;
+        if (!hasMorePosts) return;
+        
+        const scrollPosition = window.innerHeight + window.scrollY;
+        const bottomPosition = document.body.offsetHeight - 500;
+        
+        if (scrollPosition >= bottomPosition) {
+            loadFeed(false);
+        }
+    });
+}
+
+// ========== REFRESH FEED (for after upload/delete) ==========
+async function refreshFeed() {
+    currentPage = 0;
+    hasMorePosts = true;
+    isLoading = false;
+    await loadFeed(true);
 }
 
 // ========== VIEW PROFILE ==========
@@ -158,7 +247,7 @@ async function viewProfile(userId) {
                     ${posts?.length === 0 ? '<div style="color: #888; text-align: center; padding: 40px;">No posts yet</div>' : ''}
                     ${posts?.map(p => `
                         <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                            <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" cursor: pointer;">
+                            <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
                             <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                         </div>
                     `).join('') || ''}
@@ -222,13 +311,13 @@ function togglePostMenu(postId) {
 
 async function changePostPrivacy(postId, newPrivacy) { 
     await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); 
-    loadFeed(); 
+    refreshFeed(); 
 }
 
 async function deletePost(postId) { 
     if (confirm('Delete this post?')) { 
         await SB.from("posts").delete().eq("id", postId); 
-        loadFeed(); 
+        refreshFeed(); 
     } 
 }
 
@@ -282,7 +371,7 @@ function closeUploadModal() {
 
 function switchTab(tab) { 
     CURRENT_TAB = tab; 
-    loadFeed(); 
+    refreshFeed(); 
 }
 
 function bottomNav(page) {
@@ -326,18 +415,23 @@ async function uploadPost() {
     await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
     alert("Posted!"); 
     closeUploadModal(); 
-    loadFeed();
+    refreshFeed();
 }
+
 // ========== GO TO HOME ==========
 function goToHome() {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
     if (homeBtn) homeBtn.classList.add('active');
-    loadFeed();
+    refreshFeed();
 }
 
+// Initialize infinite scroll
+setupInfiniteScroll();
+
 // ========== MAKE FUNCTIONS GLOBAL ==========
-window.loadFeed = loadFeed;
+window.loadFeed = refreshFeed;
+window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
 window.toggleFollowFromProfile = toggleFollowFromProfile;
 window.likePost = likePost;
