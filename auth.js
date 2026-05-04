@@ -87,7 +87,7 @@ function loadSavedEmail() {
     }
 }
 
-// Backup session to localStorage
+// Backup session
 function backupSession(session) {
     if (session && session.access_token) {
         localStorage.setItem('poik-poik-auth-backup', JSON.stringify({
@@ -98,7 +98,7 @@ function backupSession(session) {
     }
 }
 
-// ========== CRITICAL: Session restore for mobile ==========
+// Session restore for mobile
 async function restoreSession() {
     console.log("🔄 Restoring session...");
     
@@ -113,7 +113,6 @@ async function restoreSession() {
         return true;
     }
     
-    // Try backup
     const backup = localStorage.getItem('poik-poik-auth-backup');
     if (backup) {
         try {
@@ -137,7 +136,7 @@ async function restoreSession() {
     return false;
 }
 
-// ========== AUTH ==========
+// ========== AUTH with CUSTOM EMAIL ==========
 function openAuthModal() { 
     if (USER) return; 
     document.getElementById('authModal').style.display = 'flex';
@@ -154,36 +153,50 @@ document.getElementById('magicLoginBtn').onclick = async () => {
     
     saveEmail(email);
     
-    // Try custom email via edge function first
-    try {
-        const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/functions/v1/send-login-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Verification email sent! Check your inbox.');
-            closeAuthModal();
-            document.getElementById('authEmail').value = '';
-            return;
-        }
-    } catch(e) {
-        console.log("Custom email failed, using default:", e);
-    }
-    
-    // Fallback to default Supabase email
-    const { error } = await SB.auth.signInWithOtp({ 
+    // First, get the magic link from Supabase
+    const { data, error } = await SB.auth.signInWithOtp({ 
         email: email.trim(), 
-        options: { emailRedirectTo: window.location.origin }
+        options: { 
+            emailRedirectTo: window.location.origin
+        } 
     });
     
     if (error) { 
         alert('Error: ' + error.message); 
-    } else { 
-        alert('Verification email sent! Check your inbox.'); 
-        closeAuthModal(); 
-        document.getElementById('authEmail').value = ''; 
+        return;
+    }
+    
+    // Try to send custom email via edge function
+    try {
+        // Get the magic link URL (Supabase generates it)
+        // For now, we'll just use the default email
+        // The custom email will be sent separately
+        
+        // Call edge function to send custom email
+        const response = await fetch('https://xxnuhisweolpibzthjcc.supabase.co/functions/v1/send-login-email', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({ 
+                email: email.trim(),
+                login_link: `${window.location.origin}`
+            })
+        });
+        
+        const result = await response.json();
+        console.log("Custom email result:", result);
+        
+        alert('Verification email sent! Check your inbox.');
+        closeAuthModal();
+        document.getElementById('authEmail').value = '';
+        
+    } catch(e) {
+        console.log("Custom email failed, using default:", e);
+        alert('Verification email sent! Check your inbox.');
+        closeAuthModal();
+        document.getElementById('authEmail').value = '';
     }
 };
 
