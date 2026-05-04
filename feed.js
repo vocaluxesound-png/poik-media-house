@@ -3,7 +3,6 @@ let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
-let allPostsLoaded = false;
 
 async function loadFeed(reset = true) {
     const feedDiv = document.getElementById("feed");
@@ -12,7 +11,6 @@ async function loadFeed(reset = true) {
     if (reset) {
         currentPage = 0;
         hasMorePosts = true;
-        allPostsLoaded = false;
         feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     }
     
@@ -50,12 +48,8 @@ async function loadFeed(reset = true) {
         if (!posts || posts.length === 0) {
             if (reset) {
                 feedDiv.innerHTML = '<div class="loading">No posts yet. Create your first post!</div>';
-            } else {
-                hasMorePosts = false;
-                allPostsLoaded = true;
-                const loadingDiv = document.querySelector('.loading-more');
-                if (loadingDiv) loadingDiv.remove();
             }
+            hasMorePosts = false;
             isLoading = false;
             return;
         }
@@ -147,19 +141,16 @@ async function loadFeed(reset = true) {
         // Check if we have more posts
         if (posts.length < POSTS_PER_PAGE) {
             hasMorePosts = false;
-            allPostsLoaded = true;
         } else {
-            // Add loading trigger at bottom
-            const loadingTrigger = document.createElement('div');
-            loadingTrigger.className = 'loading-more';
-            loadingTrigger.innerHTML = '<div class="loading">Loading more...</div>';
-            loadingTrigger.id = 'loading-more';
-            
-            // Remove old trigger if exists
-            const oldTrigger = document.getElementById('loading-more');
-            if (oldTrigger) oldTrigger.remove();
-            
-            feedDiv.appendChild(loadingTrigger);
+            // Add loading indicator at bottom
+            let loadingDiv = document.getElementById('loading-more');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loading-more';
+                loadingDiv.className = 'loading-more';
+                loadingDiv.innerHTML = '<div class="loading">Loading more...</div>';
+                feedDiv.appendChild(loadingDiv);
+            }
         }
         
     } catch (err) {
@@ -187,12 +178,12 @@ function setupInfiniteScroll() {
     });
 }
 
-// ========== REFRESH FEED (for after upload/delete) ==========
-async function refreshFeed() {
+// ========== REFRESH FEED (without infinite loop) ==========
+function refreshFeed() {
     currentPage = 0;
     hasMorePosts = true;
     isLoading = false;
-    await loadFeed(true);
+    loadFeed(true);
 }
 
 // ========== VIEW PROFILE ==========
@@ -430,7 +421,7 @@ function goToHome() {
 setupInfiniteScroll();
 
 // ========== MAKE FUNCTIONS GLOBAL ==========
-window.loadFeed = refreshFeed;
+window.loadFeed = loadFeed;
 window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
 window.toggleFollowFromProfile = toggleFollowFromProfile;
