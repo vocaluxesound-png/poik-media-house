@@ -1,249 +1,138 @@
-// Supabase Configuration
-const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
-const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Poik Poik</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-const SB = window.supabase.createClient(API_URL, API_KEY, {
-    auth: {
-        flowType: 'pkce',
-        persistSession: true,
-        storageKey: 'poik-poik-auth',
-        storage: window.localStorage,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-    }
-});
+<div class="header">
+<div class="header-content">
+<div class="logo">POIK POIK</div>
+<div class="header-icons">
+<i class="fas fa-search" onclick="openSearchModal()" style="cursor: pointer;"></i>
+<i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444; cursor: pointer;" title="Logout"></i>
+<div id="headerAvatar" class="header-avatar" onclick="openAuthModal()" style="cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+<i class="fas fa-user" style="color: white;"></i>
+</div>
+</div>
+</div>
+</div>
 
-let USER = null;
-let CURRENT_TAB = 'feed';
-let SHARE_URL = '';
-let timestampInterval = null;
+<div class="top-nav">
+<button class="nav-item active" onclick="switchTab('feed')">Feed</button>
+<button class="nav-item" onclick="switchTab('explore')">Explore</button>
+<button class="nav-item" onclick="switchTab('following')">Following</button>
+</div>
 
-let userLikedPosts = new Set();
-let userLikedComments = new Set();
-let userDislikedComments = new Set();
-let userLikedReplies = new Set();
-let userDislikedReplies = new Set();
+<div id="feed" class="feed"><div class="loading">Loading...</div></div>
 
-function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+<!-- Search Modal -->
+<div id="searchModal" class="search-modal" style="display: none;">
+<div class="search-modal-content">
+<div class="search-header">
+<i class="fas fa-search"></i>
+<input type="text" id="searchInput" placeholder="Search users, posts..." autocomplete="off">
+<i class="fas fa-times" onclick="closeSearchModal()" style="cursor: pointer;"></i>
+</div>
+<div id="searchResults" class="search-results"></div>
+</div>
+</div>
 
-function timeAgo(dateString) {
-    if (!dateString) return '';
-    const now = new Date();
-    const then = new Date(dateString);
-    const seconds = Math.floor((now - then) / 1000);
-    if (seconds < 60) return 'just now';
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    return `${Math.floor(days / 7)}w ago`;
-}
+<div class="bottom-nav">
+<div class="bottom-nav-items">
+<button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
+<button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
+<div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
+<button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
+<button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
+</div>
+</div>
 
-function updateAllTimestamps() {
-    document.querySelectorAll('.comment-time, .reply-time').forEach(el => {
-        const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) el.textContent = timeAgo(timestamp);
-    });
-}
+<div id="uploadModal" class="upload-modal">
+<h3>Upload</h3>
+<input type="file" id="uploadFile" accept="image/*">
+<input type="text" id="uploadCaption" placeholder="Caption...">
+<select id="uploadPrivacy" class="privacy-select">
+<option value="public">🌍 Public</option>
+<option value="friends">👥 Friends Only</option>
+<option value="private">🔒 Only Me</option>
+</select>
+<button onclick="uploadPost()">Post</button>
+<button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
+</div>
 
-function startTimestampUpdater() {
-    if (timestampInterval) clearInterval(timestampInterval);
-    timestampInterval = setInterval(updateAllTimestamps, 60000);
-}
+<div id="shareModal" class="share-modal">
+<h3 style="text-align:center;">Share to</h3>
+<div class="share-options">
+<div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
+<div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
+<div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
+<div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
+<div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
+</div>
+<button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
+</div>
 
-async function updateHeaderAvatar() {
-    const headerAvatar = document.getElementById('headerAvatar');
-    if (!headerAvatar) return;
+<div id="imageModal" class="modal" onclick="closeModal()">
+<span class="close-modal" onclick="closeModal()">&times;</span>
+<img id="modalImage">
+</div>
+
+<div id="authModal" class="auth-modal">
+<div class="auth-box">
+<h3 style="margin-bottom:20px;">Join Poik Poik</h3>
+<p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a one-time password</p>
+<input type="email" id="authEmail" placeholder="Email">
+<button id="magicLoginBtn" class="magic-btn">Send One-time password</button>
+<button id="closeAuthBtn" class="cancel-btn">Cancel</button>
+</div>
+</div>
+
+<div id="editProfileModal" class="edit-profile-modal">
+<div class="edit-profile-box">
+<h3 style="margin-bottom:20px;">Edit Profile</h3>
+<input type="text" id="editUsername" placeholder="Username">
+<textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
+<button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
+<button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
+</div>
+</div>
+
+<input type="file" id="avatarInput" accept="image/*">
+
+<script src="auth.js"></script>
+<script src="profile.js"></script>
+<script src="comments.js"></script>
+<script src="feed.js"></script>
+<script src="friends.js"></script>
+<script src="search.js"></script>
+
+<script>
+async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
+initStorage();
+
+// First, handle magic link from URL
+handleMagicLink();
+
+// Then restore existing session or check auth
+(async function() {
+    // Try to restore existing session first
+    const sessionRestored = await restoreSession();
     
-    if (USER && USER.id) {
-        const { data: profile } = await SB.from("profiles").select("avatar_url").eq("id", USER.id).single();
-        if (profile && profile.avatar_url) {
-            headerAvatar.innerHTML = `<img src="${profile.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
-            return;
-        }
-    }
-    headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
-}
-
-// ========== EMAIL AUTOFILL ==========
-function saveEmail(email) {
-    if (email) {
-        localStorage.setItem('poik-poik-email', email);
-    }
-}
-
-function getSavedEmail() {
-    return localStorage.getItem('poik-poik-email') || '';
-}
-
-function loadSavedEmail() {
-    const emailInput = document.getElementById('authEmail');
-    if (emailInput && getSavedEmail()) {
-        emailInput.value = getSavedEmail();
-    }
-}
-
-// ========== AUTH ==========
-function openAuthModal() { 
-    if (USER) return; 
-    document.getElementById('authModal').style.display = 'flex';
-    loadSavedEmail(); // Auto-fill saved email
-}
-function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
-document.getElementById('closeAuthBtn').onclick = closeAuthModal;
-
-// FIX #3: Change text from "Magic Link" to "One-time password"
-document.getElementById('magicLoginBtn').innerHTML = 'Send One-time password';
-
-document.getElementById('magicLoginBtn').onclick = async () => {
-    const email = document.getElementById('authEmail').value;
-    if (!email) { alert('Enter your email'); return; }
-    
-    // Save email for next time (FIX #2)
-    saveEmail(email);
-    
-    const { error } = await SB.auth.signInWithOtp({ 
-        email: email.trim(), 
-        options: { 
-            emailRedirectTo: window.location.origin
-        } 
-    });
-    
-    if (error) { 
-        alert('Error: ' + error.message); 
-    } else { 
-        // FIX #3: Changed message from "Magic link" to "One-time password"
-        alert('One-time password sent! Check your email.'); 
-        closeAuthModal(); 
-        document.getElementById('authEmail').value = ''; 
-    }
-};
-
-async function logout() { 
-    await SB.auth.signOut(); 
-    USER = null; 
-    localStorage.removeItem('poik-poik-auth');
-    localStorage.removeItem('poik-poik-email');
-    if (timestampInterval) clearInterval(timestampInterval); 
-    location.reload(); 
-}
-
-async function handleMagicLink() {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token) { 
-            await SB.auth.setSession({ access_token, refresh_token }); 
-            window.location.href = window.location.pathname; 
-        }
-    }
-}
-
-async function checkAuth() { 
-    const { data: { user } } = await SB.auth.getUser(); 
-    USER = user; 
-    if (USER) {
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-    }
-    return user; 
-}
-
-async function loadUserInteractions() {
-    if (!USER) return;
-    
-    userLikedPosts.clear();
-    userLikedComments.clear();
-    userDislikedComments.clear();
-    userLikedReplies.clear();
-    userDislikedReplies.clear();
-    
-    const { data: postLikes } = await SB.from("post_likes").select("post_id").eq("user_id", USER.id);
-    if (postLikes) postLikes.forEach(l => userLikedPosts.add(Number(l.post_id)));
-    
-    const { data: commentLikes } = await SB.from("comment_likes").select("comment_id").eq("user_id", USER.id);
-    if (commentLikes) commentLikes.forEach(l => userLikedComments.add(Number(l.comment_id)));
-    
-    const { data: commentDislikes } = await SB.from("comment_dislikes").select("comment_id").eq("user_id", USER.id);
-    if (commentDislikes) commentDislikes.forEach(d => userDislikedComments.add(Number(d.comment_id)));
-    
-    const { data: replyLikes } = await SB.from("reply_likes").select("reply_id").eq("user_id", USER.id);
-    if (replyLikes) replyLikes.forEach(l => userLikedReplies.add(Number(l.reply_id)));
-    
-    const { data: replyDislikes } = await SB.from("reply_dislikes").select("reply_id").eq("user_id", USER.id);
-    if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
-}
-
-// FIX #1: Universal session restore that works on ALL devices
-async function restoreSession() {
-    console.log("Restoring session...");
-    
-    // Try multiple methods to restore session
-    let session = null;
-    
-    // Method 1: Get from Supabase
-    const { data: { session: supabaseSession } } = await SB.auth.getSession();
-    session = supabaseSession;
-    
-    // Method 2: Try manual localStorage
-    if (!session) {
-        const stored = localStorage.getItem('poik-poik-auth');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (parsed && parsed.currentSession) {
-                    session = parsed.currentSession;
-                }
-            } catch(e) {}
-        }
+    if (!sessionRestored) {
+        // No session, check auth normally
+        await checkAuth();
     }
     
-    if (session && session.user) {
-        USER = session.user;
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-        console.log("Session restored for:", USER?.email);
-        return true;
-    }
-    
-    console.log("No session found");
-    return false;
-}
-
-// Listen for auth state changes
-SB.auth.onAuthStateChange(async (event, session) => {
-    console.log("Auth Event:", event);
-    if (session && session.user) {
-        USER = session.user;
-        await loadUserInteractions();
-        await updateHeaderAvatar();
-        // Refresh feed
-        if (typeof loadFeed === 'function') {
-            loadFeed();
-        }
-    } else if (event === 'SIGNED_OUT') {
-        USER = null;
-    }
-});
-
-// Initialize on page load
-(async function init() {
-    await handleMagicLink();
-    await restoreSession();
+    // Load feed if loadFeed exists
     if (typeof loadFeed === 'function') {
         loadFeed();
     }
 })();
-
-window.openAuthModal = openAuthModal;
-window.logout = logout;
-window.checkAuth = checkAuth;
-window.handleMagicLink = handleMagicLink;
-window.updateHeaderAvatar = updateHeaderAvatar;
-window.loadUserInteractions = loadUserInteractions;
-window.restoreSession = restoreSession;
+</script>
+</body>
+</html>
