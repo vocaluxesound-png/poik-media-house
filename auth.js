@@ -8,7 +8,6 @@ let CURRENT_TAB = 'feed';
 let SHARE_URL = '';
 let timestampInterval = null;
 
-// Global Sets for likes/dislikes
 let userLikedPosts = new Set();
 let userLikedComments = new Set();
 let userDislikedComments = new Set();
@@ -45,12 +44,10 @@ function startTimestampUpdater() {
     timestampInterval = setInterval(updateAllTimestamps, 60000);
 }
 
-// ========== HEADER AVATAR FIXED ==========
 async function updateHeaderAvatar() {
     const headerAvatar = document.getElementById('headerAvatar');
     if (!headerAvatar) return;
     
-    // Fetch fresh profile data from database
     if (USER && USER.id) {
         const { data: profile } = await SB.from("profiles").select("avatar_url").eq("id", USER.id).single();
         if (profile && profile.avatar_url) {
@@ -58,12 +55,9 @@ async function updateHeaderAvatar() {
             return;
         }
     }
-    
-    // Fallback to default
     headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// ========== SESSION PERSISTENCE ==========
 async function refreshSession() {
     const { data: { session } } = await SB.auth.getSession();
     if (session) {
@@ -73,7 +67,6 @@ async function refreshSession() {
 }
 setInterval(refreshSession, 30 * 60 * 1000);
 
-// ========== AUTH ==========
 function openAuthModal() { if (USER) return; document.getElementById('authModal').style.display = 'flex'; }
 function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 document.getElementById('closeAuthBtn').onclick = closeAuthModal;
@@ -110,16 +103,9 @@ async function checkAuth() {
         await loadUserInteractions();
         await updateHeaderAvatar();
     }
-    const userIcon = document.querySelector('.fa-user-circle');
-    if (user) { 
-        if (userIcon) { userIcon.classList.remove('far'); userIcon.classList.add('fas'); }
-    } else { 
-        if (userIcon) { userIcon.classList.remove('fas'); userIcon.classList.add('far'); }
-    }
     return user; 
 }
 
-// ========== LOAD USER INTERACTIONS ==========
 async function loadUserInteractions() {
     if (!USER) return;
     
@@ -145,7 +131,6 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// Make functions global
 window.openAuthModal = openAuthModal;
 window.logout = logout;
 window.checkAuth = checkAuth;
