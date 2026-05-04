@@ -350,8 +350,18 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .search-result-item:hover {
     background: #2a2a2a;
 }
+
 .loading-more {
     text-align: center;
     padding: 20px;
     color: #888;
+}
+
+/* Bottom nav active state */
+.bottom-nav-item.active {
+    color: #00ff88 !important;
+}
+
+.bottom-nav-item.active i {
+    color: #00ff88 !important;
 }
