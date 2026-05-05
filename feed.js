@@ -4,8 +4,8 @@ let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
-let isProfileView = false;
-let isFriendsView = false;  // NEW: For friends page
+window.isProfileView = false;
+window.isFriendsView = false;  // NEW: For friends page
 
 // Safe avatar function - prevents 400 errors
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
