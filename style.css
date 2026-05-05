@@ -434,18 +434,18 @@ input, select, textarea, button {
     color: #888;
 }
 
-/* Privacy button green color for active state */
+/* Privacy button green background with WHITE text for active state */
 .privacy-badge.privacy-public {
-    color: #00ff88 !important;
-    background: #222 !important;
+    background: #00ff88 !important;
+    color: white !important;
 }
 
 .privacy-badge.privacy-friends {
-    color: #00ff88 !important;
-    background: #222 !important;
+    background: #00ff88 !important;
+    color: white !important;
 }
 
 .privacy-badge.privacy-private {
-    color: #00ff88 !important;
-    background: #222 !important;
+    background: #00ff88 !important;
+    color: white !important;
 }
