@@ -20,7 +20,7 @@ function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
 
 async function loadFeed(reset = true) {
     // DON'T load feed if viewing profile or friends
-    if (isProfileView || isFriendsView) {
+    if (window.isProfileView || window.isFriendsView) {
         console.log("🚫 Skipping feed - other view active");
         return;
     }
@@ -172,7 +172,7 @@ function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
         if (!hasMorePosts) return;
-        if (isProfileView || isFriendsView) return;
+        if (window.isProfileView || window.isFriendsView) return;
         const scrollPosition = window.innerHeight + window.scrollY;
         const bottomPosition = document.body.offsetHeight - 500;
         if (scrollPosition >= bottomPosition) {
@@ -183,8 +183,8 @@ function setupInfiniteScroll() {
 
 function refreshFeed() {
     // Reset all view flags
-    isProfileView = false;
-    isFriendsView = false;
+    window.isProfileView = false;
+    window.isFriendsView = false;
     currentPage = 0;
     hasMorePosts = true;
     isLoading = false;
@@ -194,8 +194,8 @@ function refreshFeed() {
 // ========== LOAD PROFILE - FIXED ==========
 async function loadProfile() {
     // Set flag to prevent feed from loading
-    isProfileView = true;
-    isFriendsView = false;
+    window.isProfileView = true;
+    window.isFriendsView = false;
     
     if (!USER) { 
         alert('Please login'); 
@@ -325,8 +325,8 @@ async function viewProfile(userId) {
         return;
     }
     
-    isProfileView = true;
-    isFriendsView = false;
+    window.isProfileView = true;
+    window.isFriendsView = false;
     
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
@@ -401,8 +401,8 @@ async function viewProfile(userId) {
 
 function goToHome() {
     // Reset all flags
-    isProfileView = false;
-    isFriendsView = false;
+    window.isProfileView = false;
+    window.isFriendsView = false;
     
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
@@ -524,10 +524,11 @@ function bottomNav(page) {
     
     if (page === 'home') {
         document.querySelector('.bottom-nav-item:first-child').classList.add('active');
-        goToHome();  // Use goToHome instead of switchTab directly
+        goToHome();
     }
     if (page === 'friends') {
         document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
+        window.isFriendsView = true;
         if (typeof loadFriends === 'function') {
             loadFriends();
         } else {
