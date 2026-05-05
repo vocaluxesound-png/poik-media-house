@@ -115,20 +115,15 @@
 async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
 initStorage();
 
-// First, handle magic link from URL
+// Handle magic link from URL
 handleMagicLink();
 
-// Then restore existing session or check auth
+// Restore session or check auth
 (async function() {
-    // Try to restore existing session first
     const sessionRestored = await restoreSession();
-    
     if (!sessionRestored) {
-        // No session, check auth normally
         await checkAuth();
     }
-    
-    // Load feed if loadFeed exists
     if (typeof loadFeed === 'function') {
         loadFeed();
     }
