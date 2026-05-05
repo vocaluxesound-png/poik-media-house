@@ -5,16 +5,14 @@ const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
 
-// NEW: Helper function to get real comment+reply count for a post
+// Helper function to get real comment+reply count for a post
 async function getRealCommentCount(postId) {
     try {
-        // Get top-level comments count
         const { count: commentsCount } = await SB
             .from("comments")
             .select("*", { count: 'exact', head: true })
             .eq("post_id", postId);
         
-        // Get replies count
         const { count: repliesCount } = await SB
             .from("comment_replies")
             .select("*", { count: 'exact', head: true })
@@ -24,6 +22,19 @@ async function getRealCommentCount(postId) {
     } catch (err) {
         console.error("Error getting comment count:", err);
         return 0;
+    }
+}
+
+// Safe avatar function - prevents 400 errors
+function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
+    // Check if avatar URL is valid (exists, not empty, starts with http)
+    const isValidUrl = avatarUrl && avatarUrl.trim() !== '' && avatarUrl.startsWith('http');
+    
+    if (isValidUrl) {
+        return `<img src="${avatarUrl}" class="user-avatar" onclick="viewProfile('${userId}')" style="cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; object-fit: cover;" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`;
+    } else {
+        // Fallback avatar - no broken image request
+        return `<div class="avatar-placeholder" onclick="viewProfile('${userId}')" style="cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: ${size/2}px;">👤</div>`;
     }
 }
 
@@ -85,45 +96,26 @@ async function loadFeed(reset = true) {
         for (const p of posts) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             
-            // FIX: Get REAL comment count (comments + replies) for this post
+            // Get REAL comment count (comments + replies)
             let totalCount = p.comments_count || 0;
-            // If comments_count seems incomplete, fetch real count
-            // Check if there might be replies not counted
-            if (totalCount > 0) {
-                // We still need to add replies - but RPC might not include them
-                // Let's check if we need to add reply count
-                const { count: replyCount } = await SB
-                    .from("comment_replies")
-                    .select("*", { count: 'exact', head: true })
-                    .eq("post_id", p.id);
-                if (replyCount > 0) {
-                    totalCount = totalCount + replyCount;
-                }
-            } else {
-                // If zero, check if there are any replies (shouldn't happen often)
-                const { count: replyCount } = await SB
-                    .from("comment_replies")
-                    .select("*", { count: 'exact', head: true })
-                    .eq("post_id", p.id);
-                if (replyCount > 0) {
-                    const { count: commentCount } = await SB
-                        .from("comments")
-                        .select("*", { count: 'exact', head: true })
-                        .eq("post_id", p.id);
-                    totalCount = (commentCount || 0) + replyCount;
-                }
+            const { count: replyCount } = await SB
+                .from("comment_replies")
+                .select("*", { count: 'exact', head: true })
+                .eq("post_id", p.id);
+            if (replyCount > 0) {
+                totalCount = totalCount + replyCount;
             }
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
+            
             if (p.is_ai) {
                 displayName = 'Poik Poik';
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else if (p.user_id && profiles[p.user_id]) {
                 displayName = profiles[p.user_id].username || 'Member';
-                avatarHtml = profiles[p.user_id].avatar_url ?
-                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;" loading="lazy">` :
-                    '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
+                // Use safe avatar function
+                avatarHtml = getSafeAvatarHtml(profiles[p.user_id].avatar_url, p.user_id, 40);
             } else {
                 displayName = 'Member';
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
@@ -211,7 +203,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== VIEW PROFILE (FIXED - ONLY SHOWS USER'S POSTS) ==========
+// ========== VIEW PROFILE ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -242,8 +234,10 @@ async function viewProfile(userId) {
             isFollowing = followCheck && followCheck.length > 0;
         }
         
-        const avatarHtml = profile?.avatar_url ?
-            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` :
+        // Safe profile avatar
+        const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
+        const avatarHtml = isValidAvatar ?
+            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
             '<div style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px;">👤</div>';
         
         let html = `
