@@ -3,6 +3,7 @@
 // Fixed: restoreSession() now exists (was missing)
 // Fixed: onAuthStateChange listener for background tab recovery
 // Fixed: No duplicate handleMagicLink calls
+// Fixed: Feed reloads after SIGNED_IN event
 // ============================================================
 
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
@@ -108,7 +109,6 @@ async function sendMagicLink() {
         email: email.trim(),
         options: {
             emailRedirectTo: window.location.origin,
-            // Custom email template - change "Magic Link" to friendly text
             data: {
                 custom_template: true
             }
@@ -151,7 +151,6 @@ async function handleMagicLink() {
         const refresh_token = params.get('refresh_token');
         if (access_token) {
             await SB.auth.setSession({ access_token, refresh_token });
-            // Clean URL and reload
             window.location.href = window.location.pathname;
             return true;
         }
@@ -159,8 +158,7 @@ async function handleMagicLink() {
     return false;
 }
 
-// ─── restoreSession() - FIXED: This function EXISTS now! ─────
-// This is what index.html calls - it was missing before causing iOS logout
+// ─── restoreSession() ─────────────────────────────────────
 async function restoreSession() {
     try {
         const { data: { session }, error } = await SB.auth.getSession();
@@ -196,7 +194,7 @@ async function checkAuth() {
 }
 
 // ─── FIX: onAuthStateChange for iOS background tab recovery ─────
-// iOS Safari kills background timers - this catches token refresh events
+// AND reload feed after SIGNED_IN
 SB.auth.onAuthStateChange(async (event, session) => {
     console.log('🔐 Auth event:', event);
     
@@ -207,9 +205,18 @@ SB.auth.onAuthStateChange(async (event, session) => {
             await updateHeaderAvatar();
             startTimestampUpdater();
             
-            // ADD THIS LINE - to load feed after login
+            // CRITICAL FIX: Reload feed after login
             if (typeof loadFeed === 'function') {
+                console.log('🔄 Reloading feed after SIGNED_IN');
                 setTimeout(() => loadFeed(true), 100);
+            } else {
+                console.warn('⚠️ loadFeed not available yet, will retry');
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (typeof loadFeed === 'function') {
+                        loadFeed(true);
+                    }
+                }, 500);
             }
         }
     } else if (event === 'SIGNED_OUT') {
@@ -217,6 +224,11 @@ SB.auth.onAuthStateChange(async (event, session) => {
         const h = document.getElementById('headerAvatar');
         if (h) h.innerHTML = '<i class="fas fa-user" style="color:white;"></i>';
         if (timestampInterval) clearInterval(timestampInterval);
+        
+        // Also reload feed after logout (shows public posts)
+        if (typeof loadFeed === 'function') {
+            setTimeout(() => loadFeed(true), 100);
+        }
     }
 });
 
