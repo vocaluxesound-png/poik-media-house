@@ -121,7 +121,7 @@ handleMagicLink();
 // Then restore existing session or check auth
 (async function() {
     // Try to restore existing session first
-    const sessionRestored = await restoreSession();
+    const sessionRestored = await restoreAndLoad();
     
     if (!sessionRestored) {
         // No session, check auth normally
