@@ -5,7 +5,7 @@ const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
 window.isProfileView = false;
-window.isFriendsView = false;  // NEW: For friends page
+window.isFriendsView = false;
 
 // Safe avatar function - prevents 400 errors
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
@@ -17,6 +17,16 @@ function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
         return `<div class="avatar-placeholder" onclick="viewProfile('${userId}')" style="cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: ${size/2}px;">👤</div>`;
     }
 }
+
+// Close all popups when clicking outside (FIX #2c)
+document.addEventListener('click', function(e) {
+    // Close post menus
+    document.querySelectorAll('.post-menu-dropdown, .profile-post-menu-dropdown').forEach(menu => {
+        if (!menu.contains(e.target) && !menu.previousElementSibling?.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
+});
 
 async function loadFeed(reset = true) {
     // DON'T load feed if viewing profile or friends
@@ -93,6 +103,7 @@ async function loadFeed(reset = true) {
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
+            let timestamp = p.created_at ? timeAgo(p.created_at) : '';
             
             if (p.is_ai) {
                 displayName = 'Poik Poik';
@@ -105,12 +116,23 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
+            // FIX #5: Feed posts - 3-dot menu on far right
             html += `
                 <div class="post" data-post-id="${p.id}">
                     <div class="post-header">
                         <div class="post-header-left">
                             ${avatarHtml}
                             <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
+                            ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
+                        </div>
+                        <div class="post-header-right">
+                            <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
+                            <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
+                                <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
+                            </div>
                         </div>
                     </div>
                     <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
@@ -168,6 +190,52 @@ async function loadFeed(reset = true) {
     isLoading = false;
 }
 
+// Feed post privacy change (stays on Feed page)
+async function changeFeedPostPrivacy(postId, newPrivacy, fromFeed = true) {
+    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
+    
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    
+    if (fromFeed) {
+        // Refresh feed without leaving page
+        window.isProfileView = false;
+        window.isFriendsView = false;
+        currentPage = 0;
+        hasMorePosts = true;
+        isLoading = false;
+        await loadFeed(true);
+    }
+}
+
+// Delete feed post with confirmation
+async function deleteFeedPost(postId, fromFeed = true) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    
+    await SB.from("posts").delete().eq("id", postId);
+    
+    if (fromFeed) {
+        window.isProfileView = false;
+        window.isFriendsView = false;
+        currentPage = 0;
+        hasMorePosts = true;
+        isLoading = false;
+        await loadFeed(true);
+    }
+}
+
+function toggleFeedPostMenu(postId) {
+    // Close all other menus first
+    document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
+        if (menu.id !== `feed-post-menu-${postId}`) {
+            menu.style.display = 'none';
+        }
+    });
+    const menu = document.getElementById(`feed-post-menu-${postId}`);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
 function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
@@ -182,7 +250,6 @@ function setupInfiniteScroll() {
 }
 
 function refreshFeed() {
-    // Reset all view flags
     window.isProfileView = false;
     window.isFriendsView = false;
     currentPage = 0;
@@ -191,9 +258,8 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== LOAD PROFILE - FIXED ==========
+// ========== LOAD PROFILE - COMPLETE FIXED VERSION ==========
 async function loadProfile() {
-    // Set flag to prevent feed from loading
     window.isProfileView = true;
     window.isFriendsView = false;
     
@@ -208,8 +274,11 @@ async function loadProfile() {
     
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
+    // Hide top nav
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'none';
+    
     try {
-        // Get profile data
         const { data: profile, error: profileError } = await SB
             .from("profiles")
             .select("*")
@@ -218,7 +287,6 @@ async function loadProfile() {
         
         if (profileError) throw profileError;
         
-        // Get user's posts only
         const { data: posts, error: postsError } = await SB
             .from("posts")
             .select("*")
@@ -227,26 +295,25 @@ async function loadProfile() {
         
         if (postsError) throw postsError;
         
-        // Get post count
         const { count: postCount } = await SB
             .from("posts")
             .select("*", { count: 'exact', head: true })
             .eq("user_id", USER.id);
         
-        // Safe avatar HTML
         const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
-        const avatarHtml = isValidAvatar ?
+        const profileAvatarHtml = isValidAvatar ?
             `<img src="${profile.avatar_url}" class="profile-avatar-img" onclick="document.getElementById('avatarInput').click()" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
             `<div class="profile-avatar-placeholder" onclick="document.getElementById('avatarInput').click()" style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer;">👤</div>`;
         
         const displayName = profile?.username || USER.email?.split('@')[0] || 'User';
         const bio = profile?.bio || 'No bio yet';
+        const userAvatarUrl = isValidAvatar ? profile.avatar_url : null;
         
         let html = `
-            <div class="profile-header" style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="text-align: center; background: #0a0a0a; border-radius: 20px; padding: 30px; margin-bottom: 20px;">
+            <div class="profile-container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div class="profile-header" style="text-align: center; background: #0a0a0a; border-radius: 20px; padding: 30px; margin-bottom: 20px;">
                     <div style="width: 100px; height: 100px; margin: 0 auto 15px;">
-                        ${avatarHtml}
+                        ${profileAvatarHtml}
                     </div>
                     <h2>${escapeHtml(displayName)}</h2>
                     <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(displayName)}</div>
@@ -263,30 +330,38 @@ async function loadProfile() {
                 <div id="profile-posts-list">
         `;
         
-        // Display user's posts
         if (posts && posts.length > 0) {
             for (const p of posts) {
                 let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
+                let privacyClass = p.privacy;
+                let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 
+                const postAvatarHtml = userAvatarUrl ?
+                    `<img src="${userAvatarUrl}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none';">` :
+                    `<div class="avatar-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
+                
+                // FIX #6: Profile posts - privacy button as menu with GREEN color
                 html += `
-                    <div class="post" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+                    <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden; position: relative;">
                         <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
                             <div class="post-header-left" style="display: flex; align-items: center; gap: 10px;">
+                                ${postAvatarHtml}
                                 <div class="post-username" style="font-weight: bold;">${escapeHtml(displayName)}</div>
+                                ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}" style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                             </div>
                             <div class="post-privacy-menu" style="position: relative;">
-                                <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})" style="background: #222; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer;">${privacyIcon} ${privacyText}</button>
-                                <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px; z-index: 100;">
-                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')" style="padding: 8px 15px; cursor: pointer;">🌍 Public</div>
-                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')" style="padding: 8px 15px; cursor: pointer;">👥 Friends Only</div>
-                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')" style="padding: 8px 15px; cursor: pointer;">🔒 Only Me</div>
-                                    <div class="post-menu-option delete-option" onclick="deletePost(${p.id})" style="padding: 8px 15px; cursor: pointer; color: #ff4444;">🗑️ Delete</div>
+                                <button class="privacy-badge privacy-${privacyClass}" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="background: #222; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer; color: ${privacyClass === 'public' ? '#00ff88' : (privacyClass === 'friends' ? '#00ff88' : '#00ff88')};">${privacyIcon} ${privacyText}</button>
+                                <div id="profile-post-menu-${p.id}" class="profile-post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
+                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'public')">Public</div>
+                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'friends')">Friends</div>
+                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'private')">Only Me</div>
+                                    <div class="post-menu-option delete-option" onclick="deleteProfilePost(${p.id})">Delete</div>
                                 </div>
                             </div>
                         </div>
                         <img class="post-image" src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
-                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || 'Fashion visual')}</div>
+                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                     </div>
                 `;
             }
@@ -294,11 +369,7 @@ async function loadProfile() {
             html += '<div style="text-align: center; padding: 40px; color: #888;">No posts yet. Click + to upload!</div>';
         }
         
-        html += `
-                </div>
-            </div>
-        `;
-        
+        html += `</div></div>`;
         feedDiv.innerHTML = html;
         
         // Update bottom nav highlight
@@ -306,14 +377,43 @@ async function loadProfile() {
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
         if (profileBtn) profileBtn.classList.add('active');
         
-        // Hide top nav
-        const topNav = document.querySelector('.top-nav');
-        if (topNav) topNav.style.display = 'none';
-        
     } catch (err) {
         console.error("Load profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
     }
+}
+
+// Profile post menu toggle
+function toggleProfilePostMenu(postId) {
+    document.querySelectorAll('.profile-post-menu-dropdown').forEach(menu => {
+        if (menu.id !== `profile-post-menu-${postId}`) {
+            menu.style.display = 'none';
+        }
+    });
+    const menu = document.getElementById(`profile-post-menu-${postId}`);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Profile post privacy change (stays on Profile page)
+async function changeProfilePostPrivacy(postId, newPrivacy) {
+    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
+    
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    
+    // Refresh profile without leaving page
+    await loadProfile();
+}
+
+// Delete profile post with confirmation
+async function deleteProfilePost(postId) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    
+    await SB.from("posts").delete().eq("id", postId);
+    
+    // Refresh profile without leaving page
+    await loadProfile();
 }
 
 // ========== VIEW PROFILE (other user) ==========
@@ -331,6 +431,10 @@ async function viewProfile(userId) {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
+    // Hide top nav
+    const topNav = document.querySelector('.top-nav');
+    if (topNav) topNav.style.display = 'none';
+    
     try {
         const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
         if (error) throw error;
@@ -347,6 +451,8 @@ async function viewProfile(userId) {
         const avatarHtml = isValidAvatar ?
             `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` :
             '<div style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px;">👤</div>';
+        
+        const userAvatarUrl = isValidAvatar ? profile.avatar_url : null;
         
         let html = `
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -370,28 +476,38 @@ async function viewProfile(userId) {
                 <div style="margin-top: 20px;">
                     <h3 style="margin-bottom: 15px; padding-left: 10px;">Posts</h3>
                     <div id="profile-posts-list">
-                        ${posts?.length === 0 ? '<div style="color: #888; text-align: center; padding: 40px;">No posts yet</div>' : ''}
-                        ${posts?.map(p => `
-                            <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                                <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
-                                <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                            </div>
-                        `).join('') || ''}
-                    </div>
-                </div>
-            </div>
         `;
         
+        if (posts && posts.length > 0) {
+            for (const p of posts) {
+                let timestamp = p.created_at ? timeAgo(p.created_at) : '';
+                const postAvatarHtml = userAvatarUrl ?
+                    `<img src="${userAvatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
+                    `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
+                
+                html += `
+                    <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+                        <div class="post-header" style="display: flex; align-items: center; gap: 10px; padding: 12px;">
+                            ${postAvatarHtml}
+                            <div class="post-username" style="font-weight: bold;">${escapeHtml(profile?.username || 'User')}</div>
+                            ${timestamp ? `<span style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
+                        </div>
+                        <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
+                        <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                    </div>
+                `;
+            }
+        } else {
+            html += '<div style="text-align: center; padding: 40px; color: #888;">No posts yet</div>';
+        }
+        
+        html += `</div></div>`;
         feedDiv.innerHTML = html;
         
         // Update bottom nav highlight
         document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
         if (profileBtn) profileBtn.classList.add('active');
-        
-        // Hide top nav
-        const topNav = document.querySelector('.top-nav');
-        if (topNav) topNav.style.display = 'none';
         
     } catch (err) {
         console.error("View profile error:", err);
@@ -400,7 +516,6 @@ async function viewProfile(userId) {
 }
 
 function goToHome() {
-    // Reset all flags
     window.isProfileView = false;
     window.isFriendsView = false;
     
@@ -529,6 +644,7 @@ function bottomNav(page) {
     if (page === 'friends') {
         document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
         window.isFriendsView = true;
+        window.isProfileView = false;
         if (typeof loadFriends === 'function') {
             loadFriends();
         } else {
@@ -586,3 +702,9 @@ window.togglePostMenu = togglePostMenu;
 window.changePostPrivacy = changePostPrivacy;
 window.deletePost = deletePost;
 window.goToHome = goToHome;
+window.toggleFeedPostMenu = toggleFeedPostMenu;
+window.changeFeedPostPrivacy = changeFeedPostPrivacy;
+window.deleteFeedPost = deleteFeedPost;
+window.toggleProfilePostMenu = toggleProfilePostMenu;
+window.changeProfilePostPrivacy = changeProfilePostPrivacy;
+window.deleteProfilePost = deleteProfilePost;
