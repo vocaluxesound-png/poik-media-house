@@ -4,27 +4,8 @@ let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
-let isProfileView = false;  // NEW: Prevents feed from loading when viewing profile
-
-// Helper function to get real comment+reply count for a post
-async function getRealCommentCount(postId) {
-    try {
-        const { count: commentsCount } = await SB
-            .from("comments")
-            .select("*", { count: 'exact', head: true })
-            .eq("post_id", postId);
-        
-        const { count: repliesCount } = await SB
-            .from("comment_replies")
-            .select("*", { count: 'exact', head: true })
-            .eq("post_id", postId);
-        
-        return (commentsCount || 0) + (repliesCount || 0);
-    } catch (err) {
-        console.error("Error getting comment count:", err);
-        return 0;
-    }
-}
+let isProfileView = false;
+let isFriendsView = false;  // NEW: For friends page
 
 // Safe avatar function - prevents 400 errors
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
@@ -38,9 +19,9 @@ function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
 }
 
 async function loadFeed(reset = true) {
-    // DON'T load feed if viewing profile
-    if (isProfileView) {
-        console.log("🚫 Skipping feed - profile view active");
+    // DON'T load feed if viewing profile or friends
+    if (isProfileView || isFriendsView) {
+        console.log("🚫 Skipping feed - other view active");
         return;
     }
     
@@ -101,7 +82,6 @@ async function loadFeed(reset = true) {
         for (const p of posts) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             
-            // Get REAL comment count (comments + replies)
             let totalCount = p.comments_count || 0;
             const { count: replyCount } = await SB
                 .from("comment_replies")
@@ -192,7 +172,7 @@ function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
         if (!hasMorePosts) return;
-        if (isProfileView) return; // Don't load more when on profile
+        if (isProfileView || isFriendsView) return;
         const scrollPosition = window.innerHeight + window.scrollY;
         const bottomPosition = document.body.offsetHeight - 500;
         if (scrollPosition >= bottomPosition) {
@@ -202,14 +182,141 @@ function setupInfiniteScroll() {
 }
 
 function refreshFeed() {
-    isProfileView = false;  // Reset profile flag
+    // Reset all view flags
+    isProfileView = false;
+    isFriendsView = false;
     currentPage = 0;
     hasMorePosts = true;
     isLoading = false;
     loadFeed(true);
 }
 
-// ========== VIEW PROFILE ==========
+// ========== LOAD PROFILE - FIXED ==========
+async function loadProfile() {
+    // Set flag to prevent feed from loading
+    isProfileView = true;
+    isFriendsView = false;
+    
+    if (!USER) { 
+        alert('Please login'); 
+        openAuthModal(); 
+        return; 
+    }
+    
+    const feedDiv = document.getElementById("feed");
+    if (!feedDiv) return;
+    
+    feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
+    
+    try {
+        // Get profile data
+        const { data: profile, error: profileError } = await SB
+            .from("profiles")
+            .select("*")
+            .eq("id", USER.id)
+            .single();
+        
+        if (profileError) throw profileError;
+        
+        // Get user's posts only
+        const { data: posts, error: postsError } = await SB
+            .from("posts")
+            .select("*")
+            .eq("user_id", USER.id)
+            .order("created_at", { ascending: false });
+        
+        if (postsError) throw postsError;
+        
+        // Get post count
+        const { count: postCount } = await SB
+            .from("posts")
+            .select("*", { count: 'exact', head: true })
+            .eq("user_id", USER.id);
+        
+        // Safe avatar HTML
+        const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
+        const avatarHtml = isValidAvatar ?
+            `<img src="${profile.avatar_url}" class="profile-avatar-img" onclick="document.getElementById('avatarInput').click()" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+            `<div class="profile-avatar-placeholder" onclick="document.getElementById('avatarInput').click()" style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer;">👤</div>`;
+        
+        const displayName = profile?.username || USER.email?.split('@')[0] || 'User';
+        const bio = profile?.bio || 'No bio yet';
+        
+        let html = `
+            <div class="profile-header" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; background: #0a0a0a; border-radius: 20px; padding: 30px; margin-bottom: 20px;">
+                    <div style="width: 100px; height: 100px; margin: 0 auto 15px;">
+                        ${avatarHtml}
+                    </div>
+                    <h2>${escapeHtml(displayName)}</h2>
+                    <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(displayName)}</div>
+                    <div class="profile-bio" style="color: #aaa; margin-bottom: 20px;">${escapeHtml(bio)}</div>
+                    <div class="profile-stats" style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
+                        <div><strong>${postCount || 0}</strong><br>posts</div>
+                        <div><strong>0</strong><br>followers</div>
+                        <div><strong>0</strong><br>following</div>
+                    </div>
+                    <button class="edit-profile-btn" onclick="openEditProfile()" style="background: #333; color: white; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; margin-right: 10px;">Edit Profile</button>
+                    <button onclick="goToHome()" style="background: #00ff88; color: black; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">Back to Feed</button>
+                </div>
+                <h3 style="margin-bottom: 15px; padding-left: 10px;">Your Posts</h3>
+                <div id="profile-posts-list">
+        `;
+        
+        // Display user's posts
+        if (posts && posts.length > 0) {
+            for (const p of posts) {
+                let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+                let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
+                
+                html += `
+                    <div class="post" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+                        <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
+                            <div class="post-header-left" style="display: flex; align-items: center; gap: 10px;">
+                                <div class="post-username" style="font-weight: bold;">${escapeHtml(displayName)}</div>
+                            </div>
+                            <div class="post-privacy-menu" style="position: relative;">
+                                <button class="privacy-badge privacy-${p.privacy || 'public'}" onclick="togglePostMenu(${p.id})" style="background: #222; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer;">${privacyIcon} ${privacyText}</button>
+                                <div id="post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px; z-index: 100;">
+                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'public')" style="padding: 8px 15px; cursor: pointer;">🌍 Public</div>
+                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'friends')" style="padding: 8px 15px; cursor: pointer;">👥 Friends Only</div>
+                                    <div class="post-menu-option" onclick="changePostPrivacy(${p.id}, 'private')" style="padding: 8px 15px; cursor: pointer;">🔒 Only Me</div>
+                                    <div class="post-menu-option delete-option" onclick="deletePost(${p.id})" style="padding: 8px 15px; cursor: pointer; color: #ff4444;">🗑️ Delete</div>
+                                </div>
+                            </div>
+                        </div>
+                        <img class="post-image" src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
+                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || 'Fashion visual')}</div>
+                    </div>
+                `;
+            }
+        } else {
+            html += '<div style="text-align: center; padding: 40px; color: #888;">No posts yet. Click + to upload!</div>';
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        feedDiv.innerHTML = html;
+        
+        // Update bottom nav highlight
+        document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+        const profileBtn = document.querySelector('.bottom-nav-item:last-child');
+        if (profileBtn) profileBtn.classList.add('active');
+        
+        // Hide top nav
+        const topNav = document.querySelector('.top-nav');
+        if (topNav) topNav.style.display = 'none';
+        
+    } catch (err) {
+        console.error("Load profile error:", err);
+        feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
+    }
+}
+
+// ========== VIEW PROFILE (other user) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -218,14 +325,8 @@ async function viewProfile(userId) {
         return;
     }
     
-    isProfileView = true;  // Set flag to prevent feed loading
-    
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    const profileBtn = document.querySelector('.bottom-nav-item:last-child');
-    if (profileBtn) profileBtn.classList.add('active');
-    
-    const topNav = document.querySelector('.top-nav');
-    if (topNav) topNav.style.display = 'none';
+    isProfileView = true;
+    isFriendsView = false;
     
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
@@ -244,7 +345,7 @@ async function viewProfile(userId) {
         
         const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
         const avatarHtml = isValidAvatar ?
-            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` :
             '<div style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px;">👤</div>';
         
         let html = `
@@ -256,7 +357,7 @@ async function viewProfile(userId) {
                     <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(profile?.username || 'user')}</div>
                     <div style="color: #aaa; margin-bottom: 20px;">${escapeHtml(profile?.bio || 'No bio yet')}</div>
                     <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
-                        <div><strong id="profile-post-count">${posts?.length || 0}</strong><br>posts</div>
+                        <div><strong>${posts?.length || 0}</strong><br>posts</div>
                         <div><strong>0</strong><br>followers</div>
                         <div><strong>0</strong><br>following</div>
                     </div>
@@ -282,6 +383,16 @@ async function viewProfile(userId) {
         `;
         
         feedDiv.innerHTML = html;
+        
+        // Update bottom nav highlight
+        document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+        const profileBtn = document.querySelector('.bottom-nav-item:last-child');
+        if (profileBtn) profileBtn.classList.add('active');
+        
+        // Hide top nav
+        const topNav = document.querySelector('.top-nav');
+        if (topNav) topNav.style.display = 'none';
+        
     } catch (err) {
         console.error("View profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
@@ -289,12 +400,17 @@ async function viewProfile(userId) {
 }
 
 function goToHome() {
-    isProfileView = false;  // Reset profile flag
+    // Reset all flags
+    isProfileView = false;
+    isFriendsView = false;
+    
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
     if (homeBtn) homeBtn.classList.add('active');
+    
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'flex';
+    
     refreshFeed();
 }
 
@@ -405,9 +521,10 @@ function switchTab(tab) {
 
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    
     if (page === 'home') {
         document.querySelector('.bottom-nav-item:first-child').classList.add('active');
-        switchTab('feed');
+        goToHome();  // Use goToHome instead of switchTab directly
     }
     if (page === 'friends') {
         document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
@@ -449,6 +566,7 @@ setupInfiniteScroll();
 window.loadFeed = loadFeed;
 window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
+window.loadProfile = loadProfile;
 window.toggleFollowFromProfile = toggleFollowFromProfile;
 window.likePost = likePost;
 window.toggleComments = toggleComments;
