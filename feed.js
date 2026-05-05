@@ -1,8 +1,31 @@
 // ========== FEED FUNCTIONS ==========
+
 let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
+
+// NEW: Helper function to get real comment+reply count for a post
+async function getRealCommentCount(postId) {
+    try {
+        // Get top-level comments count
+        const { count: commentsCount } = await SB
+            .from("comments")
+            .select("*", { count: 'exact', head: true })
+            .eq("post_id", postId);
+        
+        // Get replies count
+        const { count: repliesCount } = await SB
+            .from("comment_replies")
+            .select("*", { count: 'exact', head: true })
+            .eq("post_id", postId);
+        
+        return (commentsCount || 0) + (repliesCount || 0);
+    } catch (err) {
+        console.error("Error getting comment count:", err);
+        return 0;
+    }
+}
 
 async function loadFeed(reset = true) {
     const feedDiv = document.getElementById("feed");
@@ -13,7 +36,6 @@ async function loadFeed(reset = true) {
         hasMorePosts = true;
         feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
     }
-    
     if (isLoading) return;
     isLoading = true;
     
@@ -23,9 +45,9 @@ async function loadFeed(reset = true) {
         }
         
         const { data: postsData, error } = await SB
-            .rpc('get_fast_feed', { 
-                limit_num: POSTS_PER_PAGE, 
-                offset_num: currentPage * POSTS_PER_PAGE 
+            .rpc('get_fast_feed', {
+                limit_num: POSTS_PER_PAGE,
+                offset_num: currentPage * POSTS_PER_PAGE
             });
         
         if (error) throw error;
@@ -52,7 +74,6 @@ async function loadFeed(reset = true) {
         
         const userIds = [...new Set(posts.filter(p => p.user_id && !p.is_ai).map(p => p.user_id))];
         let profiles = {};
-        
         if (userIds.length > 0) {
             const { data: profileData } = await SB.from("profiles").select("id, username, avatar_url").in("id", userIds);
             if (profileData) {
@@ -61,21 +82,47 @@ async function loadFeed(reset = true) {
         }
         
         let html = '';
-        
         for (const p of posts) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
-            const totalCount = (p.comments_count || 0);
+            
+            // FIX: Get REAL comment count (comments + replies) for this post
+            let totalCount = p.comments_count || 0;
+            // If comments_count seems incomplete, fetch real count
+            // Check if there might be replies not counted
+            if (totalCount > 0) {
+                // We still need to add replies - but RPC might not include them
+                // Let's check if we need to add reply count
+                const { count: replyCount } = await SB
+                    .from("comment_replies")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("post_id", p.id);
+                if (replyCount > 0) {
+                    totalCount = totalCount + replyCount;
+                }
+            } else {
+                // If zero, check if there are any replies (shouldn't happen often)
+                const { count: replyCount } = await SB
+                    .from("comment_replies")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("post_id", p.id);
+                if (replyCount > 0) {
+                    const { count: commentCount } = await SB
+                        .from("comments")
+                        .select("*", { count: 'exact', head: true })
+                        .eq("post_id", p.id);
+                    totalCount = (commentCount || 0) + replyCount;
+                }
+            }
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
-            
             if (p.is_ai) {
                 displayName = 'Poik Poik';
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else if (p.user_id && profiles[p.user_id]) {
                 displayName = profiles[p.user_id].username || 'Member';
-                avatarHtml = profiles[p.user_id].avatar_url ? 
-                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;" loading="lazy">` : 
+                avatarHtml = profiles[p.user_id].avatar_url ?
+                    `<img src="${profiles[p.user_id].avatar_url}" class="user-avatar" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;" loading="lazy">` :
                     '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else {
                 displayName = 'Member';
@@ -132,7 +179,6 @@ async function loadFeed(reset = true) {
         }
         
         currentPage++;
-        
         if (posts.length < POSTS_PER_PAGE) {
             hasMorePosts = false;
         }
@@ -143,7 +189,6 @@ async function loadFeed(reset = true) {
             feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error: ${err.message}</div>`;
         }
     }
-    
     isLoading = false;
 }
 
@@ -151,10 +196,8 @@ function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
         if (!hasMorePosts) return;
-        
         const scrollPosition = window.innerHeight + window.scrollY;
         const bottomPosition = document.body.offsetHeight - 500;
-        
         if (scrollPosition >= bottomPosition) {
             loadFeed(false);
         }
@@ -171,18 +214,16 @@ function refreshFeed() {
 // ========== VIEW PROFILE (FIXED - ONLY SHOWS USER'S POSTS) ==========
 async function viewProfile(userId) {
     if (!userId) return;
-    if (!USER) { 
-        alert('Please login to view profiles'); 
-        openAuthModal(); 
-        return; 
+    if (!USER) {
+        alert('Please login to view profiles');
+        openAuthModal();
+        return;
     }
     
-    // Update bottom nav to highlight Profile
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const profileBtn = document.querySelector('.bottom-nav-item:last-child');
     if (profileBtn) profileBtn.classList.add('active');
     
-    // Hide top nav
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     
@@ -190,14 +231,10 @@ async function viewProfile(userId) {
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
     try {
-        // Get profile data
         const { data: profile, error } = await SB.from("profiles").select("*").eq("id", userId).single();
         if (error) throw error;
         
-        // CRITICAL FIX: ONLY get this user's posts
         const { data: posts } = await SB.from("posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-        
-        console.log(`Profile posts for user ${userId}:`, posts?.length); // Debug
         
         let isFollowing = false;
         if (USER && userId !== USER.id) {
@@ -205,8 +242,8 @@ async function viewProfile(userId) {
             isFollowing = followCheck && followCheck.length > 0;
         }
         
-        const avatarHtml = profile?.avatar_url ? 
-            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` : 
+        const avatarHtml = profile?.avatar_url ?
+            `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` :
             '<div style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px;">👤</div>';
         
         let html = `
@@ -244,34 +281,25 @@ async function viewProfile(userId) {
         `;
         
         feedDiv.innerHTML = html;
-        
     } catch (err) {
         console.error("View profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
     }
 }
 
-// ========== GO TO HOME (FIXES BOTTOM NAV HIGHLIGHT) ==========
 function goToHome() {
-    // Update bottom nav to Home
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
     if (homeBtn) homeBtn.classList.add('active');
-    
-    // Show top nav again
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'flex';
-    
-    // Refresh feed
     refreshFeed();
 }
 
 async function toggleFollowFromProfile(userId) {
     const btn = document.getElementById('profile-follow-btn');
     if (!btn) return;
-    
     const { data: existing } = await SB.from("follows").select("*").eq("follower", USER.id).eq("following", userId);
-    
     if (existing && existing.length > 0) {
         await SB.from("follows").delete().eq("follower", USER.id).eq("following", userId);
         btn.innerText = 'Follow';
@@ -285,7 +313,6 @@ async function toggleFollowFromProfile(userId) {
     }
 }
 
-// ========== POST LIKE ==========
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
@@ -306,32 +333,30 @@ async function likePost(postId) {
     }
 }
 
-// ========== POST MENU ==========
-function togglePostMenu(postId) { 
-    const menu = document.getElementById(`post-menu-${postId}`); 
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
+function togglePostMenu(postId) {
+    const menu = document.getElementById(`post-menu-${postId}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
-async function changePostPrivacy(postId, newPrivacy) { 
-    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId); 
-    refreshFeed(); 
+async function changePostPrivacy(postId, newPrivacy) {
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    refreshFeed();
 }
 
-async function deletePost(postId) { 
-    if (confirm('Delete this post?')) { 
-        await SB.from("posts").delete().eq("id", postId); 
-        refreshFeed(); 
-    } 
+async function deletePost(postId) {
+    if (confirm('Delete this post?')) {
+        await SB.from("posts").delete().eq("id", postId);
+        refreshFeed();
+    }
 }
 
-// ========== SHARE ==========
-function openShareModal(url) { 
-    SHARE_URL = url; 
-    document.getElementById('shareModal').style.display = 'block'; 
+function openShareModal(url) {
+    SHARE_URL = url;
+    document.getElementById('shareModal').style.display = 'block';
 }
 
-function closeShareModal() { 
-    document.getElementById('shareModal').style.display = 'none'; 
+function closeShareModal() {
+    document.getElementById('shareModal').style.display = 'none';
 }
 
 function shareTo(platform) {
@@ -345,67 +370,61 @@ function shareTo(platform) {
     closeShareModal();
 }
 
-function copyLink() { 
-    navigator.clipboard.writeText(SHARE_URL); 
-    alert('Link copied!'); 
-    closeShareModal(); 
+function copyLink() {
+    navigator.clipboard.writeText(SHARE_URL);
+    alert('Link copied!');
+    closeShareModal();
 }
 
-// ========== UI ==========
-function openModal(img) { 
-    document.getElementById('modalImage').src = img; 
-    document.getElementById('imageModal').style.display = 'flex'; 
+function openModal(img) {
+    document.getElementById('modalImage').src = img;
+    document.getElementById('imageModal').style.display = 'flex';
 }
 
-function closeModal() { 
-    document.getElementById('imageModal').style.display = 'none'; 
+function closeModal() {
+    document.getElementById('imageModal').style.display = 'none';
 }
 
-function openUploadModal() { 
-    if (!USER) { alert('Please login first'); openAuthModal(); return; } 
-    document.getElementById('uploadModal').style.display = 'block'; 
+function openUploadModal() {
+    if (!USER) { alert('Please login first'); openAuthModal(); return; }
+    document.getElementById('uploadModal').style.display = 'block';
 }
 
-function closeUploadModal() { 
-    document.getElementById('uploadModal').style.display = 'none'; 
-    document.getElementById('uploadFile').value = ''; 
-    document.getElementById('uploadCaption').value = ''; 
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+    document.getElementById('uploadFile').value = '';
+    document.getElementById('uploadCaption').value = '';
 }
 
-function switchTab(tab) { 
-    CURRENT_TAB = tab; 
-    refreshFeed(); 
+function switchTab(tab) {
+    CURRENT_TAB = tab;
+    refreshFeed();
 }
 
 function bottomNav(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    
-    if (page === 'home') { 
-        document.querySelector('.bottom-nav-item:first-child').classList.add('active'); 
-        switchTab('feed'); 
+    if (page === 'home') {
+        document.querySelector('.bottom-nav-item:first-child').classList.add('active');
+        switchTab('feed');
     }
-    
-    if (page === 'friends') { 
-        document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active'); 
+    if (page === 'friends') {
+        document.querySelector('.bottom-nav-item:nth-child(2)').classList.add('active');
         if (typeof loadFriends === 'function') {
-            loadFriends(); 
+            loadFriends();
         } else {
             document.getElementById("feed").innerHTML = '<div class="loading">Loading friends...</div>';
         }
     }
-    
-    if (page === 'inbox') { 
-        document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active'); 
+    if (page === 'inbox') {
+        document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
         document.getElementById("feed").innerHTML = '<div class="loading">Inbox coming soon...</div>';
     }
-    
-    if (page === 'profile') { 
-        document.querySelector('.bottom-nav-item:last-child').classList.add('active'); 
-        loadProfile(); 
+    if (page === 'profile') {
+        document.querySelector('.bottom-nav-item:last-child').classList.add('active');
+        loadProfile();
     }
 }
 
-// ========== UPLOAD POST ==========
 async function uploadPost() {
     if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
@@ -416,15 +435,13 @@ async function uploadPost() {
     await SB.storage.from("post-images").upload(fileName, file);
     const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
     await SB.from("posts").insert({ image_url: data.publicUrl, caption: caption, user_id: USER.id, privacy: privacy, is_ai: false, likes: 0 });
-    alert("Posted!"); 
-    closeUploadModal(); 
+    alert("Posted!");
+    closeUploadModal();
     refreshFeed();
 }
 
-// Initialize infinite scroll
 setupInfiniteScroll();
 
-// ========== MAKE FUNCTIONS GLOBAL ==========
 window.loadFeed = loadFeed;
 window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
