@@ -1,23 +1,6 @@
-// ============================================================
-// auth.js — COMPLETE FIX for iOS Safari/Chrome session persistence
-// Fixed: restoreSession() now exists (was missing)
-// Fixed: onAuthStateChange listener for background tab recovery
-// Fixed: No duplicate handleMagicLink calls
-// Fixed: Feed reloads after SIGNED_IN event
-// ============================================================
-
+// Supabase Configuration
 const API_URL = "https://xxnuhisweolpibzthjcc.supabase.co";
 const API_KEY = "sb_publishable_jDMX1LcHK465QrACNqeXVA_WmE7mW0P";
-
-const SB = window.supabase.createClient(API_URL, API_KEY, {
-    auth: {
-        persistSession: true,
-        storageKey: 'poik-poik-auth',
-        storage: window.localStorage,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-    }
-});
 
 let USER = null;
 let CURRENT_TAB = 'feed';
@@ -30,16 +13,18 @@ let userDislikedComments = new Set();
 let userLikedReplies = new Set();
 let userDislikedReplies = new Set();
 
-// ─── Utilities ────────────────────────────────────────────
-function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
+// Create client
+const SB = window.supabase.createClient(API_URL, API_KEY, {
+    auth: {
+        persistSession: true,
+        storageKey: 'poik-poik-auth',
+        storage: window.localStorage,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+    }
+});
+
+function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
 function timeAgo(dateString) {
     if (!dateString) return '';
@@ -69,70 +54,66 @@ function startTimestampUpdater() {
     timestampInterval = setInterval(updateAllTimestamps, 60000);
 }
 
-// ─── Header avatar ────────────────────────────────────────
 async function updateHeaderAvatar() {
     const headerAvatar = document.getElementById('headerAvatar');
     if (!headerAvatar) return;
     if (USER && USER.id) {
         const { data: profile } = await SB.from("profiles").select("avatar_url").eq("id", USER.id).single();
         if (profile && profile.avatar_url) {
-            headerAvatar.innerHTML = `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`;
+            headerAvatar.innerHTML = `<img src="${profile.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
             return;
         }
     }
-    headerAvatar.innerHTML = '<i class="fas fa-user" style="color:white;"></i>';
+    headerAvatar.innerHTML = '<i class="fas fa-user" style="color: white;"></i>';
 }
 
-// ─── Email autofill ───────────────────────────────────────
-function saveEmail(email) { if (email) localStorage.setItem('poik-poik-email', email); }
-function getSavedEmail() { return localStorage.getItem('poik-poik-email') || ''; }
+function saveEmail(email) {
+    if (email) localStorage.setItem('poik-poik-email', email);
+}
+
+function getSavedEmail() {
+    return localStorage.getItem('poik-poik-email') || '';
+}
+
 function loadSavedEmail() {
     const emailInput = document.getElementById('authEmail');
-    if (emailInput && getSavedEmail()) emailInput.value = getSavedEmail();
+    if (emailInput && getSavedEmail()) {
+        emailInput.value = getSavedEmail();
+    }
 }
 
-// ─── Auth modal ───────────────────────────────────────────
 function openAuthModal() {
     if (USER) return;
     document.getElementById('authModal').style.display = 'flex';
     loadSavedEmail();
 }
-function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
 
-// ─── Magic Link Login (CUSTOM EMAIL - FIXED) ──────────────
-async function sendMagicLink() {
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+}
+
+document.getElementById('closeAuthBtn').onclick = closeAuthModal;
+document.getElementById('magicLoginBtn').innerHTML = 'Send Verification Email';
+
+document.getElementById('magicLoginBtn').onclick = async () => {
     const email = document.getElementById('authEmail').value;
     if (!email) { alert('Enter your email'); return; }
     saveEmail(email);
-    
     const { error } = await SB.auth.signInWithOtp({
         email: email.trim(),
         options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-                custom_template: true
-            }
+            emailRedirectTo: window.location.origin
         }
     });
-    
     if (error) {
         alert('Error: ' + error.message);
     } else {
-        alert('✨ Login link sent! Check your email and tap the link to sign in.');
+        alert('Verification email sent! Check your inbox.');
         closeAuthModal();
         document.getElementById('authEmail').value = '';
     }
-}
+};
 
-// Setup login button
-document.getElementById('closeAuthBtn').onclick = closeAuthModal;
-const loginBtn = document.getElementById('magicLoginBtn');
-if (loginBtn) {
-    loginBtn.innerHTML = '✨ Send Login Link';
-    loginBtn.onclick = sendMagicLink;
-}
-
-// ─── Logout ───────────────────────────────────────────────
 async function logout() {
     await SB.auth.signOut();
     USER = null;
@@ -142,7 +123,6 @@ async function logout() {
     location.reload();
 }
 
-// ─── Magic link handler (ONLY called from URL, not on every load) ─────
 async function handleMagicLink() {
     const hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
@@ -152,36 +132,10 @@ async function handleMagicLink() {
         if (access_token) {
             await SB.auth.setSession({ access_token, refresh_token });
             window.location.href = window.location.pathname;
-            return true;
         }
-    }
-    return false;
-}
-
-// ─── restoreSession() ─────────────────────────────────────
-async function restoreSession() {
-    try {
-        const { data: { session }, error } = await SB.auth.getSession();
-        if (error) {
-            console.warn('getSession error:', error.message);
-            return false;
-        }
-        if (session && session.user) {
-            USER = session.user;
-            await loadUserInteractions();
-            await updateHeaderAvatar();
-            startTimestampUpdater();
-            console.log('✅ Session restored for:', USER.email);
-            return true;
-        }
-        return false;
-    } catch (e) {
-        console.warn('restoreSession exception:', e);
-        return false;
     }
 }
 
-// ─── checkAuth (used by other files) ─────────────────────
 async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser();
     USER = user;
@@ -193,46 +147,21 @@ async function checkAuth() {
     return user;
 }
 
-// ─── FIX: onAuthStateChange for iOS background tab recovery ─────
-// AND reload feed after SIGNED_IN
-SB.auth.onAuthStateChange(async (event, session) => {
-    console.log('🔐 Auth event:', event);
-    
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session && session.user) {
-            USER = session.user;
-            await loadUserInteractions();
-            await updateHeaderAvatar();
-            startTimestampUpdater();
-            
-            // CRITICAL FIX: Reload feed after login
-            if (typeof loadFeed === 'function') {
-                console.log('🔄 Reloading feed after SIGNED_IN');
-                setTimeout(() => loadFeed(true), 100);
-            } else {
-                console.warn('⚠️ loadFeed not available yet, will retry');
-                // Retry after a short delay
-                setTimeout(() => {
-                    if (typeof loadFeed === 'function') {
-                        loadFeed(true);
-                    }
-                }, 500);
-            }
-        }
-    } else if (event === 'SIGNED_OUT') {
-        USER = null;
-        const h = document.getElementById('headerAvatar');
-        if (h) h.innerHTML = '<i class="fas fa-user" style="color:white;"></i>';
-        if (timestampInterval) clearInterval(timestampInterval);
-        
-        // Also reload feed after logout (shows public posts)
-        if (typeof loadFeed === 'function') {
-            setTimeout(() => loadFeed(true), 100);
-        }
+// ========== NEW FUNCTION ADDED FOR iOS LOGIN FIX ==========
+async function restoreSession() {
+    const { data: { session } } = await SB.auth.getSession();
+    if (session && session.user) {
+        USER = session.user;
+        await loadUserInteractions();
+        await updateHeaderAvatar();
+        startTimestampUpdater();
+        console.log("✅ Session restored for:", USER.email);
+        return true;
     }
-});
+    return false;
+}
+// ==========================================================
 
-// ─── User interaction sets ────────────────────────────────
 async function loadUserInteractions() {
     if (!USER) return;
 
@@ -258,7 +187,7 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
-// ─── Expose to global scope ───────────────────────────────
+// Expose to window
 window.openAuthModal = openAuthModal;
 window.logout = logout;
 window.checkAuth = checkAuth;
