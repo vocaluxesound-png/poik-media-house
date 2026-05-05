@@ -4,6 +4,7 @@ let currentPage = 0;
 const POSTS_PER_PAGE = 10;
 let isLoading = false;
 let hasMorePosts = true;
+let isProfileView = false;  // NEW: Prevents feed from loading when viewing profile
 
 // Helper function to get real comment+reply count for a post
 async function getRealCommentCount(postId) {
@@ -27,18 +28,22 @@ async function getRealCommentCount(postId) {
 
 // Safe avatar function - prevents 400 errors
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
-    // Check if avatar URL is valid (exists, not empty, starts with http)
     const isValidUrl = avatarUrl && avatarUrl.trim() !== '' && avatarUrl.startsWith('http');
     
     if (isValidUrl) {
         return `<img src="${avatarUrl}" class="user-avatar" onclick="viewProfile('${userId}')" style="cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; object-fit: cover;" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`;
     } else {
-        // Fallback avatar - no broken image request
         return `<div class="avatar-placeholder" onclick="viewProfile('${userId}')" style="cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: ${size/2}px;">👤</div>`;
     }
 }
 
 async function loadFeed(reset = true) {
+    // DON'T load feed if viewing profile
+    if (isProfileView) {
+        console.log("🚫 Skipping feed - profile view active");
+        return;
+    }
+    
     const feedDiv = document.getElementById("feed");
     if (!feedDiv) return;
     
@@ -114,7 +119,6 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             } else if (p.user_id && profiles[p.user_id]) {
                 displayName = profiles[p.user_id].username || 'Member';
-                // Use safe avatar function
                 avatarHtml = getSafeAvatarHtml(profiles[p.user_id].avatar_url, p.user_id, 40);
             } else {
                 displayName = 'Member';
@@ -188,6 +192,7 @@ function setupInfiniteScroll() {
     window.addEventListener('scroll', () => {
         if (isLoading) return;
         if (!hasMorePosts) return;
+        if (isProfileView) return; // Don't load more when on profile
         const scrollPosition = window.innerHeight + window.scrollY;
         const bottomPosition = document.body.offsetHeight - 500;
         if (scrollPosition >= bottomPosition) {
@@ -197,6 +202,7 @@ function setupInfiniteScroll() {
 }
 
 function refreshFeed() {
+    isProfileView = false;  // Reset profile flag
     currentPage = 0;
     hasMorePosts = true;
     isLoading = false;
@@ -211,6 +217,8 @@ async function viewProfile(userId) {
         openAuthModal();
         return;
     }
+    
+    isProfileView = true;  // Set flag to prevent feed loading
     
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const profileBtn = document.querySelector('.bottom-nav-item:last-child');
@@ -234,7 +242,6 @@ async function viewProfile(userId) {
             isFollowing = followCheck && followCheck.length > 0;
         }
         
-        // Safe profile avatar
         const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
         const avatarHtml = isValidAvatar ?
             `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
@@ -282,6 +289,7 @@ async function viewProfile(userId) {
 }
 
 function goToHome() {
+    isProfileView = false;  // Reset profile flag
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     const homeBtn = document.querySelector('.bottom-nav-item:first-child');
     if (homeBtn) homeBtn.classList.add('active');
@@ -434,8 +442,10 @@ async function uploadPost() {
     refreshFeed();
 }
 
+// Initialize infinite scroll
 setupInfiniteScroll();
 
+// ========== MAKE FUNCTIONS GLOBAL ==========
 window.loadFeed = loadFeed;
 window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
