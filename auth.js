@@ -199,15 +199,17 @@ async function checkAuth() {
 // iOS Safari kills background timers - this catches token refresh events
 SB.auth.onAuthStateChange(async (event, session) => {
     console.log('🔐 Auth event:', event);
+    
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session && session.user) {
             USER = session.user;
             await loadUserInteractions();
             await updateHeaderAvatar();
             startTimestampUpdater();
-            // Refresh feed if visible
-            if (typeof refreshFeed === 'function') {
-                refreshFeed();
+            
+            // ADD THIS LINE - to load feed after login
+            if (typeof loadFeed === 'function') {
+                setTimeout(() => loadFeed(true), 100);
             }
         }
     } else if (event === 'SIGNED_OUT') {
