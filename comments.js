@@ -9,9 +9,18 @@ async function addComment(postId) {
     if (error) { alert("Failed: " + error.message); return; }
     input.value = '';
     await loadCommentsOnly(postId);
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    
+    // FIX: Update comment count to include replies too
+    await updatePostCommentCount(postId);
+}
+
+// NEW: Helper to update comment count (comments + replies)
+async function updatePostCommentCount(postId) {
+    const { count: commentsCount } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const { count: repliesCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const totalCount = (commentsCount || 0) + (repliesCount || 0);
     const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
+    if (countSpan) countSpan.innerText = totalCount;
 }
 
 function toggleComments(postId) {
@@ -93,6 +102,7 @@ async function addReplyToComment(commentId, postId) {
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
     await loadCommentsOnly(postId);
+    await updatePostCommentCount(postId);
 }
 
 async function addReplyToReply(commentId, parentReplyId, postId) {
@@ -111,6 +121,7 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     await loadCommentsOnly(postId);
+    await updatePostCommentCount(postId);
 }
 
 async function likeReply(replyId) {
@@ -169,20 +180,22 @@ async function deleteComment(commentId, postId) {
     if (error) { alert("Delete failed: " + error.message); return; }
     await SB.from("comment_replies").delete().eq("comment_id", commentId);
     await loadCommentsOnly(postId);
-    const { count } = await SB.from("comments").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const countSpan = document.getElementById(`comment-count-${postId}`);
-    if (countSpan) countSpan.innerText = count || 0;
+    await updatePostCommentCount(postId);
 }
 
+// FIXED: deleteReply now includes user_id check for RLS
 async function deleteReply(replyId, postId) {
     if (!replyId) { alert("Cannot delete: Reply ID missing"); return; }
     if (!confirm('Delete this reply?')) return;
-    const { error } = await SB.from("comment_replies").delete().eq("id", replyId);
+    if (!USER) { alert('You must be logged in to delete.'); return; }
+    // CRITICAL FIX: Add .eq("user_id", USER.id) for RLS policy
+    const { error } = await SB.from("comment_replies").delete().eq("id", replyId).eq("user_id", USER.id);
     if (error) { alert("Failed to delete: " + error.message); return; }
     await loadCommentsOnly(postId);
+    await updatePostCommentCount(postId);
 }
 
-// ========== LOAD COMMENTS ONLY (SIMPLE WORKING VERSION) ==========
+// ========== LOAD COMMENTS ONLY ==========
 async function loadCommentsOnly(postId) {
     const commentsList = document.getElementById(`comments-list-${postId}`);
     if (!commentsList) return;
@@ -190,7 +203,6 @@ async function loadCommentsOnly(postId) {
     commentsList.innerHTML = '<div class="comment">Loading comments...</div>';
     
     try {
-        // Get all comments for this post
         const { data: comments } = await SB
             .from("comments")
             .select("*")
@@ -202,7 +214,6 @@ async function loadCommentsOnly(postId) {
             return;
         }
         
-        // Get all user profiles
         const userIds = [...new Set(comments.map(c => c.user_id).filter(id => id))];
         let profiles = {};
         if (userIds.length > 0) {
@@ -215,7 +226,6 @@ async function loadCommentsOnly(postId) {
             }
         }
         
-        // Get ALL replies for this post
         const { data: allReplies } = await SB
             .from("comment_replies")
             .select("*")
@@ -224,7 +234,6 @@ async function loadCommentsOnly(postId) {
         
         const replies = allReplies || [];
         
-        // Get reply user profiles
         const replyUserIds = [...new Set(replies.map(r => r.user_id).filter(id => id))];
         if (replyUserIds.length > 0) {
             const { data: replyProfileData } = await SB
@@ -236,11 +245,9 @@ async function loadCommentsOnly(postId) {
             }
         }
         
-        // Build HTML
         let html = '';
         
         for (const c of comments) {
-            // Get like/dislike counts
             const { count: likeCount } = await SB
                 .from("comment_likes")
                 .select("*", { count: 'exact', head: true })
@@ -258,7 +265,6 @@ async function loadCommentsOnly(postId) {
             const commenterName = profile?.username || 'User';
             const commenterAvatar = profile?.avatar_url;
             
-            // Get replies for this comment (top level only for now)
             const commentReplies = replies.filter(r => r.comment_id === c.id && !r.parent_reply_id);
             
             let repliesHtml = '';
@@ -352,7 +358,6 @@ async function loadCommentsOnly(postId) {
     }
 }
 
-// ========== UI MENU FUNCTIONS ==========
 function toggleCommentMenu(commentId) { 
     const menu = document.getElementById(`comment-menu-${commentId}`); 
     if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
@@ -372,7 +377,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ========== REPLY INPUT TOGGLE ==========
 let activeReplyCommentId = null;
 let activeReplyReplyId = null;
 
@@ -409,3 +413,6 @@ function showReplyInputForReply(commentId, replyId, postId) {
         activeReplyCommentId = null; 
     }
 }
+
+// Make helper available globally
+window.updatePostCommentCount = updatePostCommentCount;
