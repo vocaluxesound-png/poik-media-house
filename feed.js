@@ -114,7 +114,7 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // Feed posts - 3-dot menu on far right (NO privacy button, just menu)
+            // Feed posts - 3-dot menu on far right
             html += `
                 <div class="post" data-post-id="${p.id}">
                     <div class="post-header">
@@ -327,16 +327,13 @@ async function loadProfile() {
         
         if (posts && posts.length > 0) {
             for (const p of posts) {
-                // NO ICON - just text for privacy button
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-                let privacyClass = p.privacy;
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 
                 const postAvatarHtml = userAvatarUrl ?
                     `<img src="${userAvatarUrl}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none';">` :
                     `<div class="avatar-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
                 
-                // Profile posts - privacy button with NO icon, green background, black text
                 html += `
                     <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden; position: relative;">
                         <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
@@ -346,7 +343,7 @@ async function loadProfile() {
                                 ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}" style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                             </div>
                             <div class="post-privacy-menu" style="position: relative;">
-                                <button class="privacy-badge privacy-${privacyClass}" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: 500;">${privacyText}</button>
+                                <button class="privacy-badge" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: 500;">${privacyText}</button>
                                 <div id="profile-post-menu-${p.id}" class="profile-post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'public')">Public</div>
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'friends')">Friends</div>
