@@ -18,9 +18,8 @@ function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
     }
 }
 
-// Close all popups when clicking outside (FIX #2c)
+// Close all popups when clicking outside
 document.addEventListener('click', function(e) {
-    // Close post menus
     document.querySelectorAll('.post-menu-dropdown, .profile-post-menu-dropdown').forEach(menu => {
         if (!menu.contains(e.target) && !menu.previousElementSibling?.contains(e.target)) {
             menu.style.display = 'none';
@@ -29,7 +28,6 @@ document.addEventListener('click', function(e) {
 });
 
 async function loadFeed(reset = true) {
-    // DON'T load feed if viewing profile or friends
     if (window.isProfileView || window.isFriendsView) {
         console.log("🚫 Skipping feed - other view active");
         return;
@@ -116,7 +114,7 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // FIX #5: Feed posts - 3-dot menu on far right
+            // Feed posts - 3-dot menu on far right (NO privacy button, just menu)
             html += `
                 <div class="post" data-post-id="${p.id}">
                     <div class="post-header">
@@ -197,7 +195,6 @@ async function changeFeedPostPrivacy(postId, newPrivacy, fromFeed = true) {
     await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
     
     if (fromFeed) {
-        // Refresh feed without leaving page
         window.isProfileView = false;
         window.isFriendsView = false;
         currentPage = 0;
@@ -224,7 +221,6 @@ async function deleteFeedPost(postId, fromFeed = true) {
 }
 
 function toggleFeedPostMenu(postId) {
-    // Close all other menus first
     document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
         if (menu.id !== `feed-post-menu-${postId}`) {
             menu.style.display = 'none';
@@ -258,7 +254,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== LOAD PROFILE - COMPLETE FIXED VERSION ==========
+// ========== LOAD PROFILE - COMPLETE FIXED ==========
 async function loadProfile() {
     window.isProfileView = true;
     window.isFriendsView = false;
@@ -274,7 +270,6 @@ async function loadProfile() {
     
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    // Hide top nav
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     
@@ -332,7 +327,7 @@ async function loadProfile() {
         
         if (posts && posts.length > 0) {
             for (const p of posts) {
-                let privacyIcon = p.privacy === 'public' ? '🌍' : (p.privacy === 'friends' ? '👥' : '🔒');
+                // NO ICON - just text for privacy button
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
                 let privacyClass = p.privacy;
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
@@ -341,7 +336,7 @@ async function loadProfile() {
                     `<img src="${userAvatarUrl}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none';">` :
                     `<div class="avatar-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
                 
-                // FIX #6: Profile posts - privacy button as menu with GREEN color
+                // Profile posts - privacy button with NO icon, green background, black text
                 html += `
                     <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden; position: relative;">
                         <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
@@ -351,7 +346,7 @@ async function loadProfile() {
                                 ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}" style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                             </div>
                             <div class="post-privacy-menu" style="position: relative;">
-                                <button class="privacy-badge privacy-${privacyClass}" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="background: #222; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer; color: ${privacyClass === 'public' ? '#00ff88' : (privacyClass === 'friends' ? '#00ff88' : '#00ff88')};">${privacyIcon} ${privacyText}</button>
+                                <button class="privacy-badge privacy-${privacyClass}" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: 500;">${privacyText}</button>
                                 <div id="profile-post-menu-${p.id}" class="profile-post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'public')">Public</div>
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'friends')">Friends</div>
@@ -372,7 +367,6 @@ async function loadProfile() {
         html += `</div></div>`;
         feedDiv.innerHTML = html;
         
-        // Update bottom nav highlight
         document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
         if (profileBtn) profileBtn.classList.add('active');
@@ -383,7 +377,6 @@ async function loadProfile() {
     }
 }
 
-// Profile post menu toggle
 function toggleProfilePostMenu(postId) {
     document.querySelectorAll('.profile-post-menu-dropdown').forEach(menu => {
         if (menu.id !== `profile-post-menu-${postId}`) {
@@ -396,23 +389,17 @@ function toggleProfilePostMenu(postId) {
     }
 }
 
-// Profile post privacy change (stays on Profile page)
 async function changeProfilePostPrivacy(postId, newPrivacy) {
     if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
     
     await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
-    
-    // Refresh profile without leaving page
     await loadProfile();
 }
 
-// Delete profile post with confirmation
 async function deleteProfilePost(postId) {
     if (!confirm('Delete this post? This cannot be undone.')) return;
     
     await SB.from("posts").delete().eq("id", postId);
-    
-    // Refresh profile without leaving page
     await loadProfile();
 }
 
@@ -431,7 +418,6 @@ async function viewProfile(userId) {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = '<div class="loading">Loading profile...</div>';
     
-    // Hide top nav
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     
@@ -504,7 +490,6 @@ async function viewProfile(userId) {
         html += `</div></div>`;
         feedDiv.innerHTML = html;
         
-        // Update bottom nav highlight
         document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
         if (profileBtn) profileBtn.classList.add('active');
@@ -676,7 +661,6 @@ async function uploadPost() {
     refreshFeed();
 }
 
-// Initialize infinite scroll
 setupInfiniteScroll();
 
 // ========== MAKE FUNCTIONS GLOBAL ==========
