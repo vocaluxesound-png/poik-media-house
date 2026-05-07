@@ -520,3 +520,88 @@ input, select, textarea, button {
 input, select, textarea, button {
     font-size: 16px !important;
 }
+
+/* ========== GREEN NOTIFICATION PILL ========== */
+.notification-pill {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    cursor: pointer;
+    animation: slideUpPill 0.3s ease;
+}
+
+@keyframes slideUpPill {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.pill-inner {
+    background: #00ff88;
+    border-radius: 40px;
+    padding: 8px 20px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.pill-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: bold;
+    color: black;
+    font-size: 14px;
+}
+
+.pill-item i {
+    font-size: 14px;
+    color: black;
+}
+
+.pill-pointer {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #00ff88;
+}
+
+/* ========== CHAT STYLES ========== */
+.chat-item:hover {
+    background: #0f0f0f;
+}
+
+.notification-item:hover {
+    background: #0f0f0f;
+}
+
+#chat-messages {
+    scroll-behavior: smooth;
+}
+
+#chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background: #00ff88;
+    border-radius: 4px;
+}
