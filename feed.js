@@ -530,6 +530,10 @@ async function toggleFollowFromProfile(userId) {
 
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
+    
+    // Get post owner first
+    const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
+    
     const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
     if (existing && existing.length > 0) {
         await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
@@ -537,7 +541,13 @@ async function likePost(postId) {
     } else {
         await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
         userLikedPosts.add(Number(postId));
+        
+        // CREATE NOTIFICATION for post owner
+        if (post && post.user_id !== USER.id) {
+            await createNotification('like_post', post.user_id, USER.id, postId);
+        }
     }
+    
     const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
     const likeSpan = document.getElementById(`likes-${postId}`);
     if (likeSpan) likeSpan.innerText = count || 0;
