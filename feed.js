@@ -114,25 +114,29 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // Feed posts - 3-dot menu on far right
-            html += `
-                <div class="post" data-post-id="${p.id}">
-                    <div class="post-header">
-                        <div class="post-header-left">
-                            ${avatarHtml}
-                            <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
-                            ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
-                        </div>
-                        <div class="post-header-right">
-                            <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
-                            <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
-                                <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
-                            </div>
-                        </div>
-                    </div>
+            // Feed posts - 3-dot menu ONLY for post owner
+const isPostOwner = USER && p.user_id === USER.id;
+
+html += `
+    <div class="post" data-post-id="${p.id}">
+        <div class="post-header">
+            <div class="post-header-left">
+                ${avatarHtml}
+                <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
+                ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
+            </div>
+            ${isPostOwner ? `
+            <div class="post-header-right">
+                <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
+                <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
+                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
+                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
+                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
+                    <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
+                </div>
+            </div>
+            ` : ''}
+        </div>
                     <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
                     <div class="post-caption">${escapeHtml(p.caption || '')}</div>
                     <div class="post-actions-right">
