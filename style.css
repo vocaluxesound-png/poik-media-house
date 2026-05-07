@@ -458,7 +458,7 @@ input, select, textarea, button {
     border-radius: 20px;
     cursor: pointer;
     border: none;
-    font-weight: 500;
+    font-weight: bold;
     background: #00ff88 !important;
     color: black !important;
 }
