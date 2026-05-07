@@ -451,9 +451,16 @@ window.bottomNav = function(page) {
         if (typeof loadFriends === 'function') loadFriends();
         else document.getElementById("feed").innerHTML = '<div class="loading">Loading friends...</div>';
     } else if (page === 'inbox') {
-        document.querySelector('.bottom-nav-item:nth-child(4)')?.classList.add('active');
-        if (typeof loadInbox === 'function') loadInbox();
-        else document.getElementById("feed").innerHTML = '<div class="loading">Loading inbox...</div>';
+    document.querySelector('.bottom-nav-item:nth-child(4)')?.classList.add('active');
+    // Wait for USER to be available
+    if (!window.USER) {
+        alert('Please login first');
+        openAuthModal();
+        return;
+    }
+    if (typeof loadInbox === 'function') loadInbox();
+    else document.getElementById("feed").innerHTML = '<div class="loading">Loading inbox...</div>';
+}
     } else if (page === 'profile') {
         document.querySelector('.bottom-nav-item:last-child')?.classList.add('active');
         if (typeof loadProfile === 'function') loadProfile();
