@@ -8,6 +8,13 @@ async function addComment(postId) {
     const { error } = await SB.from("comments").insert({ post_id: postId, user_id: user.id, text: text });
     if (error) { alert("Failed: " + error.message); return; }
     input.value = '';
+    
+    // Get post owner for notification
+    const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
+    if (post && post.user_id !== user.id) {
+        await createNotification('comment', post.user_id, user.id, postId);
+    }
+    
     await loadCommentsOnly(postId);
     
     // FIX: Update comment count to include replies too
@@ -48,6 +55,12 @@ async function likeComment(commentId) {
         userLikedComments.add(commentId);
         const likeBtn = document.getElementById(`comment-like-btn-${commentId}`);
         if (likeBtn) likeBtn.classList.add('liked');
+        
+        // Get comment owner for notification
+        const { data: comment } = await SB.from("comments").select("user_id").eq("id", commentId).single();
+        if (comment && comment.user_id !== USER.id) {
+            await createNotification('like_comment', comment.user_id, USER.id, commentId);
+        }
     }
     const { count: likeCount } = await SB.from("comment_likes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
     const { count: dislikeCount } = await SB.from("comment_dislikes").select("*", { count: 'exact', head: true }).eq("comment_id", commentId);
@@ -101,6 +114,13 @@ async function addReplyToComment(commentId, postId) {
     if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
     document.getElementById(`reply-comment-input-${commentId}`).style.display = 'none';
+    
+    // Get comment owner for notification
+    const { data: comment } = await SB.from("comments").select("user_id").eq("id", commentId).single();
+    if (comment && comment.user_id !== user.id) {
+        await createNotification('reply', comment.user_id, user.id, postId);
+    }
+    
     await loadCommentsOnly(postId);
     await updatePostCommentCount(postId);
 }
@@ -120,6 +140,13 @@ async function addReplyToReply(commentId, parentReplyId, postId) {
     });
     if (error) { alert("Reply failed: " + error.message); return; }
     input.value = '';
+    
+    // Get parent reply owner for notification
+    const { data: parentReply } = await SB.from("comment_replies").select("user_id").eq("id", parentReplyId).single();
+    if (parentReply && parentReply.user_id !== user.id) {
+        await createNotification('reply', parentReply.user_id, user.id, postId);
+    }
+    
     await loadCommentsOnly(postId);
     await updatePostCommentCount(postId);
 }
@@ -143,6 +170,12 @@ async function likeReply(replyId) {
         userLikedReplies.add(replyId);
         const likeBtn = document.getElementById(`reply-like-btn-${replyId}`);
         if (likeBtn) likeBtn.classList.add('liked');
+        
+        // Get reply owner for notification
+        const { data: reply } = await SB.from("comment_replies").select("user_id").eq("id", replyId).single();
+        if (reply && reply.user_id !== USER.id) {
+            await createNotification('like_reply', reply.user_id, USER.id, replyId);
+        }
     }
     const { count } = await SB.from("reply_likes").select("*", { count: 'exact', head: true }).eq("reply_id", replyId);
     const likeSpan = document.getElementById(`reply-like-${replyId}`);
