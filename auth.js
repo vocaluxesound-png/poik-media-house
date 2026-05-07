@@ -117,7 +117,7 @@ document.getElementById('magicLoginBtn').onclick = async () => {
 async function logout() {
     await SB.auth.signOut();
     USER = null;
-    window.USER = null;  // FIX: Also clear window.USER
+    window.USER = null;
     localStorage.removeItem('poik-poik-auth');
     localStorage.removeItem('poik-poik-email');
     if (timestampInterval) clearInterval(timestampInterval);
@@ -140,7 +140,7 @@ async function handleMagicLink() {
 async function checkAuth() {
     const { data: { user } } = await SB.auth.getUser();
     USER = user;
-    window.USER = user;  // FIX: Expose USER to window
+    window.USER = user;
     if (USER) {
         await loadUserInteractions();
         await updateHeaderAvatar();
@@ -149,12 +149,11 @@ async function checkAuth() {
     return user;
 }
 
-// ========== FIX FOR iOS LOGIN ==========
 async function restoreSession() {
     const { data: { session } } = await SB.auth.getSession();
     if (session && session.user) {
         USER = session.user;
-        window.USER = session.user;  // FIX: Expose USER to window
+        window.USER = session.user;
         await loadUserInteractions();
         await updateHeaderAvatar();
         startTimestampUpdater();
