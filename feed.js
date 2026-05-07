@@ -635,7 +635,11 @@ function bottomNav(page) {
     }
     if (page === 'inbox') {
         document.querySelector('.bottom-nav-item:nth-child(4)').classList.add('active');
-        document.getElementById("feed").innerHTML = '<div class="loading">Inbox coming soon...</div>';
+        if (typeof loadInbox === 'function') {
+            loadInbox();
+        } else {
+            document.getElementById("feed").innerHTML = '<div class="loading">Loading inbox...</div>';
+        }
     }
     if (page === 'profile') {
         document.querySelector('.bottom-nav-item:last-child').classList.add('active');
