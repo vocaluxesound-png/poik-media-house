@@ -116,6 +116,9 @@ async function toggleFollow(userId) {
             btn.style.background = "#333";
             btn.style.color = "#fff";
         }
+        
+        // CREATE NOTIFICATION for the user being followed
+        await createNotification('follow', userId, USER.id, null);
     }
     await loadFriends();
 }
