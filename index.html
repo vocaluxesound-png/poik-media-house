@@ -111,9 +111,12 @@
 <script src="friends.js"></script>
 <script src="search.js"></script>
 
-<!-- ALL NEW CODE INLINE (no external files needed) -->
 <script>
-// ========== NOTIFICATIONS SYSTEM ==========
+// ============================================================
+// NOTIFICATIONS, MESSAGES, INBOX, GREEN PILL - COMPLETE FIX
+// ============================================================
+
+// ---------- NOTIFICATIONS ----------
 async function createNotification(type, userId, actorId, targetId) {
     if (!userId || userId === actorId) return;
     try {
@@ -173,6 +176,7 @@ async function markAllNotificationsRead() {
     await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
 }
 
+// ---------- MESSAGES ----------
 async function sendMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
     try {
@@ -256,7 +260,7 @@ async function markConversationAsRead(otherUserId) {
     await updateNotificationBarCounts();
 }
 
-// ========== INBOX FUNCTIONS ==========
+// ---------- INBOX UI ----------
 let inboxCurrentTab = 'chats';
 let currentChatUser = null;
 let chatInterval = null;
@@ -400,8 +404,7 @@ async function switchInboxTab(tab) {
     await renderInboxView();
 }
 
-// ========== GREEN NOTIFICATION PILL ==========
-let lastNotificationCounts = { likes: 0, comments: 0, follows: 0, messages: 0 };
+// ---------- GREEN NOTIFICATION PILL ----------
 let pillTimeout = null;
 
 async function updateNotificationBarCounts() {
@@ -428,38 +431,13 @@ function showNotificationPill(likes, comments, follows, messages) {
     pill.id = 'notification-pill';
     pill.className = 'notification-pill';
     pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
-    pill.onclick = () => { hideNotificationPill(); bottomNav('inbox'); };
+    pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
     document.body.appendChild(pill);
 }
 
 function hideNotificationPill() { const pill = document.getElementById('notification-pill'); if (pill) pill.remove(); }
 
-if (window.USER) {
-    setTimeout(() => updateNotificationBarCounts(), 1000);
-    setInterval(updateNotificationBarCounts, 10000);
-}
-document.addEventListener('visibilitychange', () => { if (!document.hidden && window.USER) updateNotificationBarCounts(); });
-
-// ========== EXPOSE FUNCTIONS GLOBALLY ==========
-window.createNotification = createNotification;
-window.getNotificationCounts = getNotificationCounts;
-window.getUnreadMessageCount = getUnreadMessageCount;
-window.markAllNotificationsRead = markAllNotificationsRead;
-window.sendMessage = sendMessage;
-window.getConversations = getConversations;
-window.getMessagesWithUser = getMessagesWithUser;
-window.markConversationAsRead = markConversationAsRead;
-window.loadInbox = loadInbox;
-window.switchInboxTab = switchInboxTab;
-window.openChat = openChat;
-window.sendChatMessage = sendChatMessage;
-window.renderChatsList = renderChatsList;
-window.updateNotificationBarCounts = updateNotificationBarCounts;
-</script>
-
-<script>
-// Override bottomNav to support inbox
-const originalBottomNav = window.bottomNav;
+// ---------- BOTTOM NAVIGATION (FIXED) ----------
 window.bottomNav = function(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     if (page === 'home') {
@@ -481,25 +459,39 @@ window.bottomNav = function(page) {
         if (typeof loadProfile === 'function') loadProfile();
     }
 };
-</script>
 
-<script>
+// ---------- INITIALIZE ----------
 async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
 initStorage();
 
-// Handle magic link from URL
 handleMagicLink();
 
-// Restore session or check auth
 (async function() {
     const sessionRestored = await restoreSession();
-    if (!sessionRestored) {
-        await checkAuth();
-    }
-    if (typeof loadFeed === 'function') {
-        loadFeed();
+    if (!sessionRestored) await checkAuth();
+    if (typeof loadFeed === 'function') loadFeed();
+    // Start polling for notifications after user is set
+    if (window.USER) {
+        setTimeout(() => updateNotificationBarCounts(), 2000);
+        setInterval(updateNotificationBarCounts, 10000);
     }
 })();
+
+// Expose global functions
+window.createNotification = createNotification;
+window.getNotificationCounts = getNotificationCounts;
+window.getUnreadMessageCount = getUnreadMessageCount;
+window.markAllNotificationsRead = markAllNotificationsRead;
+window.sendMessage = sendMessage;
+window.getConversations = getConversations;
+window.getMessagesWithUser = getMessagesWithUser;
+window.markConversationAsRead = markConversationAsRead;
+window.loadInbox = loadInbox;
+window.switchInboxTab = switchInboxTab;
+window.openChat = openChat;
+window.sendChatMessage = sendChatMessage;
+window.renderChatsList = renderChatsList;
+window.updateNotificationBarCounts = updateNotificationBarCounts;
 </script>
 </body>
 </html>
