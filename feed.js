@@ -343,7 +343,7 @@ async function loadProfile() {
                                 ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}" style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                             </div>
                             <div class="post-privacy-menu" style="position: relative;">
-                                <button class="privacy-badge" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: 500;">${privacyText}</button>
+                                <button class="privacy-badge" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: bold !important;">${privacyText}</button>
                                 <div id="profile-post-menu-${p.id}" class="profile-post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'public')">Public</div>
                                     <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'friends')">Friends</div>
