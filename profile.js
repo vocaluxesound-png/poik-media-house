@@ -51,6 +51,29 @@ function openEditProfile() {
 document.getElementById('closeEditModal').onclick = () => document.getElementById('editProfileModal').style.display = 'none';
 document.getElementById('saveProfileBtn').onclick = saveProfile;
 
+// ========== ONLINE STATUS - UPDATE LAST SEEN ==========
+async function updateLastSeen() {
+    if (!USER) return;
+    try {
+        await SB.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", USER.id);
+    } catch (e) {
+        console.error("Update last_seen error:", e);
+    }
+}
+
+// Update last_seen every 30 seconds and on page visibility
+if (USER) {
+    updateLastSeen();
+    setInterval(updateLastSeen, 30000);
+}
+
+// Update when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && USER) {
+        updateLastSeen();
+    }
+});
+
 async function loadProfile() {
     if (!USER) { 
         alert('Please login'); 
