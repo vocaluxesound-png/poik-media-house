@@ -117,12 +117,91 @@ async function toggleFollow(userId) {
             btn.style.color = "#fff";
         }
         
-        // CREATE NOTIFICATION for the user being followed
-        await createNotification('follow', userId, USER.id, null);
+        if (typeof createNotification === 'function') {
+            await createNotification('follow', userId, USER.id, null);
+        }
     }
     await loadFriends();
+}
+
+// ========== FOLLOWERS MODAL FUNCTIONS ==========
+async function showFollowers() {
+    if (!USER) return;
+    const { data: followers } = await SB
+        .from("follows")
+        .select("follower, profiles!follows_follower_fkey(id, username, avatar_url)")
+        .eq("following", USER.id);
+    
+    const users = followers?.map(f => f.profiles).filter(Boolean) || [];
+    showUserList(users, "Followers");
+}
+
+async function showFollowing() {
+    if (!USER) return;
+    const { data: following } = await SB
+        .from("follows")
+        .select("following, profiles!follows_following_fkey(id, username, avatar_url)")
+        .eq("follower", USER.id);
+    
+    const users = following?.map(f => f.profiles).filter(Boolean) || [];
+    showUserList(users, "Following");
+}
+
+function showUserList(users, title) {
+    let modal = document.getElementById('followersModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'followersModal';
+        modal.className = 'followers-modal';
+        modal.innerHTML = `
+            <div class="followers-modal-content">
+                <div class="followers-modal-header">
+                    <h3>${title}</h3>
+                    <button onclick="closeFollowersModal()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;">✕</button>
+                </div>
+                <div id="followersList" class="followers-list"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } else {
+        modal.querySelector('h3').textContent = title;
+    }
+    
+    const listContainer = document.getElementById('followersList');
+    if (!listContainer) return;
+    
+    if (users.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No users found</div>';
+    } else {
+        let html = '';
+        for (const user of users) {
+            html += `
+                <div class="follower-item" onclick="viewProfile('${user.id}'); closeFollowersModal();">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        ${user.avatar_url ? `<img src="${user.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                        <div>
+                            <div style="font-weight:bold;">${escapeHtml(user.username || 'User')}</div>
+                            <div style="font-size:11px;color:#888;">@${escapeHtml(user.username || 'user')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        listContainer.innerHTML = html;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeFollowersModal() {
+    const modal = document.getElementById('followersModal');
+    if (modal) modal.style.display = 'none';
 }
 
 window.loadFriends = loadFriends;
 window.switchFriendsTab = switchFriendsTab;
 window.toggleFollow = toggleFollow;
+window.showFollowers = showFollowers;
+window.showFollowing = showFollowing;
+window.closeFollowersModal = closeFollowersModal;
+
