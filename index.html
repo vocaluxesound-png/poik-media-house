@@ -120,14 +120,15 @@
 // NOTIFICATIONS, MESSAGES, INBOX, GREEN PILL - COMPLETE FIX
 // ============================================================
 
+// ---------- GLOBAL VARIABLES ----------
+let currentOpenChatUserId = null;  // Track which chat is currently OPEN
+
 // ---------- TYPING INDICATOR (Polling every 2 seconds) ----------
 let typingInterval = null;
-let currentTypingUserId = null;
 
 async function updateTypingStatus(chatWithId, isTyping) {
     if (!window.USER) return;
     try {
-        // First, check if record exists
         const { data: existing } = await SB
             .from("typing_status")
             .select("id")
@@ -162,7 +163,6 @@ async function checkTypingStatus(chatWithId) {
         if (data && data.is_typing) {
             const updatedAt = new Date(data.updated_at);
             const now = new Date();
-            // Only show if typing within last 5 seconds
             if ((now - updatedAt) < 5000) {
                 return true;
             }
@@ -190,11 +190,10 @@ function showTypingIndicator(show) {
     }
 }
 
-// Start polling for typing status
 function startTypingPolling(chatWithId) {
     if (typingInterval) clearInterval(typingInterval);
     typingInterval = setInterval(async () => {
-        if (currentChatUser === chatWithId) {
+        if (currentOpenChatUserId === chatWithId) {
             const isTyping = await checkTypingStatus(chatWithId);
             showTypingIndicator(isTyping);
         }
@@ -254,11 +253,18 @@ async function getNotificationCounts() {
 async function getUnreadMessageCount() {
     if (!window.USER) return 0;
     try {
-        const { count } = await SB
+        let query = SB
             .from("messages")
             .select("*", { count: 'exact', head: true })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
+        
+        // FIX: Exclude messages from currently open chat
+        if (currentOpenChatUserId) {
+            query = query.neq("sender_id", currentOpenChatUserId);
+        }
+        
+        const { count } = await query;
         return count || 0;
     } catch(e) { return 0; }
 }
@@ -294,6 +300,12 @@ async function sendMessage(receiverId, message) {
             message: message.trim()
         });
         if (error) return false;
+        
+        // Mark as read immediately for sender (since they are in the chat)
+        if (currentOpenChatUserId === receiverId) {
+            await markConversationAsRead(receiverId);
+        }
+        
         await updateNotificationBarCounts();
         await updateInboxGreenDot();
         return true;
@@ -317,7 +329,7 @@ async function getConversations() {
                     otherUserId: otherUserId,
                     lastMessage: msg.message,
                     lastMessageTime: msg.created_at,
-                    unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read) ? 1 : 0
+                    unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherUserId) ? 1 : 0
                 });
             } else {
                 const conv = conversations.get(otherUserId);
@@ -325,7 +337,7 @@ async function getConversations() {
                     conv.lastMessage = msg.message;
                     conv.lastMessageTime = msg.created_at;
                 }
-                if (msg.receiver_id === window.USER.id && !msg.is_read) conv.unreadCount++;
+                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherUserId) conv.unreadCount++;
             }
         }
         const userIds = [...conversations.keys()];
@@ -372,7 +384,6 @@ async function markConversationAsRead(otherUserId) {
 
 // ---------- INBOX UI ----------
 let inboxCurrentTab = 'chats';
-let currentChatUser = null;
 let chatInterval = null;
 
 async function loadInbox() {
@@ -434,7 +445,9 @@ async function renderChatsList() {
 }
 
 async function openChat(userId) {
-    currentChatUser = userId;
+    // Set current open chat to exclude from unread count
+    currentOpenChatUserId = userId;
+    
     await markConversationAsRead(userId);
     await updateInboxGreenDot();
     
@@ -457,9 +470,9 @@ async function openChat(userId) {
             <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;background:#0a0a0a;">
                 <input type="text" id="chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;border:none;background:#222;color:white;" 
                     onkeypress="if(event.key==='Enter') sendChatMessage()"
-                    onfocus="updateTypingStatus(currentChatUser, true)"
-                    onblur="updateTypingStatus(currentChatUser, false)"
-                    oninput="updateTypingStatus(currentChatUser, this.value.length > 0)">
+                    onfocus="updateTypingStatus(currentOpenChatUserId, true)"
+                    onblur="updateTypingStatus(currentOpenChatUserId, false)"
+                    oninput="updateTypingStatus(currentOpenChatUserId, this.value.length > 0)">
                 <button onclick="sendChatMessage()" style="background:#00ff88;color:black;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;">➤</button>
             </div>
         </div>
@@ -471,13 +484,16 @@ async function openChat(userId) {
 
 async function closeChat() {
     stopTypingPolling();
-    currentChatUser = null;
+    currentOpenChatUserId = null;
+    // Refresh counts after closing chat
+    await updateNotificationBarCounts();
+    await updateInboxGreenDot();
     await renderChatsList();
 }
 
 async function loadChatMessages() {
-    if (!currentChatUser) return;
-    const messages = await getMessagesWithUser(currentChatUser, 100);
+    if (!currentOpenChatUserId) return;
+    const messages = await getMessagesWithUser(currentOpenChatUserId, 100);
     const container = document.getElementById('chat-messages');
     if (!container) return;
     if (messages.length === 0) { container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; return; }
@@ -493,11 +509,10 @@ async function loadChatMessages() {
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
     const message = input?.value.trim();
-    if (!message || !currentChatUser) return;
+    if (!message || !currentOpenChatUserId) return;
     input.value = '';
-    // Stop typing indicator
-    await updateTypingStatus(currentChatUser, false);
-    await sendMessage(currentChatUser, message);
+    await updateTypingStatus(currentOpenChatUserId, false);
+    await sendMessage(currentOpenChatUserId, message);
     await loadChatMessages();
 }
 
@@ -530,7 +545,7 @@ async function switchInboxTab(tab) {
     inboxCurrentTab = tab;
     if (chatInterval) clearInterval(chatInterval);
     if (typingInterval) clearInterval(typingInterval);
-    currentChatUser = null;
+    currentOpenChatUserId = null;
     await renderInboxView();
 }
 
@@ -559,7 +574,6 @@ function showNotificationPill(likes, comments, follows, messages) {
     if (messages > 0) pillContent += `<span class="pill-item"><i class="fas fa-envelope" style="color:black;"></i> ${messages}</span>`;
     if (pillContent === '') return;
     
-    // Position pill above inbox button
     const inboxBtn = document.getElementById('inboxNavBtn');
     if (inboxBtn) {
         const rect = inboxBtn.getBoundingClientRect();
@@ -576,7 +590,6 @@ function showNotificationPill(likes, comments, follows, messages) {
         pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
         document.body.appendChild(pill);
     } else {
-        // Fallback to center
         const pill = document.createElement('div');
         pill.id = 'notification-pill';
         pill.className = 'notification-pill';
@@ -641,7 +654,6 @@ handleMagicLink();
     }
 })();
 
-// Handle window resize to reposition pill
 window.addEventListener('resize', () => {
     if (document.getElementById('notification-pill')) {
         updateNotificationBarCounts();
@@ -666,6 +678,7 @@ window.updateNotificationBarCounts = updateNotificationBarCounts;
 window.updateInboxGreenDot = updateInboxGreenDot;
 window.updateTypingStatus = updateTypingStatus;
 window.closeChat = closeChat;
+window.currentOpenChatUserId = currentOpenChatUserId;
 </script>
 
 <script>
