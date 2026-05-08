@@ -196,3 +196,6 @@ window.handleMagicLink = handleMagicLink;
 window.restoreSession = restoreSession;
 window.updateHeaderAvatar = updateHeaderAvatar;
 window.loadUserInteractions = loadUserInteractions;
+window.USER = USER;
+
+
