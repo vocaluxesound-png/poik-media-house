@@ -115,7 +115,6 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // Feed posts - 3-dot menu ONLY for post owner
             html += `
                 <div class="post" data-post-id="${p.id}">
                     <div class="post-header">
@@ -257,7 +256,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== LOAD PROFILE - COMPLETE FIXED ==========
+// ========== LOAD PROFILE ==========
 async function loadProfile() {
     window.isProfileView = true;
     window.isFriendsView = false;
@@ -298,7 +297,6 @@ async function loadProfile() {
             .select("*", { count: 'exact', head: true })
             .eq("user_id", USER.id);
         
-        // Get follower/following counts
         const { count: followerCount } = await SB
             .from("follows")
             .select("*", { count: 'exact', head: true })
@@ -328,9 +326,9 @@ async function loadProfile() {
                     <div style="color: #888; margin-bottom: 10px;">@${escapeHtml(displayName)}</div>
                     <div class="profile-bio" style="color: #aaa; margin-bottom: 20px;">${escapeHtml(bio)}</div>
                     <div class="profile-stats" style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
-                        <div><strong>${postCount || 0}</strong><br>posts</div>
-                        <div><strong>${followerCount || 0}</strong><br>followers</div>
-                        <div><strong>${followingCount || 0}</strong><br>following</div>
+                        <div class="profile-stat-clickable" onclick="refreshFeed()"><strong>${postCount || 0}</strong><br>posts</div>
+                        <div class="profile-stat-clickable" onclick="showFollowers()"><strong>${followerCount || 0}</strong><br>followers</div>
+                        <div class="profile-stat-clickable" onclick="showFollowing()"><strong>${followingCount || 0}</strong><br>following</div>
                     </div>
                     <button class="edit-profile-btn" onclick="openEditProfile()" style="background: #333; color: white; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; margin-right: 10px;">Edit Profile</button>
                     <button onclick="goToHome()" style="background: #00ff88; color: black; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">Back to Feed</button>
@@ -350,7 +348,7 @@ async function loadProfile() {
                     `<div class="avatar-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
                 
                 html += `
-                    <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden; position: relative;">
+                    <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
                         <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
                             <div class="post-header-left" style="display: flex; align-items: center; gap: 10px;">
                                 ${postAvatarHtml}
@@ -369,20 +367,20 @@ async function loadProfile() {
                         </div>
                         <img class="post-image" src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
                         <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                        <div class="post-actions-right" style="position: relative; right: auto; top: auto; transform: none; flex-direction: row; justify-content: flex-start; gap: 20px; padding: 8px 12px;">
-                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
+                        <div style="display: flex; gap: 20px; padding: 8px 12px;">
+                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})" style="flex-direction: row; gap: 5px;">
                                 <i class="fas fa-heart"></i>
                                 <span id="likes-${p.id}">${p.likes_count || 0}</span>
                             </div>
-                            <div class="action-icon" onclick="toggleComments(${p.id})">
+                            <div class="action-icon" onclick="toggleComments(${p.id})" style="flex-direction: row; gap: 5px;">
                                 <i class="far fa-comment-dots"></i>
                                 <span id="comment-count-${p.id}">${p.comments_count || 0}</span>
                             </div>
-                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
+                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')" style="flex-direction: row; gap: 5px;">
                                 <i class="fas fa-paper-plane"></i>
                                 <span>Share</span>
                             </div>
-                            <div class="action-icon" onclick="alert('Saved!')">
+                            <div class="action-icon" onclick="alert('Saved!')" style="flex-direction: row; gap: 5px;">
                                 <i class="far fa-bookmark"></i>
                                 <span>Save</span>
                             </div>
@@ -444,7 +442,7 @@ async function deleteProfilePost(postId) {
     await loadProfile();
 }
 
-// ========== VIEW PROFILE (other user) - COMPLETE FIXED ==========
+// ========== VIEW PROFILE (other user) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -474,7 +472,6 @@ async function viewProfile(userId) {
             isFollowing = followCheck && followCheck.length > 0;
         }
         
-        // Get follower/following counts for this user
         const { count: followerCount } = await SB
             .from("follows")
             .select("*", { count: 'exact', head: true })
@@ -532,27 +529,27 @@ async function viewProfile(userId) {
                 
                 html += `
                     <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                        <div class="post-header" style="display: flex; align-items: center; gap: 10px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 12px;">
                             ${postAvatarHtml}
-                            <div class="post-username" style="font-weight: bold;">${escapeHtml(displayName)}</div>
+                            <div style="font-weight: bold;">${escapeHtml(displayName)}</div>
                             ${timestamp ? `<span style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                         </div>
                         <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
-                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                        <div class="post-actions-right" style="position: relative; right: auto; top: auto; transform: none; flex-direction: row; justify-content: flex-start; gap: 20px; padding: 8px 12px;">
-                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
+                        <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                        <div style="display: flex; gap: 20px; padding: 8px 12px;">
+                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})" style="flex-direction: row; gap: 5px;">
                                 <i class="fas fa-heart"></i>
                                 <span id="likes-${p.id}">${p.likes_count || 0}</span>
                             </div>
-                            <div class="action-icon" onclick="toggleComments(${p.id})">
+                            <div class="action-icon" onclick="toggleComments(${p.id})" style="flex-direction: row; gap: 5px;">
                                 <i class="far fa-comment-dots"></i>
                                 <span id="comment-count-${p.id}">${p.comments_count || 0}</span>
                             </div>
-                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
+                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')" style="flex-direction: row; gap: 5px;">
                                 <i class="fas fa-paper-plane"></i>
                                 <span>Share</span>
                             </div>
-                            <div class="action-icon" onclick="alert('Saved!')">
+                            <div class="action-icon" onclick="alert('Saved!')" style="flex-direction: row; gap: 5px;">
                                 <i class="far fa-bookmark"></i>
                                 <span>Save</span>
                             </div>
@@ -588,7 +585,6 @@ async function viewProfile(userId) {
     }
 }
 
-// Open chat from profile page
 async function openChatFromProfile(userId) {
     bottomNav('inbox');
     setTimeout(() => {
@@ -627,7 +623,6 @@ async function toggleFollowFromProfile(userId) {
         btn.style.background = '#333';
         btn.style.color = 'white';
         
-        // CREATE NOTIFICATION for the user being followed
         if (typeof createNotification === 'function') {
             await createNotification('follow', userId, USER.id, null);
         }
@@ -638,7 +633,6 @@ async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     
     try {
-        // Get post owner first
         const { data: post, error: postError } = await SB
             .from("posts")
             .select("user_id")
@@ -662,50 +656,19 @@ async function likePost(postId) {
         }
         
         if (existing && existing.length > 0) {
-            // Unlike
-            const { error: deleteError } = await SB
-                .from("post_likes")
-                .delete()
-                .eq("post_id", postId)
-                .eq("user_id", USER.id);
-            
-            if (deleteError) {
-                console.error("Error unliking:", deleteError);
-                return;
-            }
-            
+            await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
             userLikedPosts.delete(Number(postId));
         } else {
-            // Like
-            const { error: insertError } = await SB
-                .from("post_likes")
-                .insert({ post_id: postId, user_id: USER.id });
-            
-            if (insertError) {
-                console.error("Error liking:", insertError);
-                return;
-            }
-            
+            await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
             userLikedPosts.add(Number(postId));
             
-            // CREATE NOTIFICATION for post owner
             if (post && post.user_id !== USER.id && typeof createNotification === 'function') {
                 await createNotification('like_post', post.user_id, USER.id, postId);
             }
         }
         
-        // Get updated like count
-        const { count, error: countError } = await SB
-            .from("post_likes")
-            .select("*", { count: 'exact', head: true })
-            .eq("post_id", postId);
+        const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
         
-        if (countError) {
-            console.error("Error getting count:", countError);
-            return;
-        }
-        
-        // Update UI
         const likeSpan = document.getElementById(`likes-${postId}`);
         if (likeSpan) likeSpan.innerText = count || 0;
         
