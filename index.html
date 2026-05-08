@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -121,7 +121,7 @@
 // ============================================================
 
 // ---------- GLOBAL VARIABLES ----------
-let currentOpenChatUserId = null;  // Track which chat is currently OPEN (only for THIS user)
+let currentOpenChatUserId = null;
 
 // ---------- TYPING INDICATOR ----------
 let typingInterval = null;
@@ -225,8 +225,7 @@ async function createNotification(type, userId, actorId, targetId) {
             type: type,
             target_id: targetId || 0
         });
-        await updateNotificationBarCounts();
-        await updateInboxGreenDot();
+        await refreshAllCounts();
     } catch(e) { console.error("Notification error:", e); }
 }
 
@@ -253,20 +252,20 @@ async function getNotificationCounts() {
 async function getUnreadMessageCount() {
     if (!window.USER) return 0;
     try {
-        let query = SB
+        // Get ALL unread messages for this user
+        const { count: totalUnread, data: messages } = await SB
             .from("messages")
-            .select("*", { count: 'exact', head: true })
+            .select("sender_id", { count: 'exact', head: false })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
-        // ONLY exclude messages from currently open chat for THIS user
-        // When THIS user has a chat open, don't count messages from that person
-        if (currentOpenChatUserId) {
-            query = query.neq("sender_id", currentOpenChatUserId);
+        // If user has a chat open, subtract messages from that person
+        if (currentOpenChatUserId && messages) {
+            const openChatMessages = messages.filter(m => m.sender_id === currentOpenChatUserId).length;
+            return (totalUnread || 0) - openChatMessages;
         }
         
-        const { count } = await query;
-        return count || 0;
+        return totalUnread || 0;
     } catch(e) { return 0; }
 }
 
@@ -291,6 +290,11 @@ async function updateInboxGreenDot() {
     }
 }
 
+async function refreshAllCounts() {
+    await updateNotificationBarCounts();
+    await updateInboxGreenDot();
+}
+
 // ---------- MESSAGES ----------
 async function sendMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
@@ -302,9 +306,7 @@ async function sendMessage(receiverId, message) {
         });
         if (error) return false;
         
-        // After sending, update counts
-        await updateNotificationBarCounts();
-        await updateInboxGreenDot();
+        await refreshAllCounts();
         return true;
     } catch(e) { return false; }
 }
@@ -318,6 +320,7 @@ async function getConversations() {
             .or(`sender_id.eq.${window.USER.id},receiver_id.eq.${window.USER.id}`)
             .order("created_at", { ascending: false });
         if (!messages || messages.length === 0) return [];
+        
         const conversations = new Map();
         for (const msg of messages) {
             const otherUserId = msg.sender_id === window.USER.id ? msg.receiver_id : msg.sender_id;
@@ -334,13 +337,17 @@ async function getConversations() {
                     conv.lastMessage = msg.message;
                     conv.lastMessageTime = msg.created_at;
                 }
-                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherUserId) conv.unreadCount++;
+                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherUserId) {
+                    conv.unreadCount++;
+                }
             }
         }
+        
         const userIds = [...conversations.keys()];
         const { data: profiles } = await SB.from("profiles").select("id, username, avatar_url, last_seen").in("id", userIds);
         const profileMap = new Map();
         if (profiles) profiles.forEach(p => profileMap.set(p.id, p));
+        
         const result = [];
         for (const [userId, conv] of conversations) {
             const profile = profileMap.get(userId);
@@ -368,15 +375,22 @@ async function getMessagesWithUser(otherUserId, limit = 50) {
             .or(`and(sender_id.eq.${window.USER.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${window.USER.id})`)
             .order("created_at", { ascending: true })
             .limit(limit);
-        return data || [];
-    } catch(e) { return []; }
+        
+        // Also fetch profile for avatar
+        const { data: profile } = await SB
+            .from("profiles")
+            .select("avatar_url, username")
+            .eq("id", otherUserId)
+            .single();
+        
+        return { messages: data || [], profile: profile };
+    } catch(e) { return { messages: [], profile: null }; }
 }
 
 async function markConversationAsRead(otherUserId) {
     if (!window.USER) return;
     await SB.from("messages").update({ is_read: true }).eq("sender_id", otherUserId).eq("receiver_id", window.USER.id).eq("is_read", false);
-    await updateNotificationBarCounts();
-    await updateInboxGreenDot();
+    await refreshAllCounts();
 }
 
 // ---------- INBOX UI ----------
@@ -392,7 +406,7 @@ async function loadInbox() {
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     await markAllNotificationsRead();
-    await updateInboxGreenDot();
+    await refreshAllCounts();
     feedDiv.innerHTML = '<div class="loading">Loading inbox...</div>';
     await renderInboxView();
 }
@@ -442,20 +456,45 @@ async function renderChatsList() {
 }
 
 async function openChat(userId) {
-    // Set current open chat to exclude from unread count for THIS user
     currentOpenChatUserId = userId;
-    
-    // Mark messages from this user as read
     await markConversationAsRead(userId);
-    await updateInboxGreenDot();
-    
-    // Start typing polling
+    await refreshAllCounts();
     startTypingPolling(userId);
     
-    const { data: profile } = await SB.from("profiles").select("username, avatar_url, last_seen").eq("id", userId).single();
+    const result = await getMessagesWithUser(userId, 100);
+    const messages = result.messages;
+    const profile = result.profile;
+    
     const container = document.getElementById('inbox-content');
     if (!container) return;
     const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
+    
+    // Build messages HTML with avatars
+    let messagesHtml = '';
+    if (messages.length === 0) {
+        messagesHtml = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>';
+    } else {
+        for (const msg of messages) {
+            const isMine = msg.sender_id === window.USER.id;
+            // Get sender profile for avatar
+            const senderId = msg.sender_id;
+            let senderAvatar = '';
+            if (!isMine && profile) {
+                senderAvatar = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:8px;">` : `<div style="width:28px;height:28px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:8px;">👤</div>`;
+            }
+            
+            messagesHtml += `
+                <div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:8px;">
+                    ${!isMine ? senderAvatar : ''}
+                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine?'#00ff88':'#222'};color:${isMine?'black':'white'};word-wrap:break-word;">
+                        ${escapeHtml(msg.message)}
+                        <div style="font-size:9px;color:${isMine?'#006644':'#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
+                    </div>
+                    ${isMine ? '' : ''}
+                </div>
+            `;
+        }
+    }
     
     container.innerHTML = `
         <div style="display:flex;flex-direction:column;height:calc(100vh - 180px);">
@@ -464,7 +503,7 @@ async function openChat(userId) {
                 <div style="position:relative;">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`:`<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}${isOnline?'<div style="position:absolute;bottom:0px;right:0px;width:10px;height:10px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>':''}</div>
                 <div><div style="font-weight:bold;">${escapeHtml(profile?.username||'User')}</div><div style="font-size:10px;color:${isOnline?'#00ff88':'#888'};">${isOnline?'🟢 Active now':(profile?.last_seen?`Last seen ${timeAgo(profile.last_seen)}`:'Offline')}</div></div>
             </div>
-            <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"><div class="loading">Loading messages...</div></div>
+            <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;">${messagesHtml}</div>
             <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;background:#0a0a0a;">
                 <input type="text" id="chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;border:none;background:#222;color:white;" 
                     onkeypress="if(event.key==='Enter') sendChatMessage()"
@@ -475,33 +514,64 @@ async function openChat(userId) {
             </div>
         </div>
     `;
-    await loadChatMessages();
+    
+    const messagesContainer = document.getElementById('chat-messages');
+    if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
     if (chatInterval) clearInterval(chatInterval);
-    chatInterval = setInterval(loadChatMessages, 3000);
-}
-
-async function closeChat() {
-    stopTypingPolling();
-    currentOpenChatUserId = null;  // Reset when closing chat
-    // Refresh counts after closing chat
-    await updateNotificationBarCounts();
-    await updateInboxGreenDot();
-    await renderChatsList();
+    chatInterval = setInterval(async () => {
+        if (currentOpenChatUserId) {
+            const newResult = await getMessagesWithUser(currentOpenChatUserId, 100);
+            const newMessages = newResult.messages;
+            if (JSON.stringify(messages) !== JSON.stringify(newMessages)) {
+                await loadChatMessages();
+            }
+        }
+    }, 3000);
 }
 
 async function loadChatMessages() {
     if (!currentOpenChatUserId) return;
-    const messages = await getMessagesWithUser(currentOpenChatUserId, 100);
+    const result = await getMessagesWithUser(currentOpenChatUserId, 100);
+    const messages = result.messages;
+    const profile = result.profile;
     const container = document.getElementById('chat-messages');
     if (!container) return;
-    if (messages.length === 0) { container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; return; }
+    
+    if (messages.length === 0) { 
+        container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; 
+        return; 
+    }
+    
     let html = '';
     for (const msg of messages) {
         const isMine = msg.sender_id === window.USER.id;
-        html += `<div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};"><div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine?'#00ff88':'#222'};color:${isMine?'black':'white'};word-wrap:break-word;">${escapeHtml(msg.message)}<div style="font-size:9px;color:${isMine?'#006644':'#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div></div></div>`;
+        let senderAvatar = '';
+        if (!isMine && profile) {
+            senderAvatar = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:8px;">` : `<div style="width:28px;height:28px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:8px;">👤</div>`;
+        }
+        
+        html += `
+            <div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:8px;">
+                ${!isMine ? senderAvatar : ''}
+                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine?'#00ff88':'#222'};color:${isMine?'black':'white'};word-wrap:break-word;">
+                    ${escapeHtml(msg.message)}
+                    <div style="font-size:9px;color:${isMine?'#006644':'#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
+                </div>
+            </div>
+        `;
     }
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
+}
+
+async function closeChat() {
+    stopTypingPolling();
+    currentOpenChatUserId = null;
+    if (chatInterval) clearInterval(chatInterval);
+    chatInterval = null;
+    await refreshAllCounts();
+    await renderChatsList();
 }
 
 async function sendChatMessage() {
@@ -583,14 +653,7 @@ function showNotificationPill(likes, comments, follows, messages) {
         pill.style.left = (rect.left + rect.width / 2) + 'px';
         pill.style.transform = 'translateX(-50%)';
         pill.style.zIndex = '1000';
-        pill.style.cursor = 'pointer';
-        pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
-        pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
-        document.body.appendChild(pill);
-    } else {
-        const pill = document.createElement('div');
-        pill.id = 'notification-pill';
-        pill.className = 'notification-pill';
+        pill.style.cursor = 'cursor';
         pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
         pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
         document.body.appendChild(pill);
@@ -633,7 +696,6 @@ window.bottomNav = function(page) {
 // ---------- INITIALIZE ----------
 async function initStorage() { try { await SB.storage.createBucket('avatars', { public: true }); } catch(e) {} }
 initStorage();
-
 handleMagicLink();
 
 (async function() {
@@ -641,14 +703,8 @@ handleMagicLink();
     if (!sessionRestored) await checkAuth();
     if (typeof loadFeed === 'function') loadFeed();
     if (window.USER) {
-        setTimeout(() => {
-            updateNotificationBarCounts();
-            updateInboxGreenDot();
-        }, 2000);
-        setInterval(() => {
-            updateNotificationBarCounts();
-            updateInboxGreenDot();
-        }, 10000);
+        setTimeout(() => refreshAllCounts(), 2000);
+        setInterval(() => refreshAllCounts(), 10000);
     }
 })();
 
@@ -676,15 +732,14 @@ window.updateNotificationBarCounts = updateNotificationBarCounts;
 window.updateInboxGreenDot = updateInboxGreenDot;
 window.updateTypingStatus = updateTypingStatus;
 window.closeChat = closeChat;
+window.refreshAllCounts = refreshAllCounts;
 </script>
 
 <script>
-// Sync USER to window.USER just in case
 setInterval(function() {
     if (typeof USER !== 'undefined' && USER && !window.USER) {
         window.USER = USER;
-        updateInboxGreenDot();
-        updateNotificationBarCounts();
+        refreshAllCounts();
     }
 }, 500);
 </script>
