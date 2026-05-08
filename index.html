@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -47,7 +47,11 @@
 <button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
 <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
 <div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
-<button class="bottom-nav-item" onclick="bottomNav('inbox')"><i class="far fa-comment-dots"></i><span>Inbox</span></button>
+<button id="inboxNavBtn" class="bottom-nav-item" onclick="bottomNav('inbox')">
+<i class="far fa-comment-dots"></i>
+<span>Inbox</span>
+<div id="inboxGreenDot" class="inbox-dot"></div>
+</button>
 <button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
 </div>
 </div>
@@ -116,6 +120,93 @@
 // NOTIFICATIONS, MESSAGES, INBOX, GREEN PILL - COMPLETE FIX
 // ============================================================
 
+// ---------- TYPING INDICATOR (Polling every 2 seconds) ----------
+let typingInterval = null;
+let currentTypingUserId = null;
+
+async function updateTypingStatus(chatWithId, isTyping) {
+    if (!window.USER) return;
+    try {
+        // First, check if record exists
+        const { data: existing } = await SB
+            .from("typing_status")
+            .select("id")
+            .eq("user_id", window.USER.id)
+            .eq("chat_with_id", chatWithId)
+            .single();
+        
+        if (existing) {
+            await SB.from("typing_status")
+                .update({ is_typing: isTyping, updated_at: new Date().toISOString() })
+                .eq("id", existing.id);
+        } else {
+            await SB.from("typing_status").insert({
+                user_id: window.USER.id,
+                chat_with_id: chatWithId,
+                is_typing: isTyping
+            });
+        }
+    } catch(e) { console.error("Typing status error:", e); }
+}
+
+async function checkTypingStatus(chatWithId) {
+    if (!window.USER) return false;
+    try {
+        const { data } = await SB
+            .from("typing_status")
+            .select("is_typing, updated_at")
+            .eq("user_id", chatWithId)
+            .eq("chat_with_id", window.USER.id)
+            .single();
+        
+        if (data && data.is_typing) {
+            const updatedAt = new Date(data.updated_at);
+            const now = new Date();
+            // Only show if typing within last 5 seconds
+            if ((now - updatedAt) < 5000) {
+                return true;
+            }
+        }
+        return false;
+    } catch(e) { return false; }
+}
+
+function showTypingIndicator(show) {
+    let indicator = document.getElementById('typing-indicator');
+    if (show) {
+        if (!indicator) {
+            const container = document.getElementById('chat-messages');
+            if (container) {
+                indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.innerHTML = '<span></span><span></span><span></span><span style="margin-left:5px;color:#888;font-size:11px;">typing...</span>';
+                container.appendChild(indicator);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    } else {
+        if (indicator) indicator.remove();
+    }
+}
+
+// Start polling for typing status
+function startTypingPolling(chatWithId) {
+    if (typingInterval) clearInterval(typingInterval);
+    typingInterval = setInterval(async () => {
+        if (currentChatUser === chatWithId) {
+            const isTyping = await checkTypingStatus(chatWithId);
+            showTypingIndicator(isTyping);
+        }
+    }, 2000);
+}
+
+function stopTypingPolling() {
+    if (typingInterval) clearInterval(typingInterval);
+    typingInterval = null;
+    showTypingIndicator(false);
+}
+
 // ---------- NOTIFICATIONS ----------
 async function createNotification(type, userId, actorId, targetId) {
     if (!userId || userId === actorId) return;
@@ -136,6 +227,7 @@ async function createNotification(type, userId, actorId, targetId) {
             target_id: targetId || 0
         });
         await updateNotificationBarCounts();
+        await updateInboxGreenDot();
     } catch(e) { console.error("Notification error:", e); }
 }
 
@@ -176,6 +268,22 @@ async function markAllNotificationsRead() {
     await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
 }
 
+// ---------- INBOX GREEN DOT ----------
+async function updateInboxGreenDot() {
+    const unreadMessages = await getUnreadMessageCount();
+    const notificationCounts = await getNotificationCounts();
+    const totalUnread = unreadMessages + notificationCounts.likes + notificationCounts.comments + notificationCounts.follows;
+    
+    const greenDot = document.getElementById('inboxGreenDot');
+    if (greenDot) {
+        if (totalUnread > 0) {
+            greenDot.classList.add('show');
+        } else {
+            greenDot.classList.remove('show');
+        }
+    }
+}
+
 // ---------- MESSAGES ----------
 async function sendMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
@@ -187,6 +295,7 @@ async function sendMessage(receiverId, message) {
         });
         if (error) return false;
         await updateNotificationBarCounts();
+        await updateInboxGreenDot();
         return true;
     } catch(e) { return false; }
 }
@@ -258,6 +367,7 @@ async function markConversationAsRead(otherUserId) {
     if (!window.USER) return;
     await SB.from("messages").update({ is_read: true }).eq("sender_id", otherUserId).eq("receiver_id", window.USER.id).eq("is_read", false);
     await updateNotificationBarCounts();
+    await updateInboxGreenDot();
 }
 
 // ---------- INBOX UI ----------
@@ -274,6 +384,7 @@ async function loadInbox() {
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     await markAllNotificationsRead();
+    await updateInboxGreenDot();
     feedDiv.innerHTML = '<div class="loading">Loading inbox...</div>';
     await renderInboxView();
 }
@@ -325,20 +436,30 @@ async function renderChatsList() {
 async function openChat(userId) {
     currentChatUser = userId;
     await markConversationAsRead(userId);
+    await updateInboxGreenDot();
+    
+    // Start typing polling
+    startTypingPolling(userId);
+    
     const { data: profile } = await SB.from("profiles").select("username, avatar_url, last_seen").eq("id", userId).single();
     const container = document.getElementById('inbox-content');
     if (!container) return;
     const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
+    
     container.innerHTML = `
         <div style="display:flex;flex-direction:column;height:calc(100vh - 180px);">
             <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
-                <button onclick="renderChatsList()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
+                <button onclick="closeChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
                 <div style="position:relative;">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`:`<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}${isOnline?'<div style="position:absolute;bottom:0px;right:0px;width:10px;height:10px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>':''}</div>
                 <div><div style="font-weight:bold;">${escapeHtml(profile?.username||'User')}</div><div style="font-size:10px;color:${isOnline?'#00ff88':'#888'};">${isOnline?'🟢 Active now':(profile?.last_seen?`Last seen ${timeAgo(profile.last_seen)}`:'Offline')}</div></div>
             </div>
             <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"><div class="loading">Loading messages...</div></div>
             <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;background:#0a0a0a;">
-                <input type="text" id="chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;border:none;background:#222;color:white;" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <input type="text" id="chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;border:none;background:#222;color:white;" 
+                    onkeypress="if(event.key==='Enter') sendChatMessage()"
+                    onfocus="updateTypingStatus(currentChatUser, true)"
+                    onblur="updateTypingStatus(currentChatUser, false)"
+                    oninput="updateTypingStatus(currentChatUser, this.value.length > 0)">
                 <button onclick="sendChatMessage()" style="background:#00ff88;color:black;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;">➤</button>
             </div>
         </div>
@@ -346,6 +467,12 @@ async function openChat(userId) {
     await loadChatMessages();
     if (chatInterval) clearInterval(chatInterval);
     chatInterval = setInterval(loadChatMessages, 3000);
+}
+
+async function closeChat() {
+    stopTypingPolling();
+    currentChatUser = null;
+    await renderChatsList();
 }
 
 async function loadChatMessages() {
@@ -368,6 +495,8 @@ async function sendChatMessage() {
     const message = input?.value.trim();
     if (!message || !currentChatUser) return;
     input.value = '';
+    // Stop typing indicator
+    await updateTypingStatus(currentChatUser, false);
     await sendMessage(currentChatUser, message);
     await loadChatMessages();
 }
@@ -400,11 +529,12 @@ async function renderActivityList() {
 async function switchInboxTab(tab) {
     inboxCurrentTab = tab;
     if (chatInterval) clearInterval(chatInterval);
+    if (typingInterval) clearInterval(typingInterval);
     currentChatUser = null;
     await renderInboxView();
 }
 
-// ---------- GREEN NOTIFICATION PILL ----------
+// ---------- GREEN NOTIFICATION PILL (Positioned on Inbox) ----------
 let pillTimeout = null;
 
 async function updateNotificationBarCounts() {
@@ -421,23 +551,47 @@ async function updateNotificationBarCounts() {
 function showNotificationPill(likes, comments, follows, messages) {
     let existingPill = document.getElementById('notification-pill');
     if (existingPill) existingPill.remove();
+    
     let pillContent = '';
     if (likes > 0) pillContent += `<span class="pill-item"><i class="fas fa-heart" style="color:black;"></i> ${likes}</span>`;
     if (comments > 0) pillContent += `<span class="pill-item"><i class="fas fa-comment" style="color:black;"></i> ${comments}</span>`;
     if (follows > 0) pillContent += `<span class="pill-item"><i class="fas fa-user-plus" style="color:black;"></i> ${follows}</span>`;
     if (messages > 0) pillContent += `<span class="pill-item"><i class="fas fa-envelope" style="color:black;"></i> ${messages}</span>`;
     if (pillContent === '') return;
-    const pill = document.createElement('div');
-    pill.id = 'notification-pill';
-    pill.className = 'notification-pill';
-    pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
-    pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
-    document.body.appendChild(pill);
+    
+    // Position pill above inbox button
+    const inboxBtn = document.getElementById('inboxNavBtn');
+    if (inboxBtn) {
+        const rect = inboxBtn.getBoundingClientRect();
+        const pill = document.createElement('div');
+        pill.id = 'notification-pill';
+        pill.className = 'notification-pill';
+        pill.style.position = 'fixed';
+        pill.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
+        pill.style.left = (rect.left + rect.width / 2) + 'px';
+        pill.style.transform = 'translateX(-50%)';
+        pill.style.zIndex = '1000';
+        pill.style.cursor = 'pointer';
+        pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
+        pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
+        document.body.appendChild(pill);
+    } else {
+        // Fallback to center
+        const pill = document.createElement('div');
+        pill.id = 'notification-pill';
+        pill.className = 'notification-pill';
+        pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
+        pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
+        document.body.appendChild(pill);
+    }
 }
 
-function hideNotificationPill() { const pill = document.getElementById('notification-pill'); if (pill) pill.remove(); }
+function hideNotificationPill() { 
+    const pill = document.getElementById('notification-pill'); 
+    if (pill) pill.remove(); 
+}
 
-// ---------- BOTTOM NAVIGATION (FIXED) ----------
+// ---------- BOTTOM NAVIGATION ----------
 window.bottomNav = function(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     if (page === 'home') {
@@ -476,10 +630,23 @@ handleMagicLink();
     if (!sessionRestored) await checkAuth();
     if (typeof loadFeed === 'function') loadFeed();
     if (window.USER) {
-        setTimeout(() => updateNotificationBarCounts(), 2000);
-        setInterval(updateNotificationBarCounts, 10000);
+        setTimeout(() => {
+            updateNotificationBarCounts();
+            updateInboxGreenDot();
+        }, 2000);
+        setInterval(() => {
+            updateNotificationBarCounts();
+            updateInboxGreenDot();
+        }, 10000);
     }
 })();
+
+// Handle window resize to reposition pill
+window.addEventListener('resize', () => {
+    if (document.getElementById('notification-pill')) {
+        updateNotificationBarCounts();
+    }
+});
 
 // Expose global functions
 window.createNotification = createNotification;
@@ -496,6 +663,9 @@ window.openChat = openChat;
 window.sendChatMessage = sendChatMessage;
 window.renderChatsList = renderChatsList;
 window.updateNotificationBarCounts = updateNotificationBarCounts;
+window.updateInboxGreenDot = updateInboxGreenDot;
+window.updateTypingStatus = updateTypingStatus;
+window.closeChat = closeChat;
 </script>
 
 <script>
@@ -503,6 +673,8 @@ window.updateNotificationBarCounts = updateNotificationBarCounts;
 setInterval(function() {
     if (typeof USER !== 'undefined' && USER && !window.USER) {
         window.USER = USER;
+        updateInboxGreenDot();
+        updateNotificationBarCounts();
     }
 }, 500);
 </script>
