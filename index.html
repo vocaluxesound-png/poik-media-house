@@ -121,9 +121,9 @@
 // ============================================================
 
 // ---------- GLOBAL VARIABLES ----------
-let currentOpenChatUserId = null;  // Track which chat is currently OPEN
+let currentOpenChatUserId = null;  // Track which chat is currently OPEN (only for THIS user)
 
-// ---------- TYPING INDICATOR (Polling every 2 seconds) ----------
+// ---------- TYPING INDICATOR ----------
 let typingInterval = null;
 
 async function updateTypingStatus(chatWithId, isTyping) {
@@ -259,7 +259,8 @@ async function getUnreadMessageCount() {
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
-        // FIX: Exclude messages from currently open chat
+        // ONLY exclude messages from currently open chat for THIS user
+        // When THIS user has a chat open, don't count messages from that person
         if (currentOpenChatUserId) {
             query = query.neq("sender_id", currentOpenChatUserId);
         }
@@ -301,11 +302,7 @@ async function sendMessage(receiverId, message) {
         });
         if (error) return false;
         
-        // Mark as read immediately for sender (since they are in the chat)
-        if (currentOpenChatUserId === receiverId) {
-            await markConversationAsRead(receiverId);
-        }
-        
+        // After sending, update counts
         await updateNotificationBarCounts();
         await updateInboxGreenDot();
         return true;
@@ -445,9 +442,10 @@ async function renderChatsList() {
 }
 
 async function openChat(userId) {
-    // Set current open chat to exclude from unread count
+    // Set current open chat to exclude from unread count for THIS user
     currentOpenChatUserId = userId;
     
+    // Mark messages from this user as read
     await markConversationAsRead(userId);
     await updateInboxGreenDot();
     
@@ -484,7 +482,7 @@ async function openChat(userId) {
 
 async function closeChat() {
     stopTypingPolling();
-    currentOpenChatUserId = null;
+    currentOpenChatUserId = null;  // Reset when closing chat
     // Refresh counts after closing chat
     await updateNotificationBarCounts();
     await updateInboxGreenDot();
@@ -549,7 +547,7 @@ async function switchInboxTab(tab) {
     await renderInboxView();
 }
 
-// ---------- GREEN NOTIFICATION PILL (Positioned on Inbox) ----------
+// ---------- GREEN NOTIFICATION PILL ----------
 let pillTimeout = null;
 
 async function updateNotificationBarCounts() {
@@ -678,7 +676,6 @@ window.updateNotificationBarCounts = updateNotificationBarCounts;
 window.updateInboxGreenDot = updateInboxGreenDot;
 window.updateTypingStatus = updateTypingStatus;
 window.closeChat = closeChat;
-window.currentOpenChatUserId = currentOpenChatUserId;
 </script>
 
 <script>
