@@ -89,6 +89,7 @@ async function loadFeed(reset = true) {
         let html = '';
         for (const p of posts) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
+            const isPostOwner = USER && p.user_id === USER.id;
             
             let totalCount = p.comments_count || 0;
             const { count: replyCount } = await SB
@@ -115,28 +116,26 @@ async function loadFeed(reset = true) {
             }
             
             // Feed posts - 3-dot menu ONLY for post owner
-const isPostOwner = USER && p.user_id === USER.id;
-
-html += `
-    <div class="post" data-post-id="${p.id}">
-        <div class="post-header">
-            <div class="post-header-left">
-                ${avatarHtml}
-                <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
-                ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
-            </div>
-            ${isPostOwner ? `
-            <div class="post-header-right">
-                <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
-                <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
-                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
-                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
-                    <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
-                    <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
-                </div>
-            </div>
-            ` : ''}
-        </div>
+            html += `
+                <div class="post" data-post-id="${p.id}">
+                    <div class="post-header">
+                        <div class="post-header-left">
+                            ${avatarHtml}
+                            <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
+                            ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
+                        </div>
+                        ${isPostOwner ? `
+                        <div class="post-header-right">
+                            <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
+                            <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none; position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
+                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
+                                <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
                     <img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">
                     <div class="post-caption">${escapeHtml(p.caption || '')}</div>
                     <div class="post-actions-right">
@@ -299,6 +298,17 @@ async function loadProfile() {
             .select("*", { count: 'exact', head: true })
             .eq("user_id", USER.id);
         
+        // Get follower/following counts
+        const { count: followerCount } = await SB
+            .from("follows")
+            .select("*", { count: 'exact', head: true })
+            .eq("following", USER.id);
+        
+        const { count: followingCount } = await SB
+            .from("follows")
+            .select("*", { count: 'exact', head: true })
+            .eq("follower", USER.id);
+        
         const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
         const profileAvatarHtml = isValidAvatar ?
             `<img src="${profile.avatar_url}" class="profile-avatar-img" onclick="document.getElementById('avatarInput').click()" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
@@ -319,8 +329,8 @@ async function loadProfile() {
                     <div class="profile-bio" style="color: #aaa; margin-bottom: 20px;">${escapeHtml(bio)}</div>
                     <div class="profile-stats" style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
                         <div><strong>${postCount || 0}</strong><br>posts</div>
-                        <div><strong>0</strong><br>followers</div>
-                        <div><strong>0</strong><br>following</div>
+                        <div><strong>${followerCount || 0}</strong><br>followers</div>
+                        <div><strong>${followingCount || 0}</strong><br>following</div>
                     </div>
                     <button class="edit-profile-btn" onclick="openEditProfile()" style="background: #333; color: white; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; margin-right: 10px;">Edit Profile</button>
                     <button onclick="goToHome()" style="background: #00ff88; color: black; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">Back to Feed</button>
@@ -333,6 +343,7 @@ async function loadProfile() {
             for (const p of posts) {
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
+                const isLiked = USER && userLikedPosts.has(Number(p.id));
                 
                 const postAvatarHtml = userAvatarUrl ?
                     `<img src="${userAvatarUrl}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none';">` :
@@ -358,6 +369,35 @@ async function loadProfile() {
                         </div>
                         <img class="post-image" src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
                         <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                        <div class="post-actions-right" style="position: relative; right: auto; top: auto; transform: none; flex-direction: row; justify-content: flex-start; gap: 20px; padding: 8px 12px;">
+                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
+                                <i class="fas fa-heart"></i>
+                                <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                            </div>
+                            <div class="action-icon" onclick="toggleComments(${p.id})">
+                                <i class="far fa-comment-dots"></i>
+                                <span id="comment-count-${p.id}">${p.comments_count || 0}</span>
+                            </div>
+                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Share</span>
+                            </div>
+                            <div class="action-icon" onclick="alert('Saved!')">
+                                <i class="far fa-bookmark"></i>
+                                <span>Save</span>
+                            </div>
+                        </div>
+                        <div class="comments-section" id="comments-${p.id}" style="display:none">
+                            <div class="comments-header">
+                                <span class="comments-title">💬 Comments (${p.comments_count || 0})</span>
+                                <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
+                            </div>
+                            <div id="comments-list-${p.id}">Click to load comments</div>
+                            <div class="comment-input">
+                                <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
+                                <button onclick="addComment(${p.id})">Post</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
@@ -404,7 +444,7 @@ async function deleteProfilePost(postId) {
     await loadProfile();
 }
 
-// ========== VIEW PROFILE (other user) ==========
+// ========== VIEW PROFILE (other user) - COMPLETE FIXED ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -434,12 +474,24 @@ async function viewProfile(userId) {
             isFollowing = followCheck && followCheck.length > 0;
         }
         
+        // Get follower/following counts for this user
+        const { count: followerCount } = await SB
+            .from("follows")
+            .select("*", { count: 'exact', head: true })
+            .eq("following", userId);
+        
+        const { count: followingCount } = await SB
+            .from("follows")
+            .select("*", { count: 'exact', head: true })
+            .eq("follower", userId);
+        
         const isValidAvatar = profile?.avatar_url && profile.avatar_url.trim() !== '' && profile.avatar_url.startsWith('http');
         const avatarHtml = isValidAvatar ?
             `<img src="${profile.avatar_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">` :
             '<div style="width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px;">👤</div>';
         
         const userAvatarUrl = isValidAvatar ? profile.avatar_url : null;
+        const displayName = profile?.username || 'User';
         
         let html = `
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -451,13 +503,18 @@ async function viewProfile(userId) {
                     <div style="color: #aaa; margin-bottom: 20px;">${escapeHtml(profile?.bio || 'No bio yet')}</div>
                     <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;">
                         <div><strong>${posts?.length || 0}</strong><br>posts</div>
-                        <div><strong>0</strong><br>followers</div>
-                        <div><strong>0</strong><br>following</div>
+                        <div><strong>${followerCount || 0}</strong><br>followers</div>
+                        <div><strong>${followingCount || 0}</strong><br>following</div>
                     </div>
                     ${userId !== USER?.id ? `
-                        <button id="profile-follow-btn" onclick="toggleFollowFromProfile('${userId}')" style="background: ${isFollowing ? '#333' : '#00ff88'}; color: ${isFollowing ? '#fff' : '#000'}; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">
-                            ${isFollowing ? 'Following' : 'Follow'}
-                        </button>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="profile-follow-btn" onclick="toggleFollowFromProfile('${userId}')" style="background: ${isFollowing ? '#333' : '#00ff88'}; color: ${isFollowing ? '#fff' : '#000'}; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">
+                                ${isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button onclick="openChatFromProfile('${userId}')" style="background: #333; color: white; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">
+                                💬 Message
+                            </button>
+                        </div>
                     ` : ''}
                 </div>
                 <div style="margin-top: 20px;">
@@ -468,6 +525,7 @@ async function viewProfile(userId) {
         if (posts && posts.length > 0) {
             for (const p of posts) {
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
+                const isLiked = USER && userLikedPosts.has(Number(p.id));
                 const postAvatarHtml = userAvatarUrl ?
                     `<img src="${userAvatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
                     `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`;
@@ -476,11 +534,40 @@ async function viewProfile(userId) {
                     <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
                         <div class="post-header" style="display: flex; align-items: center; gap: 10px; padding: 12px;">
                             ${postAvatarHtml}
-                            <div class="post-username" style="font-weight: bold;">${escapeHtml(profile?.username || 'User')}</div>
+                            <div class="post-username" style="font-weight: bold;">${escapeHtml(displayName)}</div>
                             ${timestamp ? `<span style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
                         </div>
                         <img src="${p.image_url}" style="width: 100%;" onclick="openModal('${p.image_url}')" loading="lazy">
-                        <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
+                        <div class="post-actions-right" style="position: relative; right: auto; top: auto; transform: none; flex-direction: row; justify-content: flex-start; gap: 20px; padding: 8px 12px;">
+                            <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
+                                <i class="fas fa-heart"></i>
+                                <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                            </div>
+                            <div class="action-icon" onclick="toggleComments(${p.id})">
+                                <i class="far fa-comment-dots"></i>
+                                <span id="comment-count-${p.id}">${p.comments_count || 0}</span>
+                            </div>
+                            <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Share</span>
+                            </div>
+                            <div class="action-icon" onclick="alert('Saved!')">
+                                <i class="far fa-bookmark"></i>
+                                <span>Save</span>
+                            </div>
+                        </div>
+                        <div class="comments-section" id="comments-${p.id}" style="display:none">
+                            <div class="comments-header">
+                                <span class="comments-title">💬 Comments (${p.comments_count || 0})</span>
+                                <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
+                            </div>
+                            <div id="comments-list-${p.id}">Click to load comments</div>
+                            <div class="comment-input">
+                                <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
+                                <button onclick="addComment(${p.id})">Post</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
@@ -499,6 +586,16 @@ async function viewProfile(userId) {
         console.error("View profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
     }
+}
+
+// Open chat from profile page
+async function openChatFromProfile(userId) {
+    bottomNav('inbox');
+    setTimeout(() => {
+        if (typeof openChat === 'function') {
+            openChat(userId);
+        }
+    }, 500);
 }
 
 function goToHome() {
@@ -529,36 +626,100 @@ async function toggleFollowFromProfile(userId) {
         btn.innerText = 'Following';
         btn.style.background = '#333';
         btn.style.color = 'white';
+        
+        // CREATE NOTIFICATION for the user being followed
+        if (typeof createNotification === 'function') {
+            await createNotification('follow', userId, USER.id, null);
+        }
     }
 }
 
 async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     
-    // Get post owner first
-    const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
-    
-    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    if (existing && existing.length > 0) {
-        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(Number(postId));
-    } else {
-        await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(Number(postId));
+    try {
+        // Get post owner first
+        const { data: post, error: postError } = await SB
+            .from("posts")
+            .select("user_id")
+            .eq("id", postId)
+            .single();
         
-        // CREATE NOTIFICATION for post owner
-        if (post && post.user_id !== USER.id) {
-            await createNotification('like_post', post.user_id, USER.id, postId);
+        if (postError) {
+            console.error("Error getting post:", postError);
+            return;
         }
-    }
-    
-    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
-        else likeBtn.classList.remove('liked');
+        
+        const { data: existing, error: checkError } = await SB
+            .from("post_likes")
+            .select("*")
+            .eq("post_id", postId)
+            .eq("user_id", USER.id);
+        
+        if (checkError) {
+            console.error("Error checking like:", checkError);
+            return;
+        }
+        
+        if (existing && existing.length > 0) {
+            // Unlike
+            const { error: deleteError } = await SB
+                .from("post_likes")
+                .delete()
+                .eq("post_id", postId)
+                .eq("user_id", USER.id);
+            
+            if (deleteError) {
+                console.error("Error unliking:", deleteError);
+                return;
+            }
+            
+            userLikedPosts.delete(Number(postId));
+        } else {
+            // Like
+            const { error: insertError } = await SB
+                .from("post_likes")
+                .insert({ post_id: postId, user_id: USER.id });
+            
+            if (insertError) {
+                console.error("Error liking:", insertError);
+                return;
+            }
+            
+            userLikedPosts.add(Number(postId));
+            
+            // CREATE NOTIFICATION for post owner
+            if (post && post.user_id !== USER.id && typeof createNotification === 'function') {
+                await createNotification('like_post', post.user_id, USER.id, postId);
+            }
+        }
+        
+        // Get updated like count
+        const { count, error: countError } = await SB
+            .from("post_likes")
+            .select("*", { count: 'exact', head: true })
+            .eq("post_id", postId);
+        
+        if (countError) {
+            console.error("Error getting count:", countError);
+            return;
+        }
+        
+        // Update UI
+        const likeSpan = document.getElementById(`likes-${postId}`);
+        if (likeSpan) likeSpan.innerText = count || 0;
+        
+        const likeBtn = document.getElementById(`like-btn-${postId}`);
+        if (likeBtn) {
+            if (userLikedPosts.has(Number(postId))) {
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.classList.remove('liked');
+            }
+        }
+        
+    } catch (err) {
+        console.error("Like post error:", err);
     }
 }
 
@@ -707,3 +868,4 @@ window.deleteFeedPost = deleteFeedPost;
 window.toggleProfilePostMenu = toggleProfilePostMenu;
 window.changeProfilePostPrivacy = changeProfilePostPrivacy;
 window.deleteProfilePost = deleteProfilePost;
+window.openChatFromProfile = openChatFromProfile;
