@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -122,6 +122,7 @@
 
 // ---------- GLOBAL VARIABLES ----------
 let currentOpenChatUserId = null;
+let messageSubscription = null;
 
 // ---------- TYPING INDICATOR ----------
 let typingInterval = null;
@@ -253,20 +254,22 @@ async function getUnreadMessageCount() {
     if (!window.USER) return 0;
     try {
         // Get ALL unread messages for this user
-        const { count: totalUnread, data: messages } = await SB
+        let query = SB
             .from("messages")
-            .select("sender_id", { count: 'exact', head: false })
+            .select("*", { count: 'exact', head: false })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
+        const { data: messages, count: totalUnread } = await query;
+        
         // If user has a chat open, subtract messages from that person
-        if (currentOpenChatUserId && messages) {
+        if (currentOpenChatUserId && messages && messages.length > 0) {
             const openChatMessages = messages.filter(m => m.sender_id === currentOpenChatUserId).length;
             return (totalUnread || 0) - openChatMessages;
         }
         
         return totalUnread || 0;
-    } catch(e) { return 0; }
+    } catch(e) { console.error("Get unread count error:", e); return 0; }
 }
 
 async function markAllNotificationsRead() {
@@ -295,6 +298,43 @@ async function refreshAllCounts() {
     await updateInboxGreenDot();
 }
 
+// ---------- SUPABASE REALTIME FOR MESSAGES ----------
+function setupMessageRealtime() {
+    if (messageSubscription) {
+        messageSubscription.unsubscribe();
+    }
+    
+    messageSubscription = SB
+        .channel('messages-realtime')
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `receiver_id=eq.${window.USER?.id}`
+        }, (payload) => {
+            console.log("New message received!", payload);
+            // New message arrived for current user
+            const newMessage = payload.new;
+            
+            // If this message is from someone we have open chat with, don't show notification
+            if (currentOpenChatUserId === newMessage.sender_id) {
+                // Just refresh chat messages
+                if (typeof loadChatMessages === 'function') {
+                    loadChatMessages();
+                }
+            } else {
+                // Show notification pill
+                refreshAllCounts();
+                
+                // Also refresh chats list if inbox is open
+                if (inboxCurrentTab === 'chats' && document.getElementById('inbox-content')) {
+                    renderChatsList();
+                }
+            }
+        })
+        .subscribe();
+}
+
 // ---------- MESSAGES ----------
 async function sendMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
@@ -302,11 +342,12 @@ async function sendMessage(receiverId, message) {
         const { error } = await SB.from("messages").insert({
             sender_id: window.USER.id,
             receiver_id: receiverId,
-            message: message.trim()
+            message: message.trim(),
+            is_read: false
         });
         if (error) return false;
         
-        await refreshAllCounts();
+        // Refresh own counts (sender doesn't get notification)
         return true;
     } catch(e) { return false; }
 }
@@ -369,21 +410,20 @@ async function getConversations() {
 async function getMessagesWithUser(otherUserId, limit = 50) {
     if (!window.USER) return [];
     try {
-        const { data } = await SB
+        const { data: messages } = await SB
             .from("messages")
             .select("*")
             .or(`and(sender_id.eq.${window.USER.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${window.USER.id})`)
             .order("created_at", { ascending: true })
             .limit(limit);
         
-        // Also fetch profile for avatar
         const { data: profile } = await SB
             .from("profiles")
-            .select("avatar_url, username")
+            .select("avatar_url, username, last_seen")
             .eq("id", otherUserId)
             .single();
         
-        return { messages: data || [], profile: profile };
+        return { messages: messages || [], profile: profile };
     } catch(e) { return { messages: [], profile: null }; }
 }
 
@@ -476,21 +516,22 @@ async function openChat(userId) {
     } else {
         for (const msg of messages) {
             const isMine = msg.sender_id === window.USER.id;
-            // Get sender profile for avatar
-            const senderId = msg.sender_id;
-            let senderAvatar = '';
+            
+            // Get avatar for the other user only once
+            let avatarHtml = '';
             if (!isMine && profile) {
-                senderAvatar = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:8px;">` : `<div style="width:28px;height:28px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:8px;">👤</div>`;
+                avatarHtml = profile.avatar_url 
+                    ? `<img src="${profile.avatar_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">` 
+                    : `<div style="width:32px;height:32px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:8px;">👤</div>`;
             }
             
             messagesHtml += `
-                <div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:8px;">
-                    ${!isMine ? senderAvatar : ''}
-                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine?'#00ff88':'#222'};color:${isMine?'black':'white'};word-wrap:break-word;">
+                <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};align-items:flex-start;margin-bottom:8px;">
+                    ${!isMine ? avatarHtml : ''}
+                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
                         ${escapeHtml(msg.message)}
-                        <div style="font-size:9px;color:${isMine?'#006644':'#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
+                        <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
                     </div>
-                    ${isMine ? '' : ''}
                 </div>
             `;
         }
@@ -500,8 +541,14 @@ async function openChat(userId) {
         <div style="display:flex;flex-direction:column;height:calc(100vh - 180px);">
             <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
                 <button onclick="closeChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div style="position:relative;">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`:`<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}${isOnline?'<div style="position:absolute;bottom:0px;right:0px;width:10px;height:10px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>':''}</div>
-                <div><div style="font-weight:bold;">${escapeHtml(profile?.username||'User')}</div><div style="font-size:10px;color:${isOnline?'#00ff88':'#888'};">${isOnline?'🟢 Active now':(profile?.last_seen?`Last seen ${timeAgo(profile.last_seen)}`:'Offline')}</div></div>
+                <div style="position:relative;">
+                    ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                    ${isOnline ? '<div style="position:absolute;bottom:0px;right:0px;width:10px;height:10px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>' : ''}
+                </div>
+                <div>
+                    <div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div>
+                    <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
+                </div>
             </div>
             <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;">${messagesHtml}</div>
             <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;background:#0a0a0a;">
@@ -546,17 +593,19 @@ async function loadChatMessages() {
     let html = '';
     for (const msg of messages) {
         const isMine = msg.sender_id === window.USER.id;
-        let senderAvatar = '';
+        let avatarHtml = '';
         if (!isMine && profile) {
-            senderAvatar = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:8px;">` : `<div style="width:28px;height:28px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:8px;">👤</div>`;
+            avatarHtml = profile.avatar_url 
+                ? `<img src="${profile.avatar_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">` 
+                : `<div style="width:32px;height:32px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:8px;">👤</div>`;
         }
         
         html += `
-            <div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:8px;">
-                ${!isMine ? senderAvatar : ''}
-                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine?'#00ff88':'#222'};color:${isMine?'black':'white'};word-wrap:break-word;">
+            <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};align-items:flex-start;margin-bottom:8px;">
+                ${!isMine ? avatarHtml : ''}
+                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
                     ${escapeHtml(msg.message)}
-                    <div style="font-size:9px;color:${isMine?'#006644':'#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
+                    <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};margin-top:4px;">${timeAgo(msg.created_at)}</div>
                 </div>
             </div>
         `;
@@ -581,7 +630,8 @@ async function sendChatMessage() {
     input.value = '';
     await updateTypingStatus(currentOpenChatUserId, false);
     await sendMessage(currentOpenChatUserId, message);
-    await loadChatMessages();
+    // Refresh chat messages after sending
+    setTimeout(() => loadChatMessages(), 500);
 }
 
 async function renderActivityList() {
@@ -653,7 +703,7 @@ function showNotificationPill(likes, comments, follows, messages) {
         pill.style.left = (rect.left + rect.width / 2) + 'px';
         pill.style.transform = 'translateX(-50%)';
         pill.style.zIndex = '1000';
-        pill.style.cursor = 'cursor';
+        pill.style.cursor = 'pointer';
         pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
         pill.onclick = () => { hideNotificationPill(); window.bottomNav('inbox'); };
         document.body.appendChild(pill);
@@ -703,6 +753,7 @@ handleMagicLink();
     if (!sessionRestored) await checkAuth();
     if (typeof loadFeed === 'function') loadFeed();
     if (window.USER) {
+        setupMessageRealtime();
         setTimeout(() => refreshAllCounts(), 2000);
         setInterval(() => refreshAllCounts(), 10000);
     }
@@ -733,12 +784,14 @@ window.updateInboxGreenDot = updateInboxGreenDot;
 window.updateTypingStatus = updateTypingStatus;
 window.closeChat = closeChat;
 window.refreshAllCounts = refreshAllCounts;
+window.loadChatMessages = loadChatMessages;
 </script>
 
 <script>
 setInterval(function() {
     if (typeof USER !== 'undefined' && USER && !window.USER) {
         window.USER = USER;
+        setupMessageRealtime();
         refreshAllCounts();
     }
 }, 500);
