@@ -1,52 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=7">
-<style>
-/* Fixed chat styles */
-.chat-container-fixed {
-    height: calc(100vh - 130px);
-    display: flex;
-    flex-direction: column;
-}
-.chat-messages-fixed {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.chat-input-fixed {
-    padding: 12px;
-    border-top: 1px solid #333;
-    background: #0a0a0a;
-    display: flex;
-    gap: 8px;
-}
-.chat-input-fixed input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 20px;
-    border: none;
-    background: #222;
-    color: white;
-    font-size: 16px;
-}
-.chat-input-fixed button {
-    background: #00ff88;
-    color: black;
-    border: none;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-</style>
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -99,7 +58,7 @@
 
 <div id="uploadModal" class="upload-modal">
 <h3>Upload</h3>
-<input type="file" id="uploadFile" accept="image/*">
+<input type="file" id="uploadFile" accept="image/*,video/*">
 <input type="text" id="uploadCaption" placeholder="Caption...">
 <select id="uploadPrivacy" class="privacy-select">
 <option value="public">🌍 Public</option>
@@ -158,11 +117,12 @@
 
 <script>
 // ============================================================
-// SIMPLIFIED WORKING VERSION - GREEN PILL ON INBOX
+// COMPLETE FIXED VERSION - ALL 8 ISSUES
 // ============================================================
 
 let currentOpenChatUserId = null;
 let refreshInterval = null;
+let messagePollInterval = null;
 
 // Helper functions
 window.escapeHtml = function(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); };
@@ -183,49 +143,30 @@ window.timeAgo = function(dateString) {
     return `${Math.floor(days / 7)}w ago`;
 };
 
-// ----- UNREAD MESSAGE COUNT (SIMPLE) -----
+function isVideoUrl(url) {
+    return url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm') || url.includes('video'));
+}
+
+// ----- UNREAD MESSAGE COUNT -----
 async function getSimpleUnreadCount() {
     if (!window.USER) return 0;
     try {
-        const { count, error } = await SB
+        const { count } = await SB
             .from("messages")
             .select("*", { count: 'exact', head: true })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
-        
-        if (error) {
-            console.error("Count error:", error);
-            return 0;
-        }
-        console.log("📊 Unread count:", count);
         return count || 0;
-    } catch(e) {
-        console.error("Get unread error:", e);
-        return 0;
-    }
+    } catch(e) { return 0; }
 }
 
-// ----- GREEN PILL -----
+// ----- GREEN PILL - Issue #1 -----
 async function showGreenPill() {
     const unreadCount = await getSimpleUnreadCount();
-    const notificationCounts = { likes: 0, comments: 0, follows: 0 };
-    
-    const totalNew = unreadCount + notificationCounts.likes + notificationCounts.comments + notificationCounts.follows;
-    
-    console.log("🔔 Total new:", totalNew, "Unread:", unreadCount);
-    
-    if (totalNew === 0) {
-        hideGreenPill();
-        return;
-    }
+    if (unreadCount === 0) { hideGreenPill(); return; }
     
     let existingPill = document.getElementById('notification-pill');
     if (existingPill) existingPill.remove();
-    
-    let pillContent = '';
-    if (unreadCount > 0) pillContent += `<span class="pill-item"><i class="fas fa-envelope" style="color:black;"></i> ${unreadCount}</span>`;
-    
-    if (pillContent === '') return;
     
     const inboxBtn = document.getElementById('inboxNavBtn');
     if (inboxBtn) {
@@ -237,9 +178,9 @@ async function showGreenPill() {
         pill.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
         pill.style.left = (rect.left + rect.width / 2) + 'px';
         pill.style.transform = 'translateX(-50%)';
-        pill.style.zIndex = '1000';
+        pill.style.zIndex = '1002';
         pill.style.cursor = 'pointer';
-        pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
+        pill.innerHTML = `<div class="pill-inner"><span class="pill-item"><i class="fas fa-envelope" style="color:black;"></i> ${unreadCount}</span></div><div class="pill-pointer"></div>`;
         pill.onclick = () => { hideGreenPill(); bottomNav('inbox'); };
         document.body.appendChild(pill);
     }
@@ -250,58 +191,36 @@ function hideGreenPill() {
     if (pill) pill.remove();
 }
 
-// ----- UPDATE GREEN DOT -----
+// ----- GREEN DOT -----
 async function updateGreenDot() {
     const unreadCount = await getSimpleUnreadCount();
     const greenDot = document.getElementById('inboxGreenDot');
     if (greenDot) {
-        if (unreadCount > 0) {
-            greenDot.classList.add('show');
-        } else {
-            greenDot.classList.remove('show');
-        }
+        if (unreadCount > 0) greenDot.classList.add('show');
+        else greenDot.classList.remove('show');
     }
 }
 
 // ----- MARK MESSAGES AS READ -----
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
-    const { error } = await SB
-        .from("messages")
-        .update({ is_read: true })
-        .eq("sender_id", senderId)
-        .eq("receiver_id", window.USER.id)
-        .eq("is_read", false);
-    
-    if (error) {
-        console.error("Mark read error:", error);
-    } else {
-        console.log("✅ Marked messages as read from:", senderId);
-        await showGreenPill();
-        await updateGreenDot();
-    }
+    await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
+    await showGreenPill();
+    await updateGreenDot();
 }
 
 // ----- SEND MESSAGE -----
 async function sendSimpleMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
     try {
-        const { error } = await SB.from("messages").insert({
+        await SB.from("messages").insert({
             sender_id: window.USER.id,
             receiver_id: receiverId,
             message: message.trim(),
             is_read: false
         });
-        if (error) {
-            console.error("Send error:", error);
-            return false;
-        }
-        console.log("✅ Message sent to:", receiverId);
         return true;
-    } catch(e) {
-        console.error("Exception:", e);
-        return false;
-    }
+    } catch(e) { return false; }
 }
 
 // ----- GET CONVERSATIONS -----
@@ -327,9 +246,8 @@ async function getSimpleConversations() {
                     unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read) ? 1 : 0
                 });
             } else if (new Date(msg.created_at) > new Date(convMap.get(otherId).lastMessageTime)) {
-                const conv = convMap.get(otherId);
-                conv.lastMessage = msg.message;
-                conv.lastMessageTime = msg.created_at;
+                convMap.get(otherId).lastMessage = msg.message;
+                convMap.get(otherId).lastMessageTime = msg.created_at;
             }
         }
         
@@ -353,10 +271,7 @@ async function getSimpleConversations() {
         }
         result.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
         return result;
-    } catch(e) {
-        console.error("Get conversations error:", e);
-        return [];
-    }
+    } catch(e) { return []; }
 }
 
 // ----- GET MESSAGES WITH USER -----
@@ -371,20 +286,16 @@ async function getSimpleMessages(userId) {
         
         const { data: profile } = await SB
             .from("profiles")
-            .select("avatar_url, username, last_seen")
+            .select("avatar_url, username, last_seen, id")
             .eq("id", userId)
             .single();
         
         return { messages: data || [], profile: profile };
-    } catch(e) {
-        console.error("Get messages error:", e);
-        return { messages: [], profile: null };
-    }
+    } catch(e) { return { messages: [], profile: null }; }
 }
 
 // ----- INBOX FUNCTIONS -----
 let inboxTab = 'chats';
-let messagePollInterval = null;
 
 async function loadSimpleInbox() {
     const feedDiv = document.getElementById("feed");
@@ -396,7 +307,6 @@ async function loadSimpleInbox() {
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
     
-    await markAllNotificationsRead();
     feedDiv.innerHTML = '<div class="loading">Loading inbox...</div>';
     await renderSimpleInbox();
 }
@@ -404,13 +314,13 @@ async function loadSimpleInbox() {
 async function renderSimpleInbox() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = `
-        <div style="max-width:600px;margin:0 auto;">
+        <div style="max-width:600px;margin:0 auto;padding-bottom:70px;">
             <div style="padding:16px;border-bottom:1px solid #222;"><h2 style="font-size:20px;">Inbox</h2></div>
             <div style="display:flex;border-bottom:1px solid #333;">
                 <button onclick="switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='chats'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='chats'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">💬 Chats</button>
                 <button onclick="switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='activity'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='activity'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">🔔 Activity</button>
             </div>
-            <div id="inbox-content-simple">${inboxTab==='chats'?'<div class="loading">Loading chats...</div>':'<div class="loading">Loading activity...</div>'}</div>
+            <div id="inbox-content-simple">${inboxTab==='chats'?'<div class="loading">Loading chats...</div>':'<div class="loading">Loading notifications...</div>'}</div>
         </div>
     `;
     
@@ -440,7 +350,7 @@ async function renderSimpleChats() {
                     </div>
                     <div style="display:flex;justify-content:space-between;">
                         <span style="font-size:13px;color:${conv.unreadCount>0?'#00ff88':'#888'}">${escapeHtml(conv.lastMessage.substring(0,40))}</span>
-                        ${conv.unreadCount>0 ? `<span style="background:#00ff88;color:black;border-radius:12px;padding:2px 8px;font-size:10px;">${conv.unreadCount}</span>` : ''}
+                        ${conv.unreadCount>0 ? `<span style="background:#00ff88;color:black;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:bold;">${conv.unreadCount}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -491,12 +401,14 @@ async function openSimpleChat(userId) {
         <div class="chat-container-fixed">
             <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
                 <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
-                <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div></div>
+                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')">
+                    ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                    <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div></div>
+                </div>
             </div>
             <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
             <div class="chat-input-fixed">
-                <input type="text" id="simple-chat-input" placeholder="Message...">
+                <input type="text" id="simple-chat-input" placeholder="Message..." onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
                 <button onclick="sendSimpleChatMessage()">➤</button>
             </div>
         </div>
@@ -505,17 +417,9 @@ async function openSimpleChat(userId) {
     const msgContainer = document.getElementById('simple-chat-messages');
     if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
     
-    // Poll for new messages every 2 seconds
     if (messagePollInterval) clearInterval(messagePollInterval);
     messagePollInterval = setInterval(async () => {
-        if (currentOpenChatUserId) {
-            const newResult = await getSimpleMessages(currentOpenChatUserId);
-            const newMessages = newResult.messages;
-            const currentDiv = document.getElementById('simple-chat-messages');
-            if (currentDiv && newMessages.length !== messages.length) {
-                await refreshSimpleChatMessages();
-            }
-        }
+        if (currentOpenChatUserId) await refreshSimpleChatMessages();
     }, 2000);
 }
 
@@ -570,10 +474,46 @@ async function closeSimpleChat() {
     await renderSimpleChats();
 }
 
+// ----- ACTIVITY TAB WITH REAL NOTIFICATIONS - Issue #4 -----
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
-    container.innerHTML = '<div class="loading">Activity coming soon...</div>';
+    
+    const { data: notifications } = await SB
+        .from("notifications")
+        .select(`*, actor:actor_id(id, username, avatar_url)`)
+        .eq("user_id", window.USER?.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+    
+    if (!notifications || notifications.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">No notifications yet</div>';
+        return;
+    }
+    
+    let html = '<div style="padding:8px 0;">';
+    for (const n of notifications) {
+        const actorName = n.actor?.username || 'Someone';
+        let icon = '📢', actionText = '';
+        if (n.type === 'follow') { icon = '👤'; actionText = 'started following you'; }
+        else if (n.type === 'like_post') { icon = '❤️'; actionText = 'liked your post'; }
+        else if (n.type === 'like_comment') { icon = '❤️'; actionText = 'liked your comment'; }
+        else if (n.type === 'comment') { icon = '💬'; actionText = 'commented on your post'; }
+        else if (n.type === 'reply') { icon = '💬'; actionText = 'replied to your comment'; }
+        
+        html += `
+            <div onclick="goToProfileFromChat('${n.actor_id}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
+                <div style="width:40px;height:40px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;">${icon}</div>
+                <div style="flex:1;">
+                    <div><strong>${escapeHtml(actorName)}</strong> ${actionText}</div>
+                    <div style="font-size:10px;color:#888;">${timeAgo(n.created_at)}</div>
+                </div>
+                ${!n.is_read ? '<div style="width:8px;height:8px;background:#00ff88;border-radius:50%;"></div>' : ''}
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 async function switchInboxTabSimple(tab) {
@@ -583,29 +523,94 @@ async function switchInboxTabSimple(tab) {
     await renderSimpleInbox();
 }
 
-async function markAllNotificationsRead() {
-    if (!window.USER) return;
-    await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
+// ----- GO TO PROFILE FROM CHAT - Issue #7 -----
+function goToProfileFromChat(userId) {
+    closeSimpleChat();
+    if (typeof viewProfile === 'function') {
+        viewProfile(userId);
+    }
 }
 
+// ----- CREATE NOTIFICATION -----
 async function createSimpleNotification(type, userId, actorId, targetId) {
     if (!userId || userId === actorId) return;
     await SB.from("notifications").insert({
         user_id: userId,
         actor_id: actorId,
         type: type,
-        target_id: targetId || 0
+        target_id: targetId || 0,
+        is_read: false
     });
 }
 
-// ----- AUTO REFRESH FOR GREEN PILL -----
+// ----- AUTO REFRESH -----
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
     refreshInterval = setInterval(async () => {
         await showGreenPill();
         await updateGreenDot();
+        if (inboxTab === 'activity' && document.getElementById('inbox-content-simple')) {
+            await renderSimpleActivity();
+        }
     }, 5000);
 }
+
+// ----- UPLOAD POST WITH VIDEO SUPPORT - Issue #2 -----
+window.uploadPost = async function() {
+    if (!USER) { alert('Login first'); return; }
+    const file = document.getElementById("uploadFile").files[0];
+    const caption = document.getElementById("uploadCaption").value;
+    const privacy = document.getElementById("uploadPrivacy").value;
+    if (!file) { alert("Select an image or video"); return; }
+    
+    const isVideo = file.type.startsWith('video/');
+    const fileName = `${USER.id}_${Date.now()}.${file.name.split('.').pop()}`;
+    
+    await SB.storage.from("post-images").upload(fileName, file);
+    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
+    
+    await SB.from("posts").insert({ 
+        image_url: data.publicUrl, 
+        caption: caption, 
+        user_id: USER.id, 
+        privacy: privacy, 
+        is_ai: false, 
+        likes: 0,
+        is_video: isVideo
+    });
+    alert("Posted!");
+    closeUploadModal();
+    refreshFeed();
+};
+
+// ----- LIKE POST WITH NOTIFICATION -----
+window.likePost = async function(postId) {
+    if (!USER) { alert('Login to like'); openAuthModal(); return; }
+    
+    const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
+    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
+    
+    if (existing && existing.length > 0) {
+        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
+        userLikedPosts.delete(Number(postId));
+    } else {
+        await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
+        userLikedPosts.add(Number(postId));
+        
+        if (post && post.user_id !== USER.id) {
+            await createSimpleNotification('like_post', post.user_id, USER.id, postId);
+        }
+    }
+    
+    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    const likeSpan = document.getElementById(`likes-${postId}`);
+    if (likeSpan) likeSpan.innerText = count || 0;
+    const likeBtn = document.getElementById(`like-btn-${postId}`);
+    if (likeBtn) {
+        if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
+        else likeBtn.classList.remove('liked');
+    }
+};
 
 // ----- INIT -----
 (async function() {
@@ -651,10 +656,10 @@ window.switchInboxTab = switchInboxTabSimple;
 window.showGreenPill = showGreenPill;
 window.updateGreenDot = updateGreenDot;
 window.createNotification = createSimpleNotification;
+window.goToProfileFromChat = goToProfileFromChat;
 </script>
 
 <script>
-// Sync window.USER
 setInterval(function() {
     if (typeof USER !== 'undefined' && USER && !window.USER) {
         window.USER = USER;
