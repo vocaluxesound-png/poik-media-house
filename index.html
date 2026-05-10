@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -48,25 +48,12 @@
 <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
 <div class="plus-circle" onclick="openEnhancedUploadModal()"><i class="fas fa-plus"></i></div>
 <button id="inboxNavBtn" class="bottom-nav-item" onclick="bottomNav('inbox')">
-<i class="fas fa-inbox"></i>
+<i class="fas fa-comment-dots"></i>
 <span>Inbox</span>
 <div id="inboxGreenDot" class="inbox-dot"></div>
 </button>
 <button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
 </div>
-</div>
-
-<div id="uploadModal" class="upload-modal">
-<h3>Upload</h3>
-<input type="file" id="uploadFile" accept="image/*,video/*">
-<input type="text" id="uploadCaption" placeholder="Caption...">
-<select id="uploadPrivacy" class="privacy-select">
-<option value="public">🌍 Public</option>
-<option value="friends">👥 Friends Only</option>
-<option value="private">🔒 Only Me</option>
-</select>
-<button onclick="uploadPost()">Post</button>
-<button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
 </div>
 
 <div id="shareModal" class="share-modal">
@@ -108,28 +95,24 @@
 
 <input type="file" id="avatarInput" accept="image/*">
 
-<!-- EXISTING SCRIPTS -->
 <script src="auth.js"></script>
 <script src="profile.js"></script>
 <script src="comments.js"></script>
 <script src="feed.js"></script>
 <script src="friends.js"></script>
 <script src="search.js"></script>
-
-<!-- NEW SCRIPTS - CHAT AND ENHANCED UPLOAD -->
 <script src="chat.js"></script>
 <script src="upload.js"></script>
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - ALL 8 ISSUES
+// COMPLETE FIXED VERSION - INBOX, NOTIFICATIONS, CHAT
 // ============================================================
 
 let currentOpenChatUserId = null;
 let refreshInterval = null;
 let messagePollInterval = null;
 
-// Helper functions
 window.escapeHtml = function(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); };
 
 window.timeAgo = function(dateString) {
@@ -148,11 +131,6 @@ window.timeAgo = function(dateString) {
     return `${Math.floor(days / 7)}w ago`;
 };
 
-function isVideoUrl(url) {
-    return url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm') || url.includes('video'));
-}
-
-// ----- UNREAD MESSAGE COUNT -----
 async function getSimpleUnreadCount() {
     if (!window.USER) return 0;
     try {
@@ -165,7 +143,6 @@ async function getSimpleUnreadCount() {
     } catch(e) { return 0; }
 }
 
-// ----- GREEN PILL -----
 async function showGreenPill() {
     const unreadCount = await getSimpleUnreadCount();
     if (unreadCount === 0) { hideGreenPill(); return; }
@@ -196,7 +173,6 @@ function hideGreenPill() {
     if (pill) pill.remove();
 }
 
-// ----- GREEN DOT -----
 async function updateGreenDot() {
     const unreadCount = await getSimpleUnreadCount();
     const greenDot = document.getElementById('inboxGreenDot');
@@ -206,7 +182,6 @@ async function updateGreenDot() {
     }
 }
 
-// ----- MARK MESSAGES AS READ -----
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
     await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
@@ -214,7 +189,6 @@ async function markMessagesRead(senderId) {
     await updateGreenDot();
 }
 
-// ----- SEND MESSAGE -----
 async function sendSimpleMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
     try {
@@ -228,7 +202,6 @@ async function sendSimpleMessage(receiverId, message) {
     } catch(e) { return false; }
 }
 
-// ----- GET CONVERSATIONS -----
 async function getSimpleConversations() {
     if (!window.USER) return [];
     try {
@@ -279,7 +252,6 @@ async function getSimpleConversations() {
     } catch(e) { return []; }
 }
 
-// ----- GET MESSAGES WITH USER -----
 async function getSimpleMessages(userId) {
     if (!window.USER) return [];
     try {
@@ -299,7 +271,6 @@ async function getSimpleMessages(userId) {
     } catch(e) { return { messages: [], profile: null }; }
 }
 
-// ----- INBOX FUNCTIONS -----
 let inboxTab = 'chats';
 
 async function loadSimpleInbox() {
@@ -319,35 +290,41 @@ async function loadSimpleInbox() {
 async function renderSimpleInbox() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = `
-        <div style="max-width:600px;margin:0 auto;padding-bottom:70px;">
-            <div style="padding:16px;border-bottom:1px solid #222;"><h2 style="font-size:20px;">Inbox</h2></div>
-            <div style="display:flex;border-bottom:1px solid #333;">
-                <button onclick="switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='chats'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='chats'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">💬 Chats</button>
-                <button onclick="switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='activity'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='activity'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">🔔 Activity</button>
+        <div class="chat-dual-pane">
+            <div class="chat-contact-list" id="chat-contact-list">
+                <div style="padding:16px; border-bottom:1px solid #222;"><h3 style="font-size:18px;">Chats</h3></div>
+                <div id="contacts-list">${inboxTab==='chats'?'<div class="loading">Loading chats...</div>':'<div class="loading">Loading...</div>'}</div>
             </div>
-            <div id="inbox-content-simple">${inboxTab==='chats'?'<div class="loading">Loading chats...</div>':'<div class="loading">Loading notifications...</div>'}</div>
+            <div class="chat-messages-pane" id="chat-messages-pane">
+                <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#888;">
+                    Select a chat to start messaging
+                </div>
+            </div>
         </div>
     `;
     
-    if (inboxTab === 'chats') await renderSimpleChats();
+    if (inboxTab === 'chats') await renderDualChatsList();
     else await renderSimpleActivity();
 }
 
-async function renderSimpleChats() {
-    const container = document.getElementById('inbox-content-simple');
+async function renderDualChatsList() {
+    const container = document.getElementById('contacts-list');
     if (!container) return;
     
     const conversations = await getSimpleConversations();
     if (conversations.length === 0) {
-        container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">No messages yet</div>';
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No messages yet</div>';
         return;
     }
     
     let html = '<div style="padding:8px 0;">';
     for (const conv of conversations) {
         html += `
-            <div onclick="openSimpleChat('${conv.userId}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
-                ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
+            <div class="chat-contact-item" onclick="openDualChat('${conv.userId}')">
+                <div style="position:relative;">
+                    ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
+                    ${conv.isOnline ? '<div style="position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>' : ''}
+                </div>
                 <div style="flex:1;">
                     <div style="display:flex;justify-content:space-between;">
                         <span style="font-weight:bold;">${escapeHtml(conv.username)}</span>
@@ -365,7 +342,7 @@ async function renderSimpleChats() {
     container.innerHTML = html;
 }
 
-async function openSimpleChat(userId) {
+async function openDualChat(userId) {
     currentOpenChatUserId = userId;
     await markMessagesRead(userId);
     await showGreenPill();
@@ -375,8 +352,10 @@ async function openSimpleChat(userId) {
     const messages = result.messages;
     const profile = result.profile;
     
-    const container = document.getElementById('inbox-content-simple');
+    const container = document.getElementById('chat-messages-pane');
     if (!container) return;
+    
+    const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
     
     let messagesHtml = '';
     if (messages.length === 0) {
@@ -403,37 +382,61 @@ async function openSimpleChat(userId) {
     }
     
     container.innerHTML = `
-        <div class="chat-container-fixed">
-            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
-                <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
+            <button onclick="closeDualChat()" class="mobile-back-btn" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;display:none;">←</button>
+            <div onclick="goToProfileFromChat('${userId}')" style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+                <div style="position:relative;">
                     ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
-                    <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div></div>
+                    ${isOnline ? '<div style="position:absolute;bottom:0px;right:0px;width:10px;height:10px;background:#00ff88;border-radius:50%;border:2px solid #0a0a0a;"></div>' : ''}
+                </div>
+                <div>
+                    <div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div>
+                    <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
                 </div>
             </div>
-            <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
-            <div class="chat-input-fixed">
-                <input type="text" id="simple-chat-input" placeholder="Message..." onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
-                <button onclick="sendSimpleChatMessage()">➤</button>
-            </div>
+        </div>
+        <div id="chat-messages-area" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;">${messagesHtml}</div>
+        <div class="chat-input-wrapper">
+            <button class="chat-icon-btn" onclick="sendVoiceMessageFromChat()" title="Voice Message (hold to record)" id="voiceRecordBtn">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="chat-icon-btn" onclick="sendImageMessageFromChat()" title="Send Image">
+                <i class="fas fa-image"></i>
+            </button>
+            <button class="chat-icon-btn" onclick="sendVideoMessageFromChat()" title="Send Video">
+                <i class="fas fa-video"></i>
+            </button>
+            <input type="text" id="chat-input-glass" class="glass-chat-input" placeholder="Message..." style="flex:1;" onkeypress="if(event.key==='Enter') sendDualChatMessage()">
+            <button class="glass-send-btn" onclick="sendDualChatMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
     `;
     
-    const msgContainer = document.getElementById('simple-chat-messages');
+    // Show back button on mobile
+    if (window.innerWidth <= 767) {
+        const backBtn = container.querySelector('.mobile-back-btn');
+        if (backBtn) backBtn.style.display = 'flex';
+    }
+    
+    const msgContainer = document.getElementById('chat-messages-area');
     if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
     
     if (messagePollInterval) clearInterval(messagePollInterval);
     messagePollInterval = setInterval(async () => {
-        if (currentOpenChatUserId) await refreshSimpleChatMessages();
+        if (currentOpenChatUserId) await refreshDualChatMessages();
     }, 2000);
+    
+    // Setup voice recording
+    setupDualChatVoiceRecording();
 }
 
-async function refreshSimpleChatMessages() {
+async function refreshDualChatMessages() {
     if (!currentOpenChatUserId) return;
     const result = await getSimpleMessages(currentOpenChatUserId);
     const messages = result.messages;
     const profile = result.profile;
-    const container = document.getElementById('simple-chat-messages');
+    const container = document.getElementById('chat-messages-area');
     if (!container) return;
     
     if (messages.length === 0) {
@@ -464,24 +467,176 @@ async function refreshSimpleChatMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
-async function sendSimpleChatMessage() {
-    const input = document.getElementById('simple-chat-input');
+async function sendDualChatMessage() {
+    const input = document.getElementById('chat-input-glass');
     const message = input?.value.trim();
     if (!message || !currentOpenChatUserId) return;
     input.value = '';
     await sendSimpleMessage(currentOpenChatUserId, message);
-    await refreshSimpleChatMessages();
+    await refreshDualChatMessages();
 }
 
-async function closeSimpleChat() {
+async function closeDualChat() {
     if (messagePollInterval) clearInterval(messagePollInterval);
     currentOpenChatUserId = null;
-    await renderSimpleChats();
+    await renderDualChatsList();
+    
+    const container = document.getElementById('chat-messages-pane');
+    if (container) {
+        container.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:#888;">
+            Select a chat to start messaging
+        </div>`;
+    }
 }
 
-// ----- ACTIVITY TAB WITH REAL NOTIFICATIONS -----
+function setupDualChatVoiceRecording() {
+    const voiceBtn = document.getElementById('voiceRecordBtn');
+    if (!voiceBtn) return;
+    
+    voiceBtn.addEventListener('mousedown', startDualVoiceRecording);
+    voiceBtn.addEventListener('mouseup', stopDualVoiceRecording);
+    voiceBtn.addEventListener('mouseleave', cancelDualVoiceRecording);
+    voiceBtn.addEventListener('touchstart', startDualVoiceRecording);
+    voiceBtn.addEventListener('touchend', stopDualVoiceRecording);
+}
+
+let dualMediaRecorder = null;
+let dualAudioChunks = [];
+let dualIsRecording = false;
+
+async function startDualVoiceRecording(e) {
+    e.preventDefault();
+    if (!currentOpenChatUserId) return;
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        dualMediaRecorder = new MediaRecorder(stream);
+        dualAudioChunks = [];
+        
+        dualMediaRecorder.ondataavailable = (event) => {
+            dualAudioChunks.push(event.data);
+        };
+        
+        dualMediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(dualAudioChunks, { type: 'audio/webm' });
+            await sendDualVoiceMessage(audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+        };
+        
+        dualMediaRecorder.start();
+        dualIsRecording = true;
+        
+        const voiceBtn = document.getElementById('voiceRecordBtn');
+        voiceBtn.classList.add('recording');
+        voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        
+    } catch (err) {
+        console.error("Microphone error:", err);
+        alert("Could not access microphone. Please check permissions.");
+    }
+}
+
+function stopDualVoiceRecording() {
+    if (dualMediaRecorder && dualIsRecording) {
+        dualMediaRecorder.stop();
+        dualIsRecording = false;
+        
+        const voiceBtn = document.getElementById('voiceRecordBtn');
+        voiceBtn.classList.remove('recording');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+    }
+}
+
+function cancelDualVoiceRecording() {
+    if (dualMediaRecorder && dualIsRecording) {
+        dualMediaRecorder.stop();
+        dualIsRecording = false;
+        
+        const voiceBtn = document.getElementById('voiceRecordBtn');
+        voiceBtn.classList.remove('recording');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+    }
+}
+
+async function sendDualVoiceMessage(audioBlob) {
+    if (!currentOpenChatUserId) return;
+    
+    const fileName = `voice_${window.USER.id}_${Date.now()}.webm`;
+    await SB.storage.from("chat-media").upload(fileName, audioBlob);
+    const { data } = SB.storage.from("chat-media").getPublicUrl(fileName);
+    
+    await SB.from("messages").insert({
+        sender_id: window.USER.id,
+        receiver_id: currentOpenChatUserId,
+        message: "🎤 Voice message",
+        message_type: "voice",
+        voice_url: data.publicUrl,
+        is_read: false
+    });
+    
+    await refreshDualChatMessages();
+}
+
+async function sendImageMessageFromChat() {
+    if (!currentOpenChatUserId) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const fileName = `img_${window.USER.id}_${Date.now()}.jpg`;
+        await SB.storage.from("chat-media").upload(fileName, file);
+        const { data } = SB.storage.from("chat-media").getPublicUrl(fileName);
+        
+        await SB.from("messages").insert({
+            sender_id: window.USER.id,
+            receiver_id: currentOpenChatUserId,
+            message: "📷 Image",
+            message_type: "image",
+            image_url: data.publicUrl,
+            is_read: false
+        });
+        
+        await refreshDualChatMessages();
+        await showGreenPill();
+        await updateGreenDot();
+    };
+    input.click();
+}
+
+async function sendVideoMessageFromChat() {
+    if (!currentOpenChatUserId) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const fileName = `vid_${window.USER.id}_${Date.now()}.mp4`;
+        await SB.storage.from("chat-media").upload(fileName, file);
+        const { data } = SB.storage.from("chat-media").getPublicUrl(fileName);
+        
+        await SB.from("messages").insert({
+            sender_id: window.USER.id,
+            receiver_id: currentOpenChatUserId,
+            message: "🎥 Video",
+            message_type: "video",
+            video_url: data.publicUrl,
+            is_read: false
+        });
+        
+        await refreshDualChatMessages();
+        await showGreenPill();
+        await updateGreenDot();
+    };
+    input.click();
+}
+
 async function renderSimpleActivity() {
-    const container = document.getElementById('inbox-content-simple');
+    const container = document.getElementById('contacts-list');
     if (!container) return;
     
     const { data: notifications } = await SB
@@ -528,15 +683,12 @@ async function switchInboxTabSimple(tab) {
     await renderSimpleInbox();
 }
 
-// ----- GO TO PROFILE FROM CHAT -----
 function goToProfileFromChat(userId) {
-    closeSimpleChat();
     if (typeof viewProfile === 'function') {
         viewProfile(userId);
     }
 }
 
-// ----- CREATE NOTIFICATION -----
 async function createSimpleNotification(type, userId, actorId, targetId) {
     if (!userId || userId === actorId) return;
     await SB.from("notifications").insert({
@@ -548,19 +700,14 @@ async function createSimpleNotification(type, userId, actorId, targetId) {
     });
 }
 
-// ----- AUTO REFRESH -----
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
     refreshInterval = setInterval(async () => {
         await showGreenPill();
         await updateGreenDot();
-        if (inboxTab === 'activity' && document.getElementById('inbox-content-simple')) {
-            await renderSimpleActivity();
-        }
     }, 5000);
 }
 
-// ----- INIT -----
 (async function() {
     const sessionRestored = await restoreSession();
     if (!sessionRestored) await checkAuth();
@@ -574,7 +721,6 @@ function startAutoRefresh() {
     }
 })();
 
-// Expose functions
 window.bottomNav = function(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     if (page === 'home') {
@@ -597,14 +743,21 @@ window.bottomNav = function(page) {
 };
 
 window.loadInbox = loadSimpleInbox;
-window.openChat = openSimpleChat;
-window.closeChat = closeSimpleChat;
-window.sendChatMessage = sendSimpleChatMessage;
+window.openChat = openDualChat;
+window.closeChat = closeDualChat;
+window.sendChatMessage = sendDualChatMessage;
 window.switchInboxTab = switchInboxTabSimple;
 window.showGreenPill = showGreenPill;
 window.updateGreenDot = updateGreenDot;
 window.createNotification = createSimpleNotification;
 window.goToProfileFromChat = goToProfileFromChat;
+window.openDualChat = openDualChat;
+window.closeDualChat = closeDualChat;
+window.sendDualChatMessage = sendDualChatMessage;
+window.refreshDualChatMessages = refreshDualChatMessages;
+window.sendImageMessageFromChat = sendImageMessageFromChat;
+window.sendVideoMessageFromChat = sendVideoMessageFromChat;
+window.sendVoiceMessageFromChat = sendDualVoiceMessage;
 </script>
 
 <script>
@@ -615,6 +768,20 @@ setInterval(function() {
         if (typeof updateGreenDot === 'function') updateGreenDot();
     }
 }, 500);
+
+// Handle mobile back button visibility
+window.addEventListener('resize', function() {
+    if (currentOpenChatUserId) {
+        const backBtn = document.querySelector('.mobile-back-btn');
+        if (backBtn) {
+            if (window.innerWidth <= 767) {
+                backBtn.style.display = 'flex';
+            } else {
+                backBtn.style.display = 'none';
+            }
+        }
+    }
+});
 </script>
 
 </body>
