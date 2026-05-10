@@ -1647,3 +1647,249 @@ body {
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
 }
+/* ========== FIXES - NO DUAL-PANE LEAK INTO FEED ========== */
+
+/* Make sure feed stays single column - NOT affected by chat CSS */
+.feed {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding-bottom: 70px !important;
+    background: black !important;
+}
+
+/* Feed videos - proper sizing */
+.feed .video-feed-item {
+    position: relative;
+    background: black;
+    margin-bottom: 0 !important;
+    scroll-snap-align: none !important;
+}
+
+.feed .video-feed-item video {
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    background: black;
+    border-radius: 0;
+}
+
+/* Feed action buttons - restore original position */
+.feed .post-actions-right {
+    position: absolute;
+    right: 12px;
+    bottom: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 15;
+}
+
+.feed .action-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: white;
+    text-shadow: 0 0 5px black;
+}
+
+.feed .action-icon.liked {
+    color: #FE2C55;
+}
+
+/* Feed username and caption - restore above video */
+.feed .post-header {
+    position: absolute;
+    bottom: 20px;
+    left: 12px;
+    z-index: 15;
+    background: transparent;
+    padding: 0;
+}
+
+.feed .post-username {
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    text-shadow: 0 0 5px black;
+    cursor: pointer;
+}
+
+.feed .post-caption {
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+    margin-top: 4px;
+    text-shadow: 0 0 3px black;
+    padding: 0;
+    position: absolute;
+    bottom: 60px;
+    left: 12px;
+    z-index: 15;
+    max-width: 70%;
+}
+
+/* Volume toggle on feed videos */
+.feed .volume-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    color: white;
+}
+
+/* ========== REAL GLASS-MORPHISM FOR CHAT ========== */
+
+/* Glass input - NOT flat dark mode */
+.glass-chat-input {
+    background: rgba(30, 30, 40, 0.5) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 30px !important;
+    padding: 12px 20px !important;
+    color: white !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.glass-chat-input:focus {
+    border-color: #00ff88 !important;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3) !important;
+    outline: none !important;
+}
+
+/* Glass send button */
+.glass-send-btn {
+    background: rgba(0, 255, 136, 0.85) !important;
+    backdrop-filter: blur(5px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+}
+
+.glass-send-btn:hover {
+    transform: scale(1.05);
+    background: #00ff88 !important;
+}
+
+/* Glass chat bubbles */
+.glass-bubble-mine {
+    background: rgba(0, 255, 136, 0.8) !important;
+    backdrop-filter: blur(5px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: black !important;
+}
+
+.glass-bubble-theirs {
+    background: rgba(50, 50, 60, 0.7) !important;
+    backdrop-filter: blur(5px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: white !important;
+}
+
+/* ========== CHAT DUAL-PANE (ONLY FOR CHAT PAGE) ========== */
+
+.chat-page .chat-dual-pane {
+    display: flex;
+    height: calc(100vh - 60px);
+}
+
+.chat-page .chat-contact-list {
+    width: 320px;
+    border-right: 1px solid #222;
+    overflow-y: auto;
+    background: #0a0a0a;
+}
+
+.chat-page .chat-messages-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+}
+
+/* Mobile chat */
+@media (max-width: 767px) {
+    .chat-page .chat-contact-list {
+        display: none;
+    }
+    .chat-page .chat-contact-list.active {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 200;
+    }
+}
+
+/* ========== PROFILE GRID LIKE COUNTS ========== */
+
+.profile-post-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: white;
+    font-size: 11px;
+}
+
+.profile-post-overlay i {
+    font-size: 10px;
+}
+
+.profile-post-overlay span {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* Profile grid item */
+.profile-grid-item {
+    position: relative;
+    aspect-ratio: 1/1;
+    background: #111;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.profile-grid-item img,
+.profile-grid-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-grid-item .overlay-stats {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
