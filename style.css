@@ -81,6 +81,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-text { font-size: 13px; margin-left: 36px; margin-bottom: 5px; word-break: break-word; }
 .comment-actions { display: flex; gap: 12px; margin-left: 36px; font-size: 11px; }
 .comment-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; padding: 2px 6px; font-size: 11px; transition: color 0.15s ease; }
+/* Comment actions */
 .comment-action i { font-size: 11px; margin-right: 4px; transition: color 0.15s ease; }
 .comment-action { color: white; transition: color 0.15s ease; }
 .comment-action.liked { color: #FE2C55; }
@@ -88,6 +89,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .comment-action.disliked { color: #FFC107; }
 .comment-action.disliked i { color: #FFC107; }
 
+/* Reply actions - ADD THIS */
 .reply-action i { font-size: 9px; margin-right: 3px; transition: color 0.15s ease; }
 .reply-action { color: white; transition: color 0.15s ease; }
 .reply-action.liked { color: #FE2C55; }
@@ -163,51 +165,363 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 .cancel-btn { background: #222; color: white; border: none; }
 
 #avatarInput { display: none; }
-.reply { transition: margin-left 0.2s ease; }
+/* Nested replies indentation */
+.reply {
+    transition: margin-left 0.2s ease;
+}
 
-.reply-actions { display: flex; gap: 10px; margin-left: 26px; font-size: 10px; }
-.reply-action { color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; background: transparent; border: none; padding: 1px 5px; font-size: 10px; transition: color 0.15s ease; }
-.reply-action i { font-size: 10px; color: white; transition: color 0.15s ease; }
-.reply-action.liked { color: #FE2C55; }
-.reply-action.liked i { color: #FE2C55; }
-.reply-action.disliked { color: #FFC107; }
-.reply-action.disliked i { color: #FFC107; }
+/* Reply actions styling */
+.reply-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: 26px;
+    font-size: 10px;
+}
 
-.header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.reply-action {
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 1px 5px;
+    font-size: 10px;
+    transition: color 0.15s ease;
+}
 
-.search-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); z-index: 1000; align-items: flex-start; justify-content: center; padding-top: 60px; }
-.search-modal-content { width: 90%; max-width: 500px; background: #1a1a1a; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
-.search-header { display: flex; align-items: center; gap: 12px; padding: 15px; background: #222; border-bottom: 1px solid #333; }
-.search-header i { color: #888; font-size: 18px; }
-.search-header input { flex: 1; background: none; border: none; color: white; font-size: 16px; outline: none; }
-.search-results { max-height: 400px; overflow-y: auto; }
-.search-result-item { padding: 12px 15px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.2s; }
-.search-result-item:hover { background: #2a2a2a; }
+.reply-action i {
+    font-size: 10px;
+    color: white;
+    transition: color 0.15s ease;
+}
 
-.loading-more { text-align: center; padding: 20px; color: #888; }
+.reply-action.liked {
+    color: #FE2C55;
+}
 
-.bottom-nav-item.active { color: #00ff88 !important; }
-.bottom-nav-item.active i { color: #00ff88 !important; }
+.reply-action.liked i {
+    color: #FE2C55;
+}
+
+.reply-action.disliked {
+    color: #FFC107;
+}
+
+.reply-action.disliked i {
+    color: #FFC107;
+}
+/* Header Avatar */
+.header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Search Modal */
+.search-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 60px;
+}
+
+.search-modal-content {
+    width: 90%;
+    max-width: 500px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.search-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: #222;
+    border-bottom: 1px solid #333;
+}
+
+.search-header i {
+    color: #888;
+    font-size: 18px;
+}
+
+.search-header input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #222;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-result-item:hover {
+    background: #2a2a2a;
+}
+/* Header Avatar */
+.header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Search Modal */
+.search-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 60px;
+}
+
+.search-modal-content {
+    width: 90%;
+    max-width: 500px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.search-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: #222;
+    border-bottom: 1px solid #333;
+}
+
+.search-header i {
+    color: #888;
+    font-size: 18px;
+}
+
+.search-header input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #222;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-result-item:hover {
+    background: #2a2a2a;
+}
+
+.loading-more {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+}
+
+/* Bottom nav active state */
+.bottom-nav-item.active {
+    color: #00ff88 !important;
+}
+
+.bottom-nav-item.active i {
+    color: #00ff88 !important;
+}
 
 /* ========== NEW CSS ADDED FOR FIXES ========== */
-input, select, textarea, button { font-size: 16px !important; }
-.post { position: relative; }
-.post-header-right { position: relative; }
-.post-menu-dropdown, .profile-post-menu-dropdown { position: absolute; right: 10px; top: 40px; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-.post-menu-option { padding: 10px 15px; cursor: pointer; color: white; transition: background 0.2s; }
-.post-menu-option:hover { background: #333; }
-.post-menu-option.delete-option { color: #ff4444; }
-.post-menu-option.delete-option:hover { background: #442222; }
-.post-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; }
-.post-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.post-time { font-size: 11px; color: #888; }
-.privacy-badge.privacy-public { background: #00ff88 !important; color: white !important; }
-.privacy-badge.privacy-friends { background: #00ff88 !important; color: white !important; }
-.privacy-badge.privacy-private { background: #00ff88 !important; color: white !important; }
-.privacy-badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; cursor: pointer; border: none; font-weight: bold; background: #00ff88 !important; color: black !important; }
-input, select, textarea, button { font-size: 16px !important; }
 
-/* ========== 1. GREEN NOTIFICATION PILL ========== */
+/* Prevent zoom on mobile inputs */
+input, select, textarea, button {
+    font-size: 16px !important;
+}
+
+/* Position relative for post menu positioning */
+.post {
+    position: relative;
+}
+
+.post-header-right {
+    position: relative;
+}
+
+/* Post menu dropdown styling */
+.post-menu-dropdown, .profile-post-menu-dropdown {
+    position: absolute;
+    right: 10px;
+    top: 40px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 5px 0;
+    z-index: 100;
+    min-width: 120px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.post-menu-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+}
+
+.post-menu-option:hover {
+    background: #333;
+}
+
+.post-menu-option.delete-option {
+    color: #ff4444;
+}
+
+.post-menu-option.delete-option:hover {
+    background: #442222;
+}
+
+/* Post header layout */
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+}
+
+.post-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.post-time {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Privacy button green background with WHITE text for active state */
+.privacy-badge.privacy-public {
+    background: #00ff88 !important;
+    color: white !important;
+}
+
+.privacy-badge.privacy-friends {
+    background: #00ff88 !important;
+    color: white !important;
+}
+
+.privacy-badge.privacy-private {
+    background: #00ff88 !important;
+    color: white !important;
+}
+/* ========== PRIVACY BUTTON & POST MENU STYLES ========== */
+
+/* Privacy button - Green background, Black text, NO icon */
+.privacy-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+    background: #00ff88 !important;
+    color: black !important;
+}
+
+/* Post menu dropdown styling */
+.post-menu-dropdown, .profile-post-menu-dropdown {
+    position: absolute;
+    right: 10px;
+    top: 40px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 5px 0;
+    z-index: 100;
+    min-width: 120px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Post menu options */
+.post-menu-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+}
+
+.post-menu-option:hover {
+    background: #333;
+}
+
+.post-menu-option.delete-option {
+    color: #ff4444;
+}
+
+.post-menu-option.delete-option:hover {
+    background: #442222;
+}
+
+/* Post header layout */
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+}
+
+.post-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.post-time {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Prevent zoom on mobile inputs */
+input, select, textarea, button {
+    font-size: 16px !important;
+}
+
+/* ========== GREEN NOTIFICATION PILL ========== */
 .notification-pill {
     position: fixed;
     bottom: 70px;
@@ -217,10 +531,18 @@ input, select, textarea, button { font-size: 16px !important; }
     cursor: pointer;
     animation: slideUpPill 0.3s ease;
 }
+
 @keyframes slideUpPill {
-    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
+
 .pill-inner {
     background: #00ff88;
     border-radius: 40px;
@@ -231,6 +553,7 @@ input, select, textarea, button { font-size: 16px !important; }
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+
 .pill-item {
     display: flex;
     align-items: center;
@@ -239,7 +562,12 @@ input, select, textarea, button { font-size: 16px !important; }
     color: black;
     font-size: 14px;
 }
-.pill-item i { font-size: 14px; color: black; }
+
+.pill-item i {
+    font-size: 14px;
+    color: black;
+}
+
 .pill-pointer {
     position: absolute;
     bottom: -8px;
@@ -252,15 +580,32 @@ input, select, textarea, button { font-size: 16px !important; }
     border-top: 8px solid #00ff88;
 }
 
-/* ========== 2. CHAT STYLES ========== */
-.chat-item:hover { background: #0f0f0f; }
-.notification-item:hover { background: #0f0f0f; }
-#chat-messages { scroll-behavior: smooth; }
-#chat-messages::-webkit-scrollbar { width: 4px; }
-#chat-messages::-webkit-scrollbar-track { background: #1a1a1a; }
-#chat-messages::-webkit-scrollbar-thumb { background: #00ff88; border-radius: 4px; }
+/* ========== CHAT STYLES ========== */
+.chat-item:hover {
+    background: #0f0f0f;
+}
 
-/* ========== 3. INBOX GREEN DOT ========== */
+.notification-item:hover {
+    background: #0f0f0f;
+}
+
+#chat-messages {
+    scroll-behavior: smooth;
+}
+
+#chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background: #00ff88;
+    border-radius: 4px;
+}
+/* ========== INBOX GREEN DOT ========== */
 .inbox-dot {
     position: absolute;
     top: -5px;
@@ -272,9 +617,12 @@ input, select, textarea, button { font-size: 16px !important; }
     border: 2px solid black;
     display: none;
 }
-.inbox-dot.show { display: block; }
 
-/* ========== 4. TYPING INDICATOR ========== */
+.inbox-dot.show {
+    display: block;
+}
+
+/* ========== TYPING INDICATOR ========== */
 .typing-indicator {
     display: flex;
     align-items: center;
@@ -285,6 +633,7 @@ input, select, textarea, button { font-size: 16px !important; }
     width: fit-content;
     margin: 5px 0;
 }
+
 .typing-indicator span {
     width: 8px;
     height: 8px;
@@ -292,15 +641,23 @@ input, select, textarea, button { font-size: 16px !important; }
     border-radius: 50%;
     animation: typingWave 1.4s infinite ease-in-out;
 }
+
 .typing-indicator span:nth-child(1) { animation-delay: 0s; }
 .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
 @keyframes typingWave {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-    30% { transform: translateY(-6px); opacity: 1; }
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
 }
 
-/* ========== 5. FOLLOWERS MODAL ========== */
+/* ========== FOLLOWERS MODAL ========== */
 .followers-modal {
     display: none;
     position: fixed;
@@ -313,6 +670,7 @@ input, select, textarea, button { font-size: 16px !important; }
     align-items: center;
     justify-content: center;
 }
+
 .followers-modal-content {
     background: #1a1a1a;
     border-radius: 20px;
@@ -321,6 +679,7 @@ input, select, textarea, button { font-size: 16px !important; }
     max-height: 80vh;
     overflow-y: auto;
 }
+
 .followers-modal-header {
     display: flex;
     justify-content: space-between;
@@ -328,7 +687,11 @@ input, select, textarea, button { font-size: 16px !important; }
     padding: 16px;
     border-bottom: 1px solid #333;
 }
-.followers-list { padding: 8px 0; }
+
+.followers-list {
+    padding: 8px 0;
+}
+
 .follower-item {
     display: flex;
     align-items: center;
@@ -337,33 +700,217 @@ input, select, textarea, button { font-size: 16px !important; }
     border-bottom: 1px solid #222;
     cursor: pointer;
 }
-.follower-item:hover { background: #2a2a2a; }
 
-/* ========== 6. PROFILE STATS CLICKABLE ========== */
+.follower-item:hover {
+    background: #2a2a2a;
+}
+
+/* ========== PROFILE STATS CLICKABLE ========== */
 .profile-stat-clickable {
     cursor: pointer;
     transition: opacity 0.2s;
 }
-.profile-stat-clickable:hover { opacity: 0.7; }
 
-/* ========== 7. BOTTOM NAV POSITION RELATIVE FOR DOT ========== */
-.bottom-nav-item { position: relative; }
+.profile-stat-clickable:hover {
+    opacity: 0.7;
+}
 
-/* ========== 8. GLASS-MORPHISM CHAT INPUT ========== */
+/* ========== BOTTOM NAV POSITION RELATIVE FOR DOT ========== */
+.bottom-nav-item {
+    position: relative;
+}
+/* ========== FIXES FOR ALL ISSUES ========== */
+
+/* Fix footer gap - Issue #8 */
+body {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    min-height: 100vh;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #222;
+    padding: 8px 20px;
+    z-index: 100;
+}
+
+.feed {
+    padding-bottom: 70px;
+}
+
+/* Fix chat typing box - Issue #5 */
+.chat-container-fixed {
+    height: calc(100vh - 130px);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-input-fixed {
+    padding: 12px;
+    border-top: 1px solid #333;
+    background: #0a0a0a;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+    position: sticky;
+    bottom: 0;
+}
+
+.chat-messages-fixed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* Fix video posts - Issue #2 */
+.post-video {
+    width: 100%;
+    max-height: 500px;
+    background: black;
+    object-fit: contain;
+}
+
+@media (max-width: 768px) {
+    .post-video {
+        max-height: 400px;
+        width: 100%;
+    }
+}
+
+/* Fix privacy menu overlap - Issue #3 */
+.post-privacy-menu {
+    position: relative;
+    z-index: 10;
+}
+
+.post-menu-dropdown, .profile-post-menu-dropdown {
+    z-index: 1001;
+}
+
+/* Profile post actions - Issue #6 */
+.profile-post-actions {
+    display: flex;
+    gap: 20px;
+    padding: 8px 12px;
+    border-top: 1px solid #222;
+    margin-top: 8px;
+}
+
+.profile-action-icon {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: white;
+    font-size: 14px;
+}
+
+.profile-action-icon.liked {
+    color: #FE2C55;
+}
+
+.profile-action-icon:hover {
+    opacity: 0.7;
+}
+
+/* Chat header clickable - Issue #7 */
+.chat-header-clickable {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.chat-header-clickable:hover {
+    opacity: 0.8;
+}
+
+/* Green pill position */
+.notification-pill {
+    z-index: 1002;
+}
+
+/* Ensure no gap at bottom */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+/* ========== CHAT REDESIGN - GLASS MORPHISM ========== */
+
+/* Chat container */
+.chat-container {
+    height: calc(100vh - 60px);
+    display: flex;
+    background: #000;
+}
+
+/* Dual-pane layout for desktop */
+@media (min-width: 768px) {
+    .chat-dual-pane {
+        display: flex;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .chat-contact-list {
+        width: 320px;
+        border-right: 1px solid #222;
+        overflow-y: auto;
+        background: #0a0a0a;
+    }
+    
+    .chat-messages-pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #000;
+    }
+}
+
+/* Single pane for mobile */
+@media (max-width: 767px) {
+    .chat-container {
+        flex-direction: column;
+    }
+    .chat-contact-list {
+        display: none;
+    }
+    .chat-contact-list.active {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 200;
+        background: #000;
+    }
+}
+
+/* Glass-morphism chat input */
 .chat-input-glass {
     position: relative;
     margin: 12px;
     border-radius: 30px;
-    background: rgba(30, 30, 40, 0.4) !important;
-    backdrop-filter: blur(15px) !important;
-    -webkit-backdrop-filter: blur(15px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    background: rgba(30, 30, 30, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 255, 136, 0.3);
     transition: all 0.3s ease;
 }
+
 .chat-input-glass:focus-within {
     border-color: #00ff88;
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
 }
+
 .chat-input-glass input {
     width: 100%;
     padding: 14px 50px 14px 20px;
@@ -374,14 +921,14 @@ input, select, textarea, button { font-size: 16px !important; }
     outline: none;
     border-radius: 30px;
 }
+
 .chat-input-glass button {
     position: absolute;
     right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(0, 255, 136, 0.85);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #00ff88;
+    border: none;
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -389,16 +936,21 @@ input, select, textarea, button { font-size: 16px !important; }
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s;
 }
-.chat-input-glass button:hover { transform: translateY(-50%) scale(1.05); }
 
-/* ========== 9. CHAT ATTACHMENT BUTTONS ========== */
+.chat-input-glass button:hover {
+    transform: translateY(-50%) scale(1.05);
+}
+
+/* Attachment buttons */
 .chat-attachments {
     display: flex;
     gap: 8px;
     padding: 8px 12px;
     border-top: 1px solid #222;
 }
+
 .attach-btn {
     background: none;
     border: none;
@@ -408,9 +960,13 @@ input, select, textarea, button { font-size: 16px !important; }
     border-radius: 50%;
     transition: all 0.2s;
 }
-.attach-btn:hover { background: #222; color: #00ff88; }
 
-/* ========== 10. VOICE RECORD BUTTON ========== */
+.attach-btn:hover {
+    background: #222;
+    color: #00ff88;
+}
+
+/* Voice message button (hold-to-record) */
 .voice-record-btn {
     background: #00ff88;
     color: black;
@@ -423,58 +979,102 @@ input, select, textarea, button { font-size: 16px !important; }
     cursor: pointer;
     transition: all 0.2s;
 }
+
 .voice-record-btn.recording {
     background: #ff4444;
     animation: pulse 1s infinite;
     color: white;
 }
+
 @keyframes pulse {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.1); opacity: 0.8; }
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* ========== 11. DUAL-PANE CHAT (DESKTOP) ========== */
-@media (min-width: 768px) {
-    .chat-dual-pane {
-        display: flex;
-        width: 100%;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .chat-contact-list {
-        width: 320px;
-        border-right: 1px solid #222;
-        overflow-y: auto;
-        background: #0a0a0a;
-    }
-    .chat-messages-pane {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background: #000;
-    }
+/* Video message indicator */
+.video-message {
+    position: relative;
+    cursor: pointer;
 }
 
-/* ========== 12. CHAT MESSAGE BUBBLES ========== */
+.video-message video {
+    max-width: 200px;
+    border-radius: 16px;
+}
+
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* Green themed scrollbar */
+.chat-messages-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chat-messages-area::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.chat-messages-area::-webkit-scrollbar-thumb {
+    background: #00ff88;
+    border-radius: 4px;
+}
+
+.chat-messages-area::-webkit-scrollbar-thumb:hover {
+    background: #00cc66;
+}
+
+/* Sticky date headers */
+.date-header {
+    position: sticky;
+    top: 0;
+    background: rgba(0,0,0,0.9);
+    backdrop-filter: blur(10px);
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #00ff88;
+    z-index: 10;
+    margin: 10px 0;
+    border-radius: 20px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Message bubble */
 .message-bubble {
     max-width: 70%;
     padding: 10px 14px;
     border-radius: 20px;
     word-wrap: break-word;
 }
+
 .message-bubble-mine {
     background: #00ff88;
     color: black;
     border-bottom-right-radius: 4px;
 }
+
 .message-bubble-theirs {
     background: #222;
     color: white;
     border-bottom-left-radius: 4px;
 }
 
-/* ========== 13. CHAT CONTACT ITEM ========== */
+/* Chat contact item */
 .chat-contact-item {
     display: flex;
     align-items: center;
@@ -483,10 +1083,12 @@ input, select, textarea, button { font-size: 16px !important; }
     cursor: pointer;
     transition: background 0.2s;
 }
-.chat-contact-item:hover,
-.chat-contact-item.active { background: #1a1a1a; }
 
-/* ========== 14. ONLINE DOT ========== */
+.chat-contact-item:hover,
+.chat-contact-item.active {
+    background: #1a1a1a;
+}
+
 .chat-contact-avatar {
     width: 50px;
     height: 50px;
@@ -494,6 +1096,7 @@ input, select, textarea, button { font-size: 16px !important; }
     object-fit: cover;
     position: relative;
 }
+
 .online-dot {
     position: absolute;
     bottom: 2px;
@@ -505,47 +1108,109 @@ input, select, textarea, button { font-size: 16px !important; }
     border: 2px solid #0a0a0a;
 }
 
-/* ========== 15. PROFILE GRID LIKE COUNTS ========== */
-.profile-grid-item {
+/* Video Feed - Autoplay styles */
+.video-feed-container {
     position: relative;
-    aspect-ratio: 1/1;
-    background: #111;
-    overflow: hidden;
-    cursor: pointer;
-}
-.profile-grid-item img,
-.profile-grid-item video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.profile-stats-overlay {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    background: rgba(0,0,0,0.6);
-    border-radius: 20px;
-    padding: 3px 8px;
-    font-size: 11px;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    height: 100vh;
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
 }
 
-/* ========== 16. GLOBAL CUSTOM SCROLLBAR ========== */
-::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+.video-feed-item {
+    scroll-snap-align: start;
+    height: 100vh;
+    position: relative;
+    background: black;
 }
-::-webkit-scrollbar-track {
-    background: #1a1a1a;
-    border-radius: 4px;
+
+.video-feed-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
-::-webkit-scrollbar-thumb {
-    background: #00ff88;
-    border-radius: 4px;
+
+.video-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    pointer-events: none;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: #00cc66;
+
+.video-overlay-content {
+    pointer-events: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.video-caption {
+    color: white;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+.video-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.video-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.video-action-btn:hover {
+    transform: scale(1.1);
+}
+
+.video-action-btn.liked {
+    color: #FE2C55;
+}
+
+/* Volume toggle */
+.volume-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    color: #00ff88;
+    backdrop-filter: blur(5px);
+}
+
+/* Double-tap heart animation */
+.heart-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    color: #FE2C55;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 30;
+    animation: heartPop 0.5s ease-out;
+}
+
+@keyframes heartPop {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
