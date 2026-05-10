@@ -1,4 +1,4 @@
-// ========== FEED FUNCTIONS ==========
+// ========== FEED FUNCTIONS WITH TAP TO PLAY/PAUSE ==========
 
 let currentPage = 0;
 const POSTS_PER_PAGE = 10;
@@ -11,7 +11,7 @@ window.isFriendsView = false;
 let videoObserver = null;
 let currentPlayingVideo = null;
 
-// Safe avatar function - prevents 400 errors
+// Safe avatar function
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
     const isValidUrl = avatarUrl && avatarUrl.trim() !== '' && avatarUrl.startsWith('http');
     
@@ -36,7 +36,7 @@ document.addEventListener('click', function(e) {
     });
 });
 
-// ========== NEW VIDEO AUTOPLAY FUNCTIONS ==========
+// ========== VIDEO AUTOPLAY FUNCTIONS ==========
 
 // Setup Intersection Observer for video autoplay
 function setupVideoAutoplay() {
@@ -58,7 +58,7 @@ function setupVideoAutoplay() {
                 }
             }
         });
-    }, { threshold: 0.5 });
+    }, { threshold: 0.6 });
 }
 
 // Toggle video mute/unmute
@@ -73,6 +73,18 @@ function toggleVideoMute(videoId) {
     }
 }
 
+// Tap to play/pause (single tap)
+function toggleVideoPlayPause(videoId) {
+    const video = document.getElementById(`video-${videoId}`);
+    if (video) {
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+        }
+    }
+}
+
 // Double-tap to like
 let lastTap = 0;
 function handleVideoDoubleTap(postId, element) {
@@ -80,6 +92,7 @@ function handleVideoDoubleTap(postId, element) {
     const tapLength = currentTime - lastTap;
     
     if (tapLength < 500 && tapLength > 0) {
+        // Double tap detected - like the post
         likePost(postId);
         showHeartAnimation(element);
     }
@@ -218,7 +231,8 @@ async function loadFeed(reset = true) {
             }
         }
         
-        let html = '';
+        let html = '<div class="video-feed-container">';
+        
         for (const p of posts) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             const isPostOwner = USER && p.user_id === USER.id;
@@ -247,83 +261,72 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // Media (image or video) - UPDATED for autoplay
-            let mediaHtml = '';
-            if (p.is_video || isVideoUrl(p.image_url)) {
-                mediaHtml = `
-                    <div class="video-feed-item" style="position: relative;">
-                        <div class="volume-toggle" onclick="event.stopPropagation(); toggleVideoMute(${p.id})" id="mute-btn-${p.id}" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20;">
-                            <i class="fas fa-volume-mute"></i>
-                        </div>
-                        <video id="video-${p.id}" 
-                               src="${p.image_url}" 
-                               poster="${p.thumbnail_url || ''}"
-                               loop 
-                               muted 
-                               playsinline
-                               style="width: 100%; max-height: 500px; background: black; object-fit: contain;"
-                               onclick="handleVideoDoubleTap(${p.id}, this.parentElement)">
-                        </video>
-                    </div>
-                `;
-            } else {
-                mediaHtml = `<img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">`;
-            }
+            const videoId = p.id;
+            const posterUrl = p.thumbnail_url || '';
+            const videoUrl = p.image_url;
             
             html += `
-                <div class="post" data-post-id="${p.id}">
-                    <div class="post-header">
-                        <div class="post-header-left">
-                            ${avatarHtml}
-                            <div class="post-username" onclick="viewProfile('${p.user_id}')" style="cursor: pointer;">${escapeHtml(displayName)}</div>
-                            ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}">${timestamp}</span>` : ''}
-                        </div>
-                        ${isPostOwner ? `
-                        <div class="post-header-right">
-                            <button class="post-menu-btn" onclick="event.stopPropagation(); toggleFeedPostMenu(${p.id})" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">⋮</button>
-                            <div id="feed-post-menu-${p.id}" class="post-menu-dropdown" style="display:none;">
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'public', true)">Public</div>
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'friends', true)">Friends</div>
-                                <div class="post-menu-option" onclick="changeFeedPostPrivacy(${p.id}, 'private', true)">Only Me</div>
-                                <div class="post-menu-option delete-option" onclick="deleteFeedPost(${p.id}, true)">Delete</div>
+                <div class="video-feed-item" data-post-id="${p.id}">
+                    <!-- Volume Toggle -->
+                    <div class="volume-toggle" onclick="event.stopPropagation(); toggleVideoMute(${videoId})" id="mute-btn-${videoId}">
+                        <i class="fas fa-volume-mute"></i>
+                    </div>
+                    
+                    <!-- Video Element - tap to play/pause, double-tap to like -->
+                    <video id="video-${videoId}" 
+                           src="${videoUrl}" 
+                           poster="${posterUrl}"
+                           loop 
+                           muted 
+                           playsinline
+                           style="width: 100%; height: 100%; object-fit: cover;"
+                           onclick="event.stopPropagation(); toggleVideoPlayPause(${videoId})"
+                           ondblclick="event.stopPropagation(); handleVideoDoubleTap(${p.id}, this.parentElement)">
+                    </video>
+                    
+                    <!-- Overlay for username, caption and actions -->
+                    <div class="video-overlay">
+                        <div class="video-overlay-content">
+                            <div class="video-info">
+                                <div class="video-username" onclick="viewProfile('${p.user_id}')">
+                                    ${escapeHtml(displayName)}
+                                </div>
+                                <div class="video-caption">${escapeHtml(p.caption || '')}</div>
+                            </div>
+                            <div class="video-actions">
+                                <div class="video-action-btn ${isLiked ? 'liked' : ''}" onclick="event.stopPropagation(); likePost(${p.id})">
+                                    <i class="fas fa-heart" style="font-size: 28px;"></i>
+                                    <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                                </div>
+                                <div class="video-action-btn" onclick="event.stopPropagation(); toggleComments(${p.id})">
+                                    <i class="far fa-comment-dots" style="font-size: 28px;"></i>
+                                    <span id="comment-count-${p.id}">${totalCount || 0}</span>
+                                </div>
+                                <div class="video-action-btn share-icon" onclick="event.stopPropagation(); openShareModal('${p.image_url}')">
+                                    <i class="fas fa-paper-plane" style="font-size: 28px;"></i>
+                                    <span>Share</span>
+                                </div>
                             </div>
                         </div>
-                        ` : ''}
                     </div>
-                    ${mediaHtml}
-                    <div class="post-caption">${escapeHtml(p.caption || '')}</div>
-                    <div class="post-actions-right">
-                        <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                            <i class="fas fa-heart"></i>
-                            <span id="likes-${p.id}">${p.likes_count || 0}</span>
-                        </div>
-                        <div class="action-icon" onclick="toggleComments(${p.id})">
-                            <i class="far fa-comment-dots"></i>
-                            <span id="comment-count-${p.id}">${totalCount || 0}</span>
-                        </div>
-                        <div class="action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                            <i class="fas fa-paper-plane"></i>
-                            <span>Share</span>
-                        </div>
-                        <div class="action-icon" onclick="alert('Saved!')">
-                            <i class="far fa-bookmark"></i>
-                            <span>Save</span>
-                        </div>
-                    </div>
-                    <div class="comments-section" id="comments-${p.id}" style="display:none">
-                        <div class="comments-header">
+                    
+                    <!-- Comments Section -->
+                    <div class="comments-section" id="comments-${p.id}" style="display:none; position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); max-height: 50%; overflow-y: auto; border-radius: 20px 20px 0 0; z-index: 50;">
+                        <div class="comments-header" style="display: flex; justify-content: space-between; padding: 12px;">
                             <span class="comments-title">💬 Comments (${totalCount || 0})</span>
-                            <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
+                            <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'" style="background:none; border:none; color:white; font-size:20px;">✕</button>
                         </div>
-                        <div id="comments-list-${p.id}">Click to load comments</div>
-                        <div class="comment-input">
-                            <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                            <button onclick="addComment(${p.id})">Post</button>
+                        <div id="comments-list-${p.id}" style="padding: 12px;">Click to load comments</div>
+                        <div class="comment-input" style="display: flex; gap: 8px; padding: 12px;">
+                            <input type="text" id="comment-input-${p.id}" placeholder="Add comment..." style="flex:1; padding:10px; border-radius:20px; border:none; background:#222; color:white;">
+                            <button onclick="addComment(${p.id})" style="background:#00ff88; color:black; border:none; padding:8px 16px; border-radius:20px;">Post</button>
                         </div>
                     </div>
                 </div>
             `;
         }
+        
+        html += '</div>';
         
         if (reset) {
             feedDiv.innerHTML = html;
@@ -389,12 +392,17 @@ function toggleFeedPostMenu(postId) {
 }
 
 function setupInfiniteScroll() {
-    window.addEventListener('scroll', () => {
+    const feedDiv = document.getElementById("feed");
+    if (!feedDiv) return;
+    
+    feedDiv.addEventListener('scroll', () => {
         if (isLoading) return;
         if (!hasMorePosts) return;
         if (window.isProfileView || window.isFriendsView) return;
-        const scrollPosition = window.innerHeight + window.scrollY;
-        const bottomPosition = document.body.offsetHeight - 500;
+        
+        const scrollPosition = feedDiv.scrollTop + feedDiv.clientHeight;
+        const bottomPosition = feedDiv.scrollHeight - 500;
+        
         if (scrollPosition >= bottomPosition) {
             loadFeed(false);
         }
@@ -410,7 +418,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== LOAD PROFILE ==========
+// ========== PROFILE PAGE WITH VIDEO AUTOPLAY ==========
 async function loadProfile() {
     window.isProfileView = true;
     window.isFriendsView = false;
@@ -488,77 +496,38 @@ async function loadProfile() {
                     <button onclick="goToHome()" style="background: #00ff88; color: black; border: none; padding: 10px 30px; border-radius: 30px; font-weight: bold; cursor: pointer;">Back to Feed</button>
                 </div>
                 <h3 style="margin-bottom: 15px; padding-left: 10px;">Your Posts</h3>
-                <div id="profile-posts-list">
+                <div id="profile-posts-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;">
         `;
         
         if (posts && posts.length > 0) {
             for (const p of posts) {
-                let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
-                let timestamp = p.created_at ? timeAgo(p.created_at) : '';
-                const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = p.comments_count || 0;
-                
-                let mediaHtml = '';
-                if (p.is_video || isVideoUrl(p.image_url)) {
-                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
-                } else {
-                    mediaHtml = `<img class="post-image" src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
-                }
-                
+                const isVideo = p.is_video || isVideoUrl(p.image_url);
                 html += `
-                    <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                        <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
-                            <div class="post-header-left" style="display: flex; align-items: center; gap: 10px;">
-                                ${userAvatarUrl ? `<img src="${userAvatarUrl}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div class="avatar-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`}
-                                <div class="post-username" style="font-weight: bold;">${escapeHtml(displayName)}</div>
-                                ${timestamp ? `<span class="post-time" data-timestamp="${p.created_at}" style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
-                            </div>
-                            <div class="post-privacy-menu" style="position: relative;">
-                                <button class="privacy-badge" onclick="event.stopPropagation(); toggleProfilePostMenu(${p.id})" style="border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; background: #00ff88; color: black; font-size: 12px; font-weight: bold !important;">${privacyText}</button>
-                                <div id="profile-post-menu-${p.id}" class="profile-post-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; background: #1a1a1a; border-radius: 10px; padding: 5px 0; z-index: 100; min-width: 120px;">
-                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'public')">Public</div>
-                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'friends')">Friends</div>
-                                    <div class="post-menu-option" onclick="changeProfilePostPrivacy(${p.id}, 'private')">Only Me</div>
-                                    <div class="post-menu-option delete-option" onclick="deleteProfilePost(${p.id})">Delete</div>
-                                </div>
-                            </div>
-                        </div>
-                        ${mediaHtml}
-                        <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                        <div class="profile-post-actions">
-                            <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes_count || 0}</span>
-                            </div>
-                            <div class="profile-action-icon" onclick="toggleComments(${p.id})">
-                                <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
-                            </div>
-                            <div class="profile-action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                                <i class="fas fa-paper-plane"></i> <span>Share</span>
-                            </div>
-                            <div class="profile-action-icon" onclick="alert('Saved!')">
-                                <i class="far fa-bookmark"></i> <span>Save</span>
-                            </div>
-                        </div>
-                        <div class="comments-section" id="comments-${p.id}" style="display:none">
-                            <div class="comments-header">
-                                <span class="comments-title">💬 Comments (${totalComments || 0})</span>
-                                <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
-                            </div>
-                            <div id="comments-list-${p.id}">Click to load comments</div>
-                            <div class="comment-input">
-                                <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                                <button onclick="addComment(${p.id})">Post</button>
-                            </div>
+                    <div class="profile-video-item" onclick="if(${isVideo}){ const video = this.querySelector('video'); if(video) video.paused ? video.play() : video.pause(); } else { openModal('${p.image_url}'); }">
+                        ${isVideo ? 
+                            `<video src="${p.image_url}" poster="${p.thumbnail_url || ''}" loop muted playsinline style="width:100%; height:100%; object-fit:cover;"></video>` :
+                            `<img src="${p.image_url}" style="width:100%; height:100%; object-fit:cover;">`
+                        }
+                        <div class="profile-video-overlay">
+                            <i class="fas fa-${isVideo ? 'play' : 'image'}"></i>
                         </div>
                     </div>
                 `;
             }
         } else {
-            html += '<div style="text-align: center; padding: 40px; color: #888;">No posts yet. Click + to upload!</div>';
+            html += '<div style="text-align: center; padding: 40px; color: #888; grid-column: span 3;">No posts yet. Click + to upload!</div>';
         }
         
         html += `</div></div>`;
         feedDiv.innerHTML = html;
+        
+        // Observe profile videos for autoplay
+        setTimeout(() => {
+            const profileVideos = document.querySelectorAll('.profile-video-item video');
+            profileVideos.forEach(video => {
+                if (videoObserver) videoObserver.observe(video);
+            });
+        }, 500);
         
         document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
@@ -570,31 +539,7 @@ async function loadProfile() {
     }
 }
 
-function toggleProfilePostMenu(postId) {
-    document.querySelectorAll('.profile-post-menu-dropdown').forEach(menu => {
-        if (menu.id !== `profile-post-menu-${postId}`) {
-            menu.style.display = 'none';
-        }
-    });
-    const menu = document.getElementById(`profile-post-menu-${postId}`);
-    if (menu) {
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-async function changeProfilePostPrivacy(postId, newPrivacy) {
-    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
-    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
-    await loadProfile();
-}
-
-async function deleteProfilePost(postId) {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
-    await SB.from("posts").delete().eq("id", postId);
-    await loadProfile();
-}
-
-// ========== VIEW PROFILE (other user) ==========
+// View other user's profile
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -668,65 +613,38 @@ async function viewProfile(userId) {
                 </div>
                 <div style="margin-top: 20px;">
                     <h3 style="margin-bottom: 15px; padding-left: 10px;">Posts</h3>
-                    <div id="profile-posts-list">
+                    <div id="profile-posts-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;">
         `;
         
         if (posts && posts.length > 0) {
             for (const p of posts) {
-                let timestamp = p.created_at ? timeAgo(p.created_at) : '';
-                const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = p.comments_count || 0;
-                
-                let mediaHtml = '';
-                if (p.is_video || isVideoUrl(p.image_url)) {
-                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
-                } else {
-                    mediaHtml = `<img src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
-                }
-                
+                const isVideo = p.is_video || isVideoUrl(p.image_url);
                 html += `
-                    <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
-                        <div style="display: flex; align-items: center; gap: 10px; padding: 12px;">
-                            ${userAvatarUrl ? `<img src="${userAvatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>`}
-                            <div style="font-weight: bold;">${escapeHtml(displayName)}</div>
-                            ${timestamp ? `<span style="font-size: 11px; color: #888;">${timestamp}</span>` : ''}
-                        </div>
-                        ${mediaHtml}
-                        <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
-                        <div class="profile-post-actions">
-                            <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes_count || 0}</span>
-                            </div>
-                            <div class="profile-action-icon" onclick="toggleComments(${p.id})">
-                                <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
-                            </div>
-                            <div class="profile-action-icon share-icon" onclick="openShareModal('${p.image_url}')">
-                                <i class="fas fa-paper-plane"></i> <span>Share</span>
-                            </div>
-                            <div class="profile-action-icon" onclick="alert('Saved!')">
-                                <i class="far fa-bookmark"></i> <span>Save</span>
-                            </div>
-                        </div>
-                        <div class="comments-section" id="comments-${p.id}" style="display:none">
-                            <div class="comments-header">
-                                <span class="comments-title">💬 Comments (${totalComments || 0})</span>
-                                <button class="close-comments" onclick="document.getElementById('comments-${p.id}').style.display='none'">✕</button>
-                            </div>
-                            <div id="comments-list-${p.id}">Click to load comments</div>
-                            <div class="comment-input">
-                                <input type="text" id="comment-input-${p.id}" placeholder="Add comment...">
-                                <button onclick="addComment(${p.id})">Post</button>
-                            </div>
+                    <div class="profile-video-item" onclick="if(${isVideo}){ const video = this.querySelector('video'); if(video) video.paused ? video.play() : video.pause(); } else { openModal('${p.image_url}'); }">
+                        ${isVideo ? 
+                            `<video src="${p.image_url}" poster="${p.thumbnail_url || ''}" loop muted playsinline style="width:100%; height:100%; object-fit:cover;"></video>` :
+                            `<img src="${p.image_url}" style="width:100%; height:100%; object-fit:cover;">`
+                        }
+                        <div class="profile-video-overlay">
+                            <i class="fas fa-${isVideo ? 'play' : 'image'}"></i>
                         </div>
                     </div>
                 `;
             }
         } else {
-            html += '<div style="text-align: center; padding: 40px; color: #888;">No posts yet</div>';
+            html += '<div style="text-align: center; padding: 40px; color: #888; grid-column: span 3;">No posts yet</div>';
         }
         
         html += `</div></div>`;
         feedDiv.innerHTML = html;
+        
+        // Observe profile videos for autoplay
+        setTimeout(() => {
+            const profileVideos = document.querySelectorAll('.profile-video-item video');
+            profileVideos.forEach(video => {
+                if (videoObserver) videoObserver.observe(video);
+            });
+        }, 500);
         
         document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
         const profileBtn = document.querySelector('.bottom-nav-item:last-child');
@@ -741,8 +659,8 @@ async function viewProfile(userId) {
 async function openChatFromProfile(userId) {
     bottomNav('inbox');
     setTimeout(() => {
-        if (typeof openChat === 'function') {
-            openChat(userId);
+        if (typeof openDualChat === 'function') {
+            openDualChat(userId);
         }
     }, 500);
 }
@@ -856,17 +774,6 @@ function closeModal() {
     document.getElementById('imageModal').style.display = 'none';
 }
 
-function openUploadModal() {
-    if (!USER) { alert('Please login first'); openAuthModal(); return; }
-    document.getElementById('uploadModal').style.display = 'block';
-}
-
-function closeUploadModal() {
-    document.getElementById('uploadModal').style.display = 'none';
-    document.getElementById('uploadFile').value = '';
-    document.getElementById('uploadCaption').value = '';
-}
-
 function switchTab(tab) {
     CURRENT_TAB = tab;
     refreshFeed();
@@ -903,39 +810,12 @@ function bottomNav(page) {
     }
 }
 
-async function uploadPost() {
-    if (!USER) { alert('Login first'); return; }
-    const file = document.getElementById("uploadFile").files[0];
-    const caption = document.getElementById("uploadCaption").value;
-    const privacy = document.getElementById("uploadPrivacy").value;
-    if (!file) { alert("Select an image or video"); return; }
-    
-    const isVideo = file.type.startsWith('video/');
-    const fileName = `${USER.id}_${Date.now()}.${file.name.split('.').pop()}`;
-    
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
-    
-    await SB.from("posts").insert({ 
-        image_url: data.publicUrl, 
-        caption: caption, 
-        user_id: USER.id, 
-        privacy: privacy, 
-        is_ai: false, 
-        likes: 0,
-        is_video: isVideo
-    });
-    alert("Posted!");
-    closeUploadModal();
-    refreshFeed();
-}
-
-// Setup video autoplay and snap scrolling on page load
+// Initialize video autoplay
 setupVideoAutoplay();
 setupSnapScrolling();
 setupInfiniteScroll();
 
-// ========== MAKE FUNCTIONS GLOBAL ==========
+// Expose functions
 window.loadFeed = loadFeed;
 window.refreshFeed = refreshFeed;
 window.viewProfile = viewProfile;
@@ -948,19 +828,12 @@ window.openShareModal = openShareModal;
 window.closeShareModal = closeShareModal;
 window.shareTo = shareTo;
 window.copyLink = copyLink;
-window.openUploadModal = openUploadModal;
-window.closeUploadModal = closeUploadModal;
 window.switchTab = switchTab;
 window.bottomNav = bottomNav;
-window.uploadPost = uploadPost;
 window.toggleFeedPostMenu = toggleFeedPostMenu;
 window.changeFeedPostPrivacy = changeFeedPostPrivacy;
 window.deleteFeedPost = deleteFeedPost;
-window.toggleProfilePostMenu = toggleProfilePostMenu;
-window.changeProfilePostPrivacy = changeProfilePostPrivacy;
-window.deleteProfilePost = deleteProfilePost;
 window.openChatFromProfile = openChatFromProfile;
-
-// New video functions
 window.toggleVideoMute = toggleVideoMute;
+window.toggleVideoPlayPause = toggleVideoPlayPause;
 window.handleVideoDoubleTap = handleVideoDoubleTap;
