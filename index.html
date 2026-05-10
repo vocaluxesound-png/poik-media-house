@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -46,9 +46,9 @@
 <div class="bottom-nav-items">
 <button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
 <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
-<div class="plus-circle" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
+<div class="plus-circle" onclick="openEnhancedUploadModal()"><i class="fas fa-plus"></i></div>
 <button id="inboxNavBtn" class="bottom-nav-item" onclick="bottomNav('inbox')">
-<i class="far fa-comment-dots"></i>
+<i class="fas fa-inbox"></i>
 <span>Inbox</span>
 <div id="inboxGreenDot" class="inbox-dot"></div>
 </button>
@@ -108,12 +108,17 @@
 
 <input type="file" id="avatarInput" accept="image/*">
 
+<!-- EXISTING SCRIPTS -->
 <script src="auth.js"></script>
 <script src="profile.js"></script>
 <script src="comments.js"></script>
 <script src="feed.js"></script>
 <script src="friends.js"></script>
 <script src="search.js"></script>
+
+<!-- NEW SCRIPTS - CHAT AND ENHANCED UPLOAD -->
+<script src="chat.js"></script>
+<script src="upload.js"></script>
 
 <script>
 // ============================================================
@@ -160,7 +165,7 @@ async function getSimpleUnreadCount() {
     } catch(e) { return 0; }
 }
 
-// ----- GREEN PILL - Issue #1 -----
+// ----- GREEN PILL -----
 async function showGreenPill() {
     const unreadCount = await getSimpleUnreadCount();
     if (unreadCount === 0) { hideGreenPill(); return; }
@@ -474,7 +479,7 @@ async function closeSimpleChat() {
     await renderSimpleChats();
 }
 
-// ----- ACTIVITY TAB WITH REAL NOTIFICATIONS - Issue #4 -----
+// ----- ACTIVITY TAB WITH REAL NOTIFICATIONS -----
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
@@ -523,7 +528,7 @@ async function switchInboxTabSimple(tab) {
     await renderSimpleInbox();
 }
 
-// ----- GO TO PROFILE FROM CHAT - Issue #7 -----
+// ----- GO TO PROFILE FROM CHAT -----
 function goToProfileFromChat(userId) {
     closeSimpleChat();
     if (typeof viewProfile === 'function') {
@@ -554,63 +559,6 @@ function startAutoRefresh() {
         }
     }, 5000);
 }
-
-// ----- UPLOAD POST WITH VIDEO SUPPORT - Issue #2 -----
-window.uploadPost = async function() {
-    if (!USER) { alert('Login first'); return; }
-    const file = document.getElementById("uploadFile").files[0];
-    const caption = document.getElementById("uploadCaption").value;
-    const privacy = document.getElementById("uploadPrivacy").value;
-    if (!file) { alert("Select an image or video"); return; }
-    
-    const isVideo = file.type.startsWith('video/');
-    const fileName = `${USER.id}_${Date.now()}.${file.name.split('.').pop()}`;
-    
-    await SB.storage.from("post-images").upload(fileName, file);
-    const { data } = SB.storage.from("post-images").getPublicUrl(fileName);
-    
-    await SB.from("posts").insert({ 
-        image_url: data.publicUrl, 
-        caption: caption, 
-        user_id: USER.id, 
-        privacy: privacy, 
-        is_ai: false, 
-        likes: 0,
-        is_video: isVideo
-    });
-    alert("Posted!");
-    closeUploadModal();
-    refreshFeed();
-};
-
-// ----- LIKE POST WITH NOTIFICATION -----
-window.likePost = async function(postId) {
-    if (!USER) { alert('Login to like'); openAuthModal(); return; }
-    
-    const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
-    const { data: existing } = await SB.from("post_likes").select("*").eq("post_id", postId).eq("user_id", USER.id);
-    
-    if (existing && existing.length > 0) {
-        await SB.from("post_likes").delete().eq("post_id", postId).eq("user_id", USER.id);
-        userLikedPosts.delete(Number(postId));
-    } else {
-        await SB.from("post_likes").insert({ post_id: postId, user_id: USER.id });
-        userLikedPosts.add(Number(postId));
-        
-        if (post && post.user_id !== USER.id) {
-            await createSimpleNotification('like_post', post.user_id, USER.id, postId);
-        }
-    }
-    
-    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
-    const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
-    const likeBtn = document.getElementById(`like-btn-${postId}`);
-    if (likeBtn) {
-        if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
-        else likeBtn.classList.remove('liked');
-    }
-};
 
 // ----- INIT -----
 (async function() {
