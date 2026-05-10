@@ -7,6 +7,10 @@ let hasMorePosts = true;
 window.isProfileView = false;
 window.isFriendsView = false;
 
+// Video autoplay variables
+let videoObserver = null;
+let currentPlayingVideo = null;
+
 // Safe avatar function - prevents 400 errors
 function getSafeAvatarHtml(avatarUrl, userId, size = 40) {
     const isValidUrl = avatarUrl && avatarUrl.trim() !== '' && avatarUrl.startsWith('http');
@@ -32,6 +36,129 @@ document.addEventListener('click', function(e) {
     });
 });
 
+// ========== NEW VIDEO AUTOPLAY FUNCTIONS ==========
+
+// Setup Intersection Observer for video autoplay
+function setupVideoAutoplay() {
+    if (videoObserver) videoObserver.disconnect();
+    
+    videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target;
+            if (entry.isIntersecting) {
+                if (currentPlayingVideo && currentPlayingVideo !== video) {
+                    currentPlayingVideo.pause();
+                }
+                video.play().catch(e => console.log("Autoplay prevented:", e));
+                currentPlayingVideo = video;
+            } else {
+                if (currentPlayingVideo === video) {
+                    video.pause();
+                    currentPlayingVideo = null;
+                }
+            }
+        });
+    }, { threshold: 0.5 });
+}
+
+// Toggle video mute/unmute
+function toggleVideoMute(videoId) {
+    const video = document.getElementById(`video-${videoId}`);
+    if (video) {
+        video.muted = !video.muted;
+        const muteBtn = document.getElementById(`mute-btn-${videoId}`);
+        if (muteBtn) {
+            muteBtn.innerHTML = video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        }
+    }
+}
+
+// Double-tap to like
+let lastTap = 0;
+function handleVideoDoubleTap(postId, element) {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    
+    if (tapLength < 500 && tapLength > 0) {
+        likePost(postId);
+        showHeartAnimation(element);
+    }
+    lastTap = currentTime;
+}
+
+function showHeartAnimation(element) {
+    const heart = document.createElement('div');
+    heart.className = 'heart-animation';
+    heart.innerHTML = '<i class="fas fa-heart"></i>';
+    heart.style.position = 'absolute';
+    heart.style.top = '50%';
+    heart.style.left = '50%';
+    heart.style.transform = 'translate(-50%, -50%)';
+    heart.style.fontSize = '80px';
+    heart.style.color = '#FE2C55';
+    heart.style.zIndex = '100';
+    heart.style.pointerEvents = 'none';
+    heart.style.animation = 'heartPop 0.5s ease-out';
+    
+    element.style.position = 'relative';
+    element.appendChild(heart);
+    
+    setTimeout(() => {
+        heart.remove();
+    }, 500);
+}
+
+// Setup snap-to-video scrolling on mobile
+function setupSnapScrolling() {
+    const feedDiv = document.getElementById("feed");
+    if (!feedDiv) return;
+    
+    let isScrolling = false;
+    let scrollTimeout;
+    
+    const handleScroll = () => {
+        if (isScrolling) return;
+        isScrolling = true;
+        
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const videos = document.querySelectorAll('.video-feed-item');
+            let bestIndex = -1;
+            let bestVisibility = 0;
+            
+            videos.forEach((video, index) => {
+                const rect = video.getBoundingClientRect();
+                const visibility = Math.min(1, Math.max(0, 
+                    (Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0)) / rect.height
+                ));
+                if (visibility > bestVisibility) {
+                    bestVisibility = visibility;
+                    bestIndex = index;
+                }
+            });
+            
+            if (bestIndex >= 0 && bestVisibility > 0.3) {
+                videos[bestIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            isScrolling = false;
+        }, 100);
+    };
+    
+    feedDiv.addEventListener('scroll', handleScroll);
+}
+
+// Observe videos after feed loads
+function observeVideoElements() {
+    setTimeout(() => {
+        const videos = document.querySelectorAll('.video-feed-item video');
+        videos.forEach(video => {
+            if (videoObserver) videoObserver.observe(video);
+        });
+    }, 500);
+}
+
+// ========== LOAD FEED ==========
 async function loadFeed(reset = true) {
     if (window.isProfileView || window.isFriendsView) {
         console.log("🚫 Skipping feed - other view active");
@@ -120,10 +247,25 @@ async function loadFeed(reset = true) {
                 avatarHtml = '<div class="m-logo"><div class="tri tri1"></div><div class="tri tri2"></div><div class="tri tri3"></div><div class="tri tri4"></div></div>';
             }
             
-            // Media (image or video)
+            // Media (image or video) - UPDATED for autoplay
             let mediaHtml = '';
             if (p.is_video || isVideoUrl(p.image_url)) {
-                mediaHtml = `<video class="post-image" controls style="width:100%; max-height:500px; background:black;" src="${p.image_url}" onclick="this.paused?this.play():this.pause()"></video>`;
+                mediaHtml = `
+                    <div class="video-feed-item" style="position: relative;">
+                        <div class="volume-toggle" onclick="event.stopPropagation(); toggleVideoMute(${p.id})" id="mute-btn-${p.id}" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20;">
+                            <i class="fas fa-volume-mute"></i>
+                        </div>
+                        <video id="video-${p.id}" 
+                               src="${p.image_url}" 
+                               poster="${p.thumbnail_url || ''}"
+                               loop 
+                               muted 
+                               playsinline
+                               style="width: 100%; max-height: 500px; background: black; object-fit: contain;"
+                               onclick="handleVideoDoubleTap(${p.id}, this.parentElement)">
+                        </video>
+                    </div>
+                `;
             } else {
                 mediaHtml = `<img class="post-image" src="${p.image_url}" onclick="openModal('${p.image_url}')" loading="lazy">`;
             }
@@ -188,6 +330,9 @@ async function loadFeed(reset = true) {
         } else {
             feedDiv.insertAdjacentHTML('beforeend', html);
         }
+        
+        // Observe videos for autoplay
+        observeVideoElements();
         
         currentPage++;
         if (posts.length < POSTS_PER_PAGE) {
@@ -265,7 +410,7 @@ function refreshFeed() {
     loadFeed(true);
 }
 
-// ========== LOAD PROFILE - WITH ACTION BUTTONS - Issue #6 ==========
+// ========== LOAD PROFILE ==========
 async function loadProfile() {
     window.isProfileView = true;
     window.isFriendsView = false;
@@ -355,7 +500,7 @@ async function loadProfile() {
                 
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
-                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}"></video>`;
+                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
                 } else {
                     mediaHtml = `<img class="post-image" src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
                 }
@@ -449,7 +594,7 @@ async function deleteProfilePost(postId) {
     await loadProfile();
 }
 
-// ========== VIEW PROFILE (other user) - WITH ACTION BUTTONS ==========
+// ========== VIEW PROFILE (other user) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) {
@@ -534,7 +679,7 @@ async function viewProfile(userId) {
                 
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
-                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}"></video>`;
+                    mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
                 } else {
                     mediaHtml = `<img src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
                 }
@@ -637,7 +782,7 @@ async function toggleFollowFromProfile(userId) {
     }
 }
 
-window.likePost = async function(postId) {
+async function likePost(postId) {
     if (!USER) { alert('Login to like'); openAuthModal(); return; }
     
     const { data: post } = await SB.from("posts").select("user_id").eq("id", postId).single();
@@ -663,7 +808,7 @@ window.likePost = async function(postId) {
         if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
         else likeBtn.classList.remove('liked');
     }
-};
+}
 
 function toggleComments(postId) {
     const section = document.getElementById(`comments-${postId}`);
@@ -758,7 +903,7 @@ function bottomNav(page) {
     }
 }
 
-window.uploadPost = async function() {
+async function uploadPost() {
     if (!USER) { alert('Login first'); return; }
     const file = document.getElementById("uploadFile").files[0];
     const caption = document.getElementById("uploadCaption").value;
@@ -783,8 +928,11 @@ window.uploadPost = async function() {
     alert("Posted!");
     closeUploadModal();
     refreshFeed();
-};
+}
 
+// Setup video autoplay and snap scrolling on page load
+setupVideoAutoplay();
+setupSnapScrolling();
 setupInfiniteScroll();
 
 // ========== MAKE FUNCTIONS GLOBAL ==========
@@ -812,3 +960,7 @@ window.toggleProfilePostMenu = toggleProfilePostMenu;
 window.changeProfilePostPrivacy = changeProfilePostPrivacy;
 window.deleteProfilePost = deleteProfilePost;
 window.openChatFromProfile = openChatFromProfile;
+
+// New video functions
+window.toggleVideoMute = toggleVideoMute;
+window.handleVideoDoubleTap = handleVideoDoubleTap;
