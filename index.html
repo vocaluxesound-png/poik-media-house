@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -228,7 +228,16 @@ async function showGreenPill() {
         pill.style.zIndex = '1002';
         pill.style.cursor = 'pointer';
         pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
-        pill.onclick = () => { hideGreenPill(); bottomNav('inbox'); };
+        // CHANGE 1: Click green pill -> Open Activity tab
+        pill.onclick = () => { 
+            hideGreenPill(); 
+            bottomNav('inbox');
+            setTimeout(() => {
+                if (typeof switchInboxTabSimple === 'function') {
+                    switchInboxTabSimple('activity');
+                }
+            }, 200);
+        };
         document.body.appendChild(pill);
     }
 }
@@ -238,12 +247,27 @@ function hideGreenPill() {
     if (pill) pill.remove();
 }
 
-// ========== GREEN DOT ON INBOX ==========
+// ========== GREEN DOT ON INBOX (ONLY unread messages) ==========
 async function updateGreenDot() {
-    const counts = await getTotalUnreadCount();
+    // CHANGE 3: Count ONLY unread messages (not notifications)
+    let msgCount = 0;
+    try {
+        let msgQuery = SB
+            .from("messages")
+            .select("*", { count: 'exact', head: true })
+            .eq("receiver_id", window.USER.id)
+            .eq("is_read", false);
+        
+        if (currentOpenChatUserId) {
+            msgQuery = msgQuery.neq("sender_id", currentOpenChatUserId);
+        }
+        const { count } = await msgQuery;
+        msgCount = count || 0;
+    } catch(e) { console.error("Message count error:", e); }
+    
     const greenDot = document.getElementById('inboxGreenDot');
     if (greenDot) {
-        if (counts.total > 0) greenDot.classList.add('show');
+        if (msgCount > 0) greenDot.classList.add('show');
         else greenDot.classList.remove('show');
     }
 }
@@ -628,6 +652,9 @@ async function closeSimpleChat() {
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
+    
+    // CHANGE 2: Mark notifications as read when viewing Activity tab
+    await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
     
     const { data: notifications } = await SB
         .from("notifications")
