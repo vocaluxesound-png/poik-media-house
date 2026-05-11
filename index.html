@@ -163,15 +163,19 @@ async function getSimpleUnreadCount() {
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
+        // If user has a chat open, exclude messages from that person
         if (currentOpenChatUserId) {
             query = query.neq("sender_id", currentOpenChatUserId);
         }
         
-        const { count } = await query;
+        const { count, error } = await query;
+        if (error) console.error("Unread count error:", error);
         return count || 0;
-    } catch(e) { return 0; }
+    } catch(e) { 
+        console.error("Get unread error:", e);
+        return 0; 
+    }
 }
-
 // ----- GREEN PILL -----
 async function showGreenPill() {
     const unreadCount = await getSimpleUnreadCount();
@@ -216,7 +220,19 @@ async function updateGreenDot() {
 // ----- MARK MESSAGES AS READ -----
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
-    await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
+    // Mark ALL messages from this sender to current user as read
+    const { error } = await SB
+        .from("messages")
+        .update({ is_read: true })
+        .eq("sender_id", senderId)
+        .eq("receiver_id", window.USER.id)
+        .eq("is_read", false);
+    
+    if (error) {
+        console.error("Mark read error:", error);
+    } else {
+        console.log("✅ Marked messages as read from:", senderId);
+    }
     await showGreenPill();
     await updateGreenDot();
 }
@@ -588,8 +604,9 @@ async function sendSimpleChatMessage() {
 }
 
 async function closeSimpleChat() {
-    // Mark messages from this chat as read before closing
+    console.log("Closing chat with:", currentOpenChatUserId);
     if (currentOpenChatUserId) {
+        console.log("Marking messages as read from:", currentOpenChatUserId);
         await markMessagesRead(currentOpenChatUserId);
     }
     stopTypingPolling();
