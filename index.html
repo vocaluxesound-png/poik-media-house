@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -122,7 +122,7 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - ALL ISSUES FIXED + TYPING INDICATOR
+// COMPLETE FIXED VERSION - WITH SEEN INDICATOR
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -163,7 +163,6 @@ async function getSimpleUnreadCount() {
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
-        // If user has a chat open, exclude messages from that person
         if (currentOpenChatUserId) {
             query = query.neq("sender_id", currentOpenChatUserId);
         }
@@ -176,6 +175,7 @@ async function getSimpleUnreadCount() {
         return 0; 
     }
 }
+
 // ----- GREEN PILL -----
 async function showGreenPill() {
     const unreadCount = await getSimpleUnreadCount();
@@ -220,7 +220,6 @@ async function updateGreenDot() {
 // ----- MARK MESSAGES AS READ -----
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
-    // Mark ALL messages from this sender to current user as read
     const { error } = await SB
         .from("messages")
         .update({ is_read: true })
@@ -237,7 +236,7 @@ async function markMessagesRead(senderId) {
     await updateGreenDot();
 }
 
-// ----- SEND MESSAGE -----
+// ----- SEND MESSAGE (UPDATED with delivered_at) -----
 async function sendSimpleMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
     try {
@@ -245,7 +244,8 @@ async function sendSimpleMessage(receiverId, message) {
             sender_id: window.USER.id,
             receiver_id: receiverId,
             message: message.trim(),
-            is_read: false
+            is_read: false,
+            delivered_at: new Date().toISOString()
         });
         return true;
     } catch(e) { return false; }
@@ -484,6 +484,14 @@ async function openSimpleChat(userId) {
     currentOpenChatUserId = userId;
     
     await markMessagesRead(userId);
+    
+    // Mark all messages as seen when opening chat (NEW FEATURE)
+    await SB.from("messages")
+        .update({ seen_at: new Date().toISOString() })
+        .eq("sender_id", userId)
+        .eq("receiver_id", window.USER.id)
+        .eq("seen_at", null);
+    
     await showGreenPill();
     await updateGreenDot();
     
@@ -516,7 +524,10 @@ async function openSimpleChat(userId) {
                     ${!isMine ? avatarHtml : ''}
                     <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
                         ${escapeHtml(msg.message)}
-                        <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
+                        <div style="font-size:9px;color:${isMine ? '#006644' : '#888'}; display:flex; justify-content:space-between; align-items:center;">
+                            <span>${timeAgo(msg.created_at)}</span>
+                            ${isMine ? (msg.seen_at ? '<span style="color:#00ff88; margin-left:8px;">✓✓ Seen</span>' : (msg.delivered_at ? '<span style="color:#888; margin-left:8px;">✓✓</span>' : '<span style="color:#888; margin-left:8px;">✓</span>')) : ''}
+                        </div>
                     </div>
                 </div>
             `;
@@ -583,7 +594,10 @@ async function refreshSimpleChatMessages() {
                 ${!isMine ? avatarHtml : ''}
                 <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
                     ${escapeHtml(msg.message)}
-                    <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
+                    <div style="font-size:9px;color:${isMine ? '#006644' : '#888'}; display:flex; justify-content:space-between; align-items:center;">
+                        <span>${timeAgo(msg.created_at)}</span>
+                        ${isMine ? (msg.seen_at ? '<span style="color:#00ff88; margin-left:8px;">✓✓ Seen</span>' : (msg.delivered_at ? '<span style="color:#888; margin-left:8px;">✓✓</span>' : '<span style="color:#888; margin-left:8px;">✓</span>')) : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -597,7 +611,6 @@ async function sendSimpleChatMessage() {
     const message = input?.value.trim();
     if (!message || !currentOpenChatUserId) return;
     input.value = '';
-    // Stop typing indicator when sending
     await updateTypingStatus(currentOpenChatUserId, false);
     await sendSimpleMessage(currentOpenChatUserId, message);
     await refreshSimpleChatMessages();
