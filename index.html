@@ -588,6 +588,10 @@ async function sendSimpleChatMessage() {
 }
 
 async function closeSimpleChat() {
+    // Mark messages from this chat as read before closing
+    if (currentOpenChatUserId) {
+        await markMessagesRead(currentOpenChatUserId);
+    }
     stopTypingPolling();
     if (messagePollInterval) clearInterval(messagePollInterval);
     currentOpenChatUserId = null;
