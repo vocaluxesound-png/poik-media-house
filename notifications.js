@@ -262,6 +262,21 @@ async function updateTabBadges() {
     }
 }
 
+// ========== ALIAS FOR NOTIFICATION-BAR.JS COMPATIBILITY ==========
+async function getNotificationCounts() {
+    const counts = await getUnreadNotificationsCount();
+    return {
+        likes: counts.likes,
+        comments: counts.comments,
+        follows: counts.follows
+    };
+}
+
+// ========== ALIAS FOR INBOX.JS COMPATIBILITY ==========
+async function getNotifications(limit = 100) {
+    return await loadActivity();
+}
+
 // Expose functions globally
 window.getUnreadNotificationsCount = getUnreadNotificationsCount;
 window.getUnreadMessagesCount = getUnreadMessagesCount;
@@ -274,3 +289,5 @@ window.showGreenPill = showGreenPill;
 window.hideGreenPill = hideGreenPill;
 window.updateInboxBadge = updateInboxBadge;
 window.updateTabBadges = updateTabBadges;
+window.getNotificationCounts = getNotificationCounts;
+window.getNotifications = getNotifications;
