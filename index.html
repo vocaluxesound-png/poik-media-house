@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -122,7 +122,7 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - ALL 8 ISSUES
+// COMPLETE FIXED VERSION - ALL ISSUES FIXED
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -162,7 +162,6 @@ async function getSimpleUnreadCount() {
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
         
-        // If user has a chat open, exclude messages from that person
         if (currentOpenChatUserId) {
             query = query.neq("sender_id", currentOpenChatUserId);
         }
@@ -255,11 +254,17 @@ async function getSimpleConversations() {
                     userId: otherId,
                     lastMessage: msg.message,
                     lastMessageTime: msg.created_at,
-                    unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read) ? 1 : 0
+                    unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) ? 1 : 0
                 });
-            } else if (new Date(msg.created_at) > new Date(convMap.get(otherId).lastMessageTime)) {
-                convMap.get(otherId).lastMessage = msg.message;
-                convMap.get(otherId).lastMessageTime = msg.created_at;
+            } else {
+                const conv = convMap.get(otherId);
+                if (msg.created_at > conv.lastMessageTime) {
+                    conv.lastMessage = msg.message;
+                    conv.lastMessageTime = msg.created_at;
+                }
+                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) {
+                    conv.unreadCount++;
+                }
             }
         }
         
@@ -271,6 +276,7 @@ async function getSimpleConversations() {
         const result = [];
         for (const [userId, conv] of convMap) {
             const profile = profileMap.get(userId);
+            const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
             result.push({
                 userId: userId,
                 username: profile?.username || 'User',
@@ -278,7 +284,7 @@ async function getSimpleConversations() {
                 lastMessage: conv.lastMessage,
                 lastMessageTime: conv.lastMessageTime,
                 unreadCount: conv.unreadCount,
-                isOnline: profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false
+                isOnline: isOnline
             });
         }
         result.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
@@ -355,9 +361,9 @@ async function renderSimpleChats() {
         html += `
             <div onclick="openSimpleChat('${conv.userId}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
                 <div style="position:relative;">
-    ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
-    ${conv.isOnline ? '<div class="online-dot"></div>' : ''}
-</div>
+                    ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
+                    ${conv.isOnline ? '<div class="online-dot"></div>' : ''}
+                </div>
                 <div style="flex:1;">
                     <div style="display:flex;justify-content:space-between;">
                         <span style="font-weight:bold;">${escapeHtml(conv.username)}</span>
@@ -376,7 +382,9 @@ async function renderSimpleChats() {
 }
 
 async function openSimpleChat(userId) {
+    // CRITICAL: Set current open chat FIRST before any unread counting
     currentOpenChatUserId = userId;
+    
     await markMessagesRead(userId);
     await showGreenPill();
     await updateGreenDot();
@@ -387,6 +395,8 @@ async function openSimpleChat(userId) {
     
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
+    
+    const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
     
     let messagesHtml = '';
     if (messages.length === 0) {
@@ -416,8 +426,11 @@ async function openSimpleChat(userId) {
         <div class="chat-container-fixed">
             <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
                 <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')">
-                    ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')" style="display:flex;align-items:center;gap:12px;">
+                    <div style="position:relative;">
+                        ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                        ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0px;right:0px;"></div>' : ''}
+                    </div>
                     <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div></div>
                 </div>
             </div>
