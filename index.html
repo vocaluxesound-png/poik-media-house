@@ -354,7 +354,10 @@ async function renderSimpleChats() {
     for (const conv of conversations) {
         html += `
             <div onclick="openSimpleChat('${conv.userId}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
-                ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
+                <div style="position:relative;">
+    ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
+    ${conv.isOnline ? '<div class="online-dot"></div>' : ''}
+</div>
                 <div style="flex:1;">
                     <div style="display:flex;justify-content:space-between;">
                         <span style="font-weight:bold;">${escapeHtml(conv.username)}</span>
