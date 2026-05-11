@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -122,12 +122,13 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - ALL ISSUES FIXED
+// COMPLETE FIXED VERSION - ALL ISSUES FIXED + TYPING INDICATOR
 // ============================================================
 
 let currentOpenChatUserId = null;
 let refreshInterval = null;
 let messagePollInterval = null;
+let typingPollInterval = null;
 
 // Helper functions
 window.escapeHtml = function(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); };
@@ -312,6 +313,87 @@ async function getSimpleMessages(userId) {
     } catch(e) { return { messages: [], profile: null }; }
 }
 
+// ========== TYPING INDICATOR FUNCTIONS ==========
+async function updateTypingStatus(chatWithId, isTyping) {
+    if (!window.USER) return;
+    try {
+        const { data: existing } = await SB
+            .from("typing_status")
+            .select("id")
+            .eq("user_id", window.USER.id)
+            .eq("chat_with_id", chatWithId)
+            .single();
+        
+        if (existing) {
+            await SB.from("typing_status")
+                .update({ is_typing: isTyping, updated_at: new Date().toISOString() })
+                .eq("id", existing.id);
+        } else {
+            await SB.from("typing_status").insert({
+                user_id: window.USER.id,
+                chat_with_id: chatWithId,
+                is_typing: isTyping
+            });
+        }
+    } catch(e) { console.error("Typing status error:", e); }
+}
+
+async function checkTypingStatus(chatWithId) {
+    if (!window.USER) return false;
+    try {
+        const { data } = await SB
+            .from("typing_status")
+            .select("is_typing, updated_at")
+            .eq("user_id", chatWithId)
+            .eq("chat_with_id", window.USER.id)
+            .single();
+        
+        if (data && data.is_typing) {
+            const updatedAt = new Date(data.updated_at);
+            const now = new Date();
+            if ((now - updatedAt) < 5000) {
+                return true;
+            }
+        }
+        return false;
+    } catch(e) { return false; }
+}
+
+function showTypingIndicator(show, username) {
+    let indicator = document.getElementById('typing-indicator');
+    if (show) {
+        if (!indicator) {
+            const container = document.getElementById('simple-chat-messages');
+            if (container) {
+                indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.innerHTML = `<span></span><span></span><span></span><span style="margin-left:5px;color:#888;font-size:11px;">${escapeHtml(username)} is typing...</span>`;
+                container.appendChild(indicator);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    } else {
+        if (indicator) indicator.remove();
+    }
+}
+
+function startTypingPolling(chatWithId, username) {
+    if (typingPollInterval) clearInterval(typingPollInterval);
+    typingPollInterval = setInterval(async () => {
+        if (currentOpenChatUserId === chatWithId) {
+            const isTyping = await checkTypingStatus(chatWithId);
+            showTypingIndicator(isTyping, username);
+        }
+    }, 2000);
+}
+
+function stopTypingPolling() {
+    if (typingPollInterval) clearInterval(typingPollInterval);
+    typingPollInterval = null;
+    showTypingIndicator(false);
+}
+
 // ----- INBOX FUNCTIONS -----
 let inboxTab = 'chats';
 
@@ -398,6 +480,9 @@ async function openSimpleChat(userId) {
     
     const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
     
+    // Start typing polling
+    startTypingPolling(userId, profile?.username || 'User');
+    
     let messagesHtml = '';
     if (messages.length === 0) {
         messagesHtml = '<div style="text-align:center;padding:40px;color:#888;">No messages yet. Say hi!</div>';
@@ -436,7 +521,11 @@ async function openSimpleChat(userId) {
             </div>
             <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
             <div class="chat-input-fixed">
-                <input type="text" id="simple-chat-input" placeholder="Message..." onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
+                <input type="text" id="simple-chat-input" placeholder="Message..." 
+                    onkeypress="if(event.key==='Enter') sendSimpleChatMessage()"
+                    onfocus="updateTypingStatus(currentOpenChatUserId, true)"
+                    onblur="updateTypingStatus(currentOpenChatUserId, false)"
+                    oninput="updateTypingStatus(currentOpenChatUserId, this.value.length > 0)">
                 <button onclick="sendSimpleChatMessage()">➤</button>
             </div>
         </div>
@@ -492,11 +581,14 @@ async function sendSimpleChatMessage() {
     const message = input?.value.trim();
     if (!message || !currentOpenChatUserId) return;
     input.value = '';
+    // Stop typing indicator when sending
+    await updateTypingStatus(currentOpenChatUserId, false);
     await sendSimpleMessage(currentOpenChatUserId, message);
     await refreshSimpleChatMessages();
 }
 
 async function closeSimpleChat() {
+    stopTypingPolling();
     if (messagePollInterval) clearInterval(messagePollInterval);
     currentOpenChatUserId = null;
     await renderSimpleChats();
@@ -547,6 +639,7 @@ async function renderSimpleActivity() {
 async function switchInboxTabSimple(tab) {
     inboxTab = tab;
     if (messagePollInterval) clearInterval(messagePollInterval);
+    if (typingPollInterval) clearInterval(typingPollInterval);
     currentOpenChatUserId = null;
     await renderSimpleInbox();
 }
@@ -628,6 +721,7 @@ window.showGreenPill = showGreenPill;
 window.updateGreenDot = updateGreenDot;
 window.createNotification = createSimpleNotification;
 window.goToProfileFromChat = goToProfileFromChat;
+window.updateTypingStatus = updateTypingStatus;
 </script>
 
 <script>
