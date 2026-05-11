@@ -156,11 +156,18 @@ function isVideoUrl(url) {
 async function getSimpleUnreadCount() {
     if (!window.USER) return 0;
     try {
-        const { count } = await SB
+        let query = SB
             .from("messages")
             .select("*", { count: 'exact', head: true })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
+        
+        // If user has a chat open, exclude messages from that person
+        if (currentOpenChatUserId) {
+            query = query.neq("sender_id", currentOpenChatUserId);
+        }
+        
+        const { count } = await query;
         return count || 0;
     } catch(e) { return 0; }
 }
