@@ -188,6 +188,27 @@ async function loadUserInteractions() {
     if (replyDislikes) replyDislikes.forEach(d => userDislikedReplies.add(Number(d.reply_id)));
 }
 
+// ========== TRACK LAST SEEN FOR ONLINE STATUS ==========
+async function updateLastSeen() {
+    if (!USER) return;
+    try {
+        await SB.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", USER.id);
+    } catch(e) { console.error("Update last_seen error:", e); }
+}
+
+// Update last_seen every 30 seconds when user is logged in
+if (USER) {
+    updateLastSeen();
+    setInterval(updateLastSeen, 30000);
+}
+
+// Update when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && USER) {
+        updateLastSeen();
+    }
+});
+
 // Expose to window
 window.openAuthModal = openAuthModal;
 window.logout = logout;
@@ -196,6 +217,6 @@ window.handleMagicLink = handleMagicLink;
 window.restoreSession = restoreSession;
 window.updateHeaderAvatar = updateHeaderAvatar;
 window.loadUserInteractions = loadUserInteractions;
+window.updateLastSeen = updateLastSeen;
 window.USER = USER;
-
 
