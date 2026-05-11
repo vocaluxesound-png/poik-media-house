@@ -368,7 +368,7 @@ function showTypingIndicator(show, username) {
                 indicator = document.createElement('div');
                 indicator.id = 'typing-indicator';
                 indicator.className = 'typing-indicator';
-                indicator.innerHTML = `<span></span><span></span><span></span><span style="margin-left:5px;color:#888;font-size:11px;">${escapeHtml(username)} is typing...</span>`;
+                indicator.innerHTML = `<span></span><span></span><span></span>`;
                 container.appendChild(indicator);
                 container.scrollTop = container.scrollHeight;
             }
