@@ -137,16 +137,18 @@ async function openChat(userId) {
         <div style="display: flex; flex-direction: column; height: calc(100vh - 180px);">
             <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #333; background: #0a0a0a;">
                 <button onclick="renderChatsList()" style="background: none; border: none; color: #00ff88; font-size: 20px; cursor: pointer;">←</button>
-                <div style="position: relative;">
-                    ${profile?.avatar_url ? 
-                        `<img src="${profile.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : 
-                        `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center;">👤</div>`
-                    }
-                    ${isOnline ? '<div style="position: absolute; bottom: 0px; right: 0px; width: 10px; height: 10px; background: #00ff88; border-radius: 50%; border: 2px solid #0a0a0a;"></div>' : ''}
-                </div>
-                <div>
-                    <div style="font-weight: bold;">${escapeHtml(profile?.username || 'User')}</div>
-                    <div style="font-size: 10px; color: ${isOnline ? '#00ff88' : '#888'};">${onlineStatusText}</div>
+                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')" style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                    <div style="position: relative;">
+                        ${profile?.avatar_url ? 
+                            `<img src="${profile.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : 
+                            `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center;">👤</div>`
+                        }
+                        ${isOnline ? '<div style="position: absolute; bottom: 0px; right: 0px; width: 10px; height: 10px; background: #00ff88; border-radius: 50%; border: 2px solid #0a0a0a;"></div>' : ''}
+                    </div>
+                    <div>
+                        <div style="font-weight: bold;">${escapeHtml(profile?.username || 'User')}</div>
+                        <div style="font-size: 10px; color: ${isOnline ? '#00ff88' : '#888'};">${onlineStatusText}</div>
+                    </div>
                 </div>
             </div>
             <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
@@ -206,6 +208,7 @@ async function sendChatMessage() {
     await sendMessage(currentChatUser, message);
     await loadChatMessages();
 }
+
 // Render Activity tab (notifications) - FIXED VERSION
 async function renderActivityList() {
     const container = document.getElementById('inbox-content');
@@ -214,7 +217,7 @@ async function renderActivityList() {
     container.innerHTML = '<div class="loading">Loading notifications...</div>';
     
     try {
-        // DIRECT QUERY to notifications table (bypass getNotifications)
+        // DIRECT QUERY to notifications table
         const { data: notifications, error } = await SB
             .from("notifications")
             .select(`
@@ -267,7 +270,6 @@ async function renderActivityList() {
         
         let html = '<div style="padding: 8px 0;">';
         
-        // Render each group
         if (today.length > 0) html += renderNotificationGroupSimple(today, 'Today');
         if (yesterday.length > 0) html += renderNotificationGroupSimple(yesterday, 'Yesterday');
         if (thisWeek.length > 0) html += renderNotificationGroupSimple(thisWeek, 'This Week');
@@ -338,103 +340,6 @@ function renderNotificationGroupSimple(notifications, title) {
     return html;
 }
 
-    
-    // Group by date
-    const today = [];
-    const yesterday = [];
-    const thisWeek = [];
-    const older = [];
-    
-    const now = new Date();
-    const todayStart = new Date(now.setHours(0, 0, 0, 0));
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - 7);
-    
-    for (const n of notifications) {
-        const notifDate = new Date(n.created_at);
-        if (notifDate >= todayStart) today.push(n);
-        else if (notifDate >= yesterdayStart) yesterday.push(n);
-        else if (notifDate >= weekStart) thisWeek.push(n);
-        else older.push(n);
-    }
-    
-    let html = '<div style="padding: 8px 0;">';
-    
-    html += await renderNotificationGroup(today, 'Today');
-    html += await renderNotificationGroup(yesterday, 'Yesterday');
-    html += await renderNotificationGroup(thisWeek, 'This Week');
-    html += await renderNotificationGroup(older, 'Older');
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-async function renderNotificationGroup(notifications, title) {
-    if (notifications.length === 0) return '';
-    
-    let html = `<div style="padding: 12px 16px; font-weight: bold; color: #00ff88; border-bottom: 1px solid #333;">${title}</div>`;
-    
-    for (const n of notifications) {
-        const actor = n.actor;
-        const actorName = actor?.username || 'Someone';
-        const timeText = timeAgo(n.created_at);
-        
-        let icon = '📢';
-        let actionText = '';
-        let clickHandler = '';
-        
-        switch (n.type) {
-            case 'follow':
-                icon = '👤';
-                actionText = `started following you`;
-                clickHandler = `viewProfile('${n.actor_id}')`;
-                break;
-            case 'like_post':
-                icon = '❤️';
-                actionText = `liked your post`;
-                clickHandler = `viewPostAndComments(${n.target_id})`;
-                break;
-            case 'like_comment':
-                icon = '❤️';
-                actionText = `liked your comment`;
-                clickHandler = `viewPostAndComments(${n.target_id})`;
-                break;
-            case 'like_reply':
-                icon = '❤️';
-                actionText = `liked your reply`;
-                clickHandler = `viewPostAndComments(${n.target_id})`;
-                break;
-            case 'comment':
-                icon = '💬';
-                actionText = `commented on your post`;
-                clickHandler = `viewPostAndComments(${n.target_id})`;
-                break;
-            case 'reply':
-                icon = '💬';
-                actionText = `replied to your comment`;
-                clickHandler = `viewPostAndComments(${n.target_id})`;
-                break;
-        }
-        
-        html += `
-            <div class="notification-item" onclick="${clickHandler}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #1a1a1a; cursor: pointer;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                    ${icon}
-                </div>
-                <div style="flex: 1;">
-                    <div><strong>${escapeHtml(actorName)}</strong> ${actionText}</div>
-                    <div style="font-size: 10px; color: #888;">${timeText}</div>
-                </div>
-                ${!n.is_read ? '<div style="width: 8px; height: 8px; background: #00ff88; border-radius: 50%;"></div>' : ''}
-            </div>
-        `;
-    }
-    
-    return html;
-}
-
 async function switchInboxTab(tab) {
     inboxCurrentTab = tab;
     if (chatInterval) clearInterval(chatInterval);
@@ -444,16 +349,28 @@ async function switchInboxTab(tab) {
 
 // Helper to view post and comments
 async function viewPostAndComments(postId) {
-    // Close inbox and show feed with post comments open
     goToHome();
     setTimeout(() => {
         const commentsSection = document.getElementById(`comments-${postId}`);
         if (commentsSection) {
             commentsSection.style.display = 'block';
-            loadCommentsOnly(postId);
+            if (typeof loadCommentsOnly === 'function') {
+                loadCommentsOnly(postId);
+            }
             document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth' });
         }
     }, 500);
+}
+
+// Go to profile from chat header
+async function goToProfileFromChat(userId) {
+    // Close chat first
+    if (chatInterval) clearInterval(chatInterval);
+    currentChatUser = null;
+    // Navigate to profile
+    if (typeof viewProfile === 'function') {
+        viewProfile(userId);
+    }
 }
 
 // Make functions global
@@ -463,3 +380,4 @@ window.openChat = openChat;
 window.sendChatMessage = sendChatMessage;
 window.renderChatsList = renderChatsList;
 window.viewPostAndComments = viewPostAndComments;
+window.goToProfileFromChat = goToProfileFromChat;
