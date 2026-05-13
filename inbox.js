@@ -216,67 +216,73 @@ async function renderActivityList() {
     
     container.innerHTML = '<div class="loading">Loading notifications...</div>';
     
-    try {
-        // DIRECT QUERY to notifications table
-        const { data: notifications, error } = await SB
-            .from("notifications")
-            .select(`
-                *,
-                actor:actor_id(id, username, avatar_url)
-            `)
-            .eq("user_id", window.USER.id)
-            .order("created_at", { ascending: false })
-            .limit(100);
-        
-        console.log("🔔 Notifications found:", notifications?.length || 0);
-        
-        if (error) {
-            console.error("Error loading notifications:", error);
-            container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Error loading notifications</div>';
-            return;
-        }
-        
-        if (!notifications || notifications.length === 0) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 60px 20px; color: #888;">
-                    <i class="fas fa-bell" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                    <p>No notifications yet</p>
-                    <p style="font-size: 12px; margin-top: 8px;">When someone interacts with you, it will appear here</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Group by date
-        const today = [];
-        const yesterday = [];
-        const thisWeek = [];
-        const older = [];
-        
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const yesterdayStart = new Date(todayStart);
-        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-        const weekStart = new Date(todayStart);
-        weekStart.setDate(weekStart.getDate() - 7);
-        
-        for (const n of notifications) {
-            const notifDate = new Date(n.created_at);
-            if (notifDate >= todayStart) today.push(n);
-            else if (notifDate >= yesterdayStart) yesterday.push(n);
-            else if (notifDate >= weekStart) thisWeek.push(n);
-            else older.push(n);
-        }
-        
-        let html = '<div style="padding: 8px 0;">';
-        
-        if (today.length > 0) html += renderNotificationGroupSimple(today, 'Today');
-        if (yesterday.length > 0) html += renderNotificationGroupSimple(yesterday, 'Yesterday');
-        if (thisWeek.length > 0) html += renderNotificationGroupSimple(thisWeek, 'This Week');
-        if (older.length > 0) html += renderNotificationGroupSimple(older, 'Older');
-        
-        html += '</div>';
-        container.innerHTML = html;
+    const { data: notifications, error } = await SB
+        .from("notifications")
+        .select(`
+            *,
+            actor:actor_id (
+                id,
+                username,
+                avatar_url
+            )
+        `)
+        .eq("user_id", window.USER.id)
+        .order("created_at", { ascending: false });
+    
+    console.log("ACTIVITY DATA:", notifications, error);
+    
+    if (error) {
+        console.error("Activity error:", error);
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:red;">Failed loading notifications</div>';
+        return;
+    }
+    
+    if (!notifications || notifications.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;color:#888;">
+                <i class="fas fa-bell" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i>
+                <p>No notifications yet</p>
+                <p style="font-size:12px;margin-top:8px;">When someone interacts with you, it will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group by date
+    const today = [];
+    const yesterday = [];
+    const thisWeek = [];
+    const older = [];
+    
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
+    
+    for (const n of notifications) {
+        const notifDate = new Date(n.created_at);
+        if (notifDate >= todayStart) today.push(n);
+        else if (notifDate >= yesterdayStart) yesterday.push(n);
+        else if (notifDate >= weekStart) thisWeek.push(n);
+        else older.push(n);
+    }
+    
+    let html = '<div style="padding:8px 0;">';
+    
+    html += renderNotificationGroup(today, 'Today');
+    html += renderNotificationGroup(yesterday, 'Yesterday');
+    html += renderNotificationGroup(thisWeek, 'This Week');
+    html += renderNotificationGroup(older, 'Older');
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Mark as read after rendering
+    await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id).eq("is_read", false);
+    await loadNotificationCounts();
+}
         
         // Mark notifications as read after viewing
         await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
