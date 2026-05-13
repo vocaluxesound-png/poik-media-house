@@ -173,22 +173,38 @@ async function getUnreadMessagesCount() {
 async function getUnreadNotificationsCount() {
     if (!window.USER) return { total: 0, likes: 0, comments: 0, follows: 0 };
     try {
-        let likes = 0, comments = 0, follows = 0;
-        const { data: notifications } = await SB
+        const { data: notifications, error } = await SB
             .from("notifications")
             .select("type")
             .eq("user_id", window.USER.id)
             .eq("is_read", false);
         
+        if (error) {
+            console.error("getUnreadNotificationsCount error:", error);
+            return { total: 0, likes: 0, comments: 0, follows: 0 };
+        }
+        
+        let likes = 0, comments = 0, follows = 0;
+        
         if (notifications) {
             for (const n of notifications) {
-                if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') likes++;
-                else if (n.type === 'comment' || n.type === 'reply') comments++;
-                else if (n.type === 'follow') follows++;
+                if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
+                    likes++;
+                } else if (n.type === 'comment' || n.type === 'reply') {
+                    comments++;
+                } else if (n.type === 'follow') {
+                    follows++;
+                }
             }
         }
+        
+        console.log("📊 Unread notifications:", { likes, comments, follows, total: likes + comments + follows });
+        
         return { total: likes + comments + follows, likes, comments, follows };
-    } catch(e) { return { total: 0, likes: 0, comments: 0, follows: 0 }; }
+    } catch(e) {
+        console.error("getUnreadNotificationsCount error:", e);
+        return { total: 0, likes: 0, comments: 0, follows: 0 };
+    }
 }
 
 // ========== GREEN PILL (ALL NOTIFICATIONS) ==========
@@ -740,6 +756,7 @@ window.createNotification = createSimpleNotification;
 window.goToProfileFromChat = goToProfileFromChat;
 window.updateTypingStatus = updateTypingStatus;
 window.viewPostAndComments = viewPostAndComments;
+window.switchInboxTabSimple = switchInboxTabSimple;
 </script>
 
 <script>
