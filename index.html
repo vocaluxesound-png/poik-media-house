@@ -648,118 +648,38 @@ async function closeSimpleChat() {
     await renderSimpleInbox();
 }
 
-// ========== ACTIVITY TAB ==========
-async function renderSimpleActivity() {
-    const container = document.getElementById('inbox-content-simple');
-    if (!container) return;
-    
-    // Mark notifications as read when viewing Activity tab
-    await markNotificationsAsRead();
-    await updateTabCounts();
-    
-    // Update the activity badge in real-time
-    const activityBtn = document.querySelector('button[onclick*="activity"]');
-    if (activityBtn) {
-        activityBtn.innerHTML = `🔔 Activity`;
-    }
-    
-    const { data: notifications } = await SB
-        .from("notifications")
-        .select(`*, actor:actor_id(id, username, avatar_url), post:posts(id, image_url, caption)`)
-        .eq("user_id", window.USER?.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-    
-    if (!notifications || notifications.length === 0) {
-        container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">No notifications yet</div>';
-        return;
-    }
-    
-    let html = '<div style="padding:8px 0;">';
-    for (const n of notifications) {
-        const actorName = n.actor?.username || 'Someone';
-        const actorId = n.actor_id;
-        const postId = n.target_id;
-        const postImage = n.post?.image_url;
-        const postCaption = n.post?.caption;
-        const timeText = timeAgo(n.created_at);
-        
-        let icon = '📢';
-        let actionText = '';
-        let clickAction = '';
-        
-        if (n.type === 'follow') { 
-            icon = '👤'; 
-            actionText = 'started following you';
-            clickAction = `viewProfile('${actorId}')`;
-        }
-        else if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') { 
-            icon = '❤️'; 
-            actionText = 'liked your post';
-            clickAction = `viewPostAndComments(${postId})`;
-        }
-        else if (n.type === 'comment' || n.type === 'reply') { 
-            icon = '💬'; 
-            actionText = 'commented on your post';
-            clickAction = `viewPostAndComments(${postId})`;
-        }
-        
-        html += `
-            <div onclick="${clickAction}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
-                <div style="width:40px;height:40px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;">${icon}</div>
-                <div style="flex:1;">
-                    <div><strong>${escapeHtml(actorName)}</strong> ${actionText}</div>
-                    ${postImage ? `<div style="display:flex;align-items:center;gap:8px;margin-top:5px;"><img src="${postImage}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"><span style="font-size:11px;color:#888;">${escapeHtml(postCaption?.substring(0,40) || 'Post')}</span></div>` : ''}
-                    <div style="font-size:10px;color:#888;margin-top:4px;">${timeText}</div>
-                </div>
-            </div>
-        `;
-    }
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Helper to view post and scroll to comments
-async function viewPostAndComments(postId) {
-    goToHome();
-    setTimeout(() => {
-        const commentsSection = document.getElementById(`comments-${postId}`);
-        if (commentsSection) {
-            commentsSection.style.display = 'block';
-            if (typeof loadCommentsOnly === 'function') {
-                loadCommentsOnly(postId);
-            }
-            document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, 500);
-}
-
-async function switchInboxTabSimple(tab) {
-    inboxTab = tab;
-    if (messagePollInterval) clearInterval(messagePollInterval);
-    if (typingPollInterval) clearInterval(typingPollInterval);
-    currentOpenChatUserId = null;
-    await updateTabCounts();
-    await renderSimpleInbox();
-}
-
-function goToProfileFromChat(userId) {
-    closeSimpleChat();
-    if (typeof viewProfile === 'function') {
-        viewProfile(userId);
-    }
-}
-
 async function createSimpleNotification(type, userId, actorId, targetId) {
-    if (!userId || userId === actorId) return;
-    await SB.from("notifications").insert({
-        user_id: userId,
-        actor_id: actorId,
-        type: type,
-        target_id: targetId || 0,
-        is_read: false
-    });
-    await showGreenPill();
+    if (!userId || !actorId || userId === actorId) return;
+    try {
+        // Deduplicate: skip if same notification in last 10 seconds
+        const { data: recent } = await SB
+            .from("notifications")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("actor_id", actorId)
+            .eq("type", type)
+            .eq("target_id", targetId || 0)
+            .gte("created_at", new Date(Date.now() - 10000).toISOString());
+        
+        if (recent && recent.length > 0) return;
+        
+        const { error } = await SB.from("notifications").insert({
+            user_id: userId,
+            actor_id: actorId,
+            type: type,
+            target_id: targetId || 0,
+            is_read: false
+        });
+        
+        if (error) {
+            console.error("createSimpleNotification insert error:", error);
+            return;
+        }
+        
+        await showGreenPill();
+    } catch(e) {
+        console.error("createSimpleNotification error:", e);
+    }
 }
 
 function startAutoRefresh() {
