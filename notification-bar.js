@@ -10,7 +10,7 @@ async function updateNotificationBarCounts() {
     }
     
     const notificationCounts = await getNotificationCounts();
-    const messageCount = await getUnreadMessageCount();
+    const messageCount = await getUnreadMessagesCount();
     
     const totalNew = notificationCounts.likes + notificationCounts.comments + notificationCounts.follows + messageCount;
     
