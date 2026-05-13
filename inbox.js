@@ -206,24 +206,138 @@ async function sendChatMessage() {
     await sendMessage(currentChatUser, message);
     await loadChatMessages();
 }
-
-// Render Activity tab (notifications)
+// Render Activity tab (notifications) - FIXED VERSION
 async function renderActivityList() {
     const container = document.getElementById('inbox-content');
     if (!container) return;
     
-    const notifications = await getNotifications(100);
+    container.innerHTML = '<div class="loading">Loading notifications...</div>';
     
-    if (notifications.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #888;">
-                <i class="fas fa-bell" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                <p>No notifications yet</p>
-                <p style="font-size: 12px; margin-top: 8px;">When someone interacts with you, it will appear here</p>
+    try {
+        // DIRECT QUERY to notifications table (bypass getNotifications)
+        const { data: notifications, error } = await SB
+            .from("notifications")
+            .select(`
+                *,
+                actor:actor_id(id, username, avatar_url)
+            `)
+            .eq("user_id", window.USER.id)
+            .order("created_at", { ascending: false })
+            .limit(100);
+        
+        console.log("🔔 Notifications found:", notifications?.length || 0);
+        
+        if (error) {
+            console.error("Error loading notifications:", error);
+            container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Error loading notifications</div>';
+            return;
+        }
+        
+        if (!notifications || notifications.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: #888;">
+                    <i class="fas fa-bell" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                    <p>No notifications yet</p>
+                    <p style="font-size: 12px; margin-top: 8px;">When someone interacts with you, it will appear here</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Group by date
+        const today = [];
+        const yesterday = [];
+        const thisWeek = [];
+        const older = [];
+        
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(weekStart.getDate() - 7);
+        
+        for (const n of notifications) {
+            const notifDate = new Date(n.created_at);
+            if (notifDate >= todayStart) today.push(n);
+            else if (notifDate >= yesterdayStart) yesterday.push(n);
+            else if (notifDate >= weekStart) thisWeek.push(n);
+            else older.push(n);
+        }
+        
+        let html = '<div style="padding: 8px 0;">';
+        
+        // Render each group
+        if (today.length > 0) html += renderNotificationGroupSimple(today, 'Today');
+        if (yesterday.length > 0) html += renderNotificationGroupSimple(yesterday, 'Yesterday');
+        if (thisWeek.length > 0) html += renderNotificationGroupSimple(thisWeek, 'This Week');
+        if (older.length > 0) html += renderNotificationGroupSimple(older, 'Older');
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+        // Mark notifications as read after viewing
+        await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
+        
+        // Update badges and green pill
+        if (typeof updateTabBadges === 'function') await updateTabBadges();
+        if (typeof updateNotificationBarCounts === 'function') await updateNotificationBarCounts();
+        
+    } catch (err) {
+        console.error("Render activity error:", err);
+        container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Error loading notifications</div>';
+    }
+}
+
+// Simple render function for notification groups
+function renderNotificationGroupSimple(notifications, title) {
+    if (!notifications || notifications.length === 0) return '';
+    
+    let html = `<div style="padding: 12px 16px; font-weight: bold; color: #00ff88; border-bottom: 1px solid #333;">${title}</div>`;
+    
+    for (const n of notifications) {
+        const actor = n.actor;
+        const actorName = actor?.username || 'Someone';
+        const actorId = n.actor_id;
+        const timeText = timeAgo(n.created_at);
+        
+        let icon = '📢';
+        let actionText = '';
+        let clickHandler = '';
+        
+        if (n.type === 'follow') {
+            icon = '👤';
+            actionText = 'started following you';
+            clickHandler = `viewProfile('${actorId}')`;
+        }
+        else if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
+            icon = '❤️';
+            actionText = 'liked your post';
+            clickHandler = `viewPostAndComments(${n.target_id})`;
+        }
+        else if (n.type === 'comment' || n.type === 'reply') {
+            icon = '💬';
+            actionText = 'commented on your post';
+            clickHandler = `viewPostAndComments(${n.target_id})`;
+        }
+        
+        html += `
+            <div onclick="${clickHandler}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #1a1a1a; cursor: pointer;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    ${icon}
+                </div>
+                <div style="flex: 1;">
+                    <div><strong>${escapeHtml(actorName)}</strong> ${actionText}</div>
+                    <div style="font-size: 10px; color: #888; margin-top: 4px;">${timeText}</div>
+                </div>
+                ${!n.is_read ? '<div style="width: 8px; height: 8px; background: #00ff88; border-radius: 50%;"></div>' : ''}
             </div>
         `;
-        return;
     }
+    
+    return html;
+}
+
     
     // Group by date
     const today = [];
