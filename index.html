@@ -715,9 +715,9 @@ function startAutoRefresh() {
     if (!sessionRestored) await checkAuth();
     if (typeof loadFeed === 'function') loadFeed();
     if (window.USER) {
+        // CRITICAL: Load notification counts after auth (fixes refresh issue)
+        await loadNotificationCounts();
         setTimeout(() => {
-            showGreenPill();
-            updateInboxBadge();
             startAutoRefresh();
         }, 2000);
     }
@@ -756,6 +756,10 @@ window.createNotification = createSimpleNotification;
 window.goToProfileFromChat = goToProfileFromChat;
 window.updateTypingStatus = updateTypingStatus;
 window.viewPostAndComments = viewPostAndComments;
+window.switchInboxTabSimple = switchInboxTabSimple;
+
+// Make sure switchInboxTab is also available
+window.switchInboxTab = switchInboxTabSimple;
 window.switchInboxTabSimple = switchInboxTabSimple;
 </script>
 
