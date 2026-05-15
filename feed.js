@@ -11,13 +11,43 @@ window.isFriendsView = false;
 let videoObserver = null;
 let currentPlayingVideo = null;
 
-// Helper to get real comment count
-async function getCommentCount(postId) {
-    const { count } = await SB
+// FIX 3 & 4: Helper to get real like count from post_likes table
+async function getRealLikeCount(postId) {
+    const { count, error } = await SB
+        .from('post_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+    
+    if (error) {
+        console.error('Like count error:', error);
+        return 0;
+    }
+    return count || 0;
+}
+
+// Helper to get real comment count from comments table
+async function getRealCommentCount(postId) {
+    const { count, error } = await SB
         .from('comments')
         .select('*', { count: 'exact', head: true })
         .eq('post_id', postId);
+    
+    if (error) {
+        console.error('Comment count error:', error);
+        return 0;
+    }
     return count || 0;
+}
+
+// Helper to get real comment count including replies
+async function getTotalCommentCount(postId) {
+    let totalCount = await getRealCommentCount(postId);
+    const { count: replyCount } = await SB
+        .from('comment_replies')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+    if (replyCount > 0) totalCount += replyCount;
+    return totalCount;
 }
 
 // Safe avatar function
@@ -193,10 +223,7 @@ async function loadFeed(reset = true) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             const isPostOwner = USER && p.user_id === USER.id;
             
-            // Get real comment count
-            let totalCount = await getCommentCount(p.id);
-            const { count: replyCount } = await SB.from("comment_replies").select("*", { count: 'exact', head: true }).eq("post_id", p.id);
-            if (replyCount > 0) totalCount += replyCount;
+            let totalCount = await getTotalCommentCount(p.id);
             
             let displayName = 'Poik Poik';
             let avatarHtml = '';
@@ -253,7 +280,7 @@ async function loadFeed(reset = true) {
                     <div class="post-actions-right">
                         <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
                             <i class="fas fa-heart"></i>
-                            <span id="likes-${p.id}">${p.likes || 0}</span>
+                            <span id="likes-${p.id}">${await getRealLikeCount(p.id)}</span>
                         </div>
                         <div class="action-icon" onclick="toggleComments(${p.id})">
                             <i class="far fa-comment-dots"></i>
@@ -294,7 +321,64 @@ async function loadFeed(reset = true) {
     isLoading = false;
 }
 
-// ========== PROFILE FUNCTIONS ==========
+// Feed post privacy change
+async function changeFeedPostPrivacy(postId, newPrivacy, fromFeed = true) {
+    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    if (fromFeed) {
+        window.isProfileView = false;
+        window.isFriendsView = false;
+        currentPage = 0;
+        hasMorePosts = true;
+        isLoading = false;
+        await loadFeed(true);
+    }
+}
+
+async function deleteFeedPost(postId, fromFeed = true) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    await SB.from("posts").delete().eq("id", postId);
+    if (fromFeed) {
+        window.isProfileView = false;
+        window.isFriendsView = false;
+        currentPage = 0;
+        hasMorePosts = true;
+        isLoading = false;
+        await loadFeed(true);
+    }
+}
+
+function toggleFeedPostMenu(postId) {
+    document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
+        if (menu.id !== `feed-post-menu-${postId}`) menu.style.display = 'none';
+    });
+    const menu = document.getElementById(`feed-post-menu-${postId}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function setupInfiniteScroll() {
+    window.addEventListener('scroll', () => {
+        if (isLoading) return;
+        if (!hasMorePosts) return;
+        if (window.isProfileView || window.isFriendsView) return;
+        const scrollPosition = window.innerHeight + window.scrollY;
+        const bottomPosition = document.body.offsetHeight - 500;
+        if (scrollPosition >= bottomPosition) {
+            loadFeed(false);
+        }
+    });
+}
+
+function refreshFeed() {
+    window.isProfileView = false;
+    window.isFriendsView = false;
+    currentPage = 0;
+    hasMorePosts = true;
+    isLoading = false;
+    loadFeed(true);
+}
+
+// ========== LOAD PROFILE ==========
 async function loadProfile() {
     window.isProfileView = true;
     window.isFriendsView = false;
@@ -342,13 +426,16 @@ async function loadProfile() {
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = await getCommentCount(p.id);
+                let totalComments = await getTotalCommentCount(p.id);
+                let realLikeCount = await getRealLikeCount(p.id);
+                
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
                     mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
                 } else {
                     mediaHtml = `<img class="post-image" src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
                 }
+                
                 html += `
                     <div class="post profile-post" data-post-id="${p.id}" style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
                         <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
@@ -371,7 +458,7 @@ async function loadProfile() {
                         <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                         <div class="profile-post-actions">
                             <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes || 0}</span>
+                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${realLikeCount}</span>
                             </div>
                             <div class="profile-action-icon" onclick="toggleComments(${p.id})">
                                 <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
@@ -411,6 +498,27 @@ async function loadProfile() {
     }
 }
 
+function toggleProfilePostMenu(postId) {
+    document.querySelectorAll('.profile-post-menu-dropdown').forEach(menu => {
+        if (menu.id !== `profile-post-menu-${postId}`) menu.style.display = 'none';
+    });
+    const menu = document.getElementById(`profile-post-menu-${postId}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+async function changeProfilePostPrivacy(postId, newPrivacy) {
+    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
+    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
+    await loadProfile();
+}
+
+async function deleteProfilePost(postId) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    await SB.from("posts").delete().eq("id", postId);
+    await loadProfile();
+}
+
+// ========== VIEW PROFILE (other user) ==========
 async function viewProfile(userId) {
     if (!userId) return;
     if (!USER) { alert('Please login to view profiles'); openAuthModal(); return; }
@@ -469,13 +577,16 @@ async function viewProfile(userId) {
             for (const p of posts) {
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = await getCommentCount(p.id);
+                let totalComments = await getTotalCommentCount(p.id);
+                let realLikeCount = await getRealLikeCount(p.id);
+                
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
                     mediaHtml = `<video class="post-image" controls style="width:100%; max-height:400px; background:black;" src="${p.image_url}" poster="${p.thumbnail_url || ''}"></video>`;
                 } else {
                     mediaHtml = `<img src="${p.image_url}" style="width:100%;" onclick="openModal('${p.image_url}')" loading="lazy">`;
                 }
+                
                 html += `
                     <div style="margin-bottom: 20px; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
                         <div style="display: flex; align-items: center; gap: 10px; padding: 12px;">
@@ -487,7 +598,7 @@ async function viewProfile(userId) {
                         <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                         <div class="profile-post-actions">
                             <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes || 0}</span>
+                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${realLikeCount}</span>
                             </div>
                             <div class="profile-action-icon" onclick="toggleComments(${p.id})">
                                 <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
@@ -525,26 +636,6 @@ async function viewProfile(userId) {
         console.error("View profile error:", err);
         feedDiv.innerHTML = `<div class="loading" style="color: #ff4444;">Error loading profile: ${err.message}</div>`;
     }
-}
-
-function toggleProfilePostMenu(postId) {
-    document.querySelectorAll('.profile-post-menu-dropdown').forEach(menu => {
-        if (menu.id !== `profile-post-menu-${postId}`) menu.style.display = 'none';
-    });
-    const menu = document.getElementById(`profile-post-menu-${postId}`);
-    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-
-async function changeProfilePostPrivacy(postId, newPrivacy) {
-    if (!confirm(`Change privacy to ${newPrivacy}?`)) return;
-    await SB.from("posts").update({ privacy: newPrivacy }).eq("id", postId);
-    await loadProfile();
-}
-
-async function deleteProfilePost(postId) {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
-    await SB.from("posts").delete().eq("id", postId);
-    await loadProfile();
 }
 
 async function openChatFromProfile(userId) {
@@ -599,13 +690,20 @@ async function likePost(postId) {
             await createNotification('like_post', post.user_id, USER.id, postId);
         }
     }
-    const { count } = await SB.from("post_likes").select("*", { count: 'exact', head: true }).eq("post_id", postId);
+    // Refresh counts on the page
     const likeSpan = document.getElementById(`likes-${postId}`);
-    if (likeSpan) likeSpan.innerText = count || 0;
+    if (likeSpan) {
+        const newCount = await getRealLikeCount(postId);
+        likeSpan.innerText = newCount;
+    }
     const likeBtn = document.getElementById(`like-btn-${postId}`);
     if (likeBtn) {
         if (userLikedPosts.has(Number(postId))) likeBtn.classList.add('liked');
         else likeBtn.classList.remove('liked');
+    }
+    // Refresh profile counts if on profile page
+    if (window.isProfileView && typeof loadProfile === 'function') {
+        loadProfile();
     }
 }
 
