@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -119,7 +119,7 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - WITH ALL FUNCTIONS
+// COMPLETE FIXED VERSION - ALL ISSUES FIXED
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -555,7 +555,7 @@ async function openSimpleChat(userId) {
     }
     
     container.innerHTML = `
-        <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
+        <div class="chat-container-fixed">
             <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #333;">
                 <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
                 <div style="position:relative;cursor:pointer;" onclick="goToProfileFromChat('${userId}')">
@@ -567,8 +567,8 @@ async function openSimpleChat(userId) {
                     <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
                 </div>
             </div>
-            <div id="simple-chat-messages" style="flex:1;overflow-y:auto;padding:16px;">${messagesHtml}</div>
-            <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;">
+            <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
+            <div class="chat-input-fixed">
                 <input type="text" id="simple-chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;background:#222;color:white;" onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
                 <button onclick="sendSimpleChatMessage()" style="background:#00ff88;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;">➤</button>
             </div>
@@ -596,7 +596,14 @@ async function refreshSimpleChatMessages() {
     const container = document.getElementById('simple-chat-messages');
     if (!container) return;
     
-    if (messages.length === 0) { container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; return; }
+    if (messages.length === 0) { 
+        container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; 
+        return; 
+    }
+    
+    // Check if user was near bottom before refresh
+    const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+    const oldScrollHeight = container.scrollHeight;
     
     let html = '';
     for (const msg of messages) {
@@ -611,7 +618,15 @@ async function refreshSimpleChatMessages() {
         `;
     }
     container.innerHTML = html;
-    container.scrollTop = container.scrollHeight;
+    
+    // ONLY auto-scroll if user was already near bottom
+    if (wasNearBottom) {
+        container.scrollTop = container.scrollHeight;
+    } else {
+        // preserve scroll position
+        const newScrollHeight = container.scrollHeight;
+        container.scrollTop += (newScrollHeight - oldScrollHeight);
+    }
 }
 
 async function sendSimpleChatMessage() {
@@ -638,20 +653,15 @@ async function closeSimpleChat() {
 
 // ========== SWITCH INBOX TAB ==========
 async function switchInboxTabSimple(tab) {
-    // Prevent unnecessary rerender if already on this tab
     if (inboxTab === tab) return;
-    
     inboxTab = tab;
-    
-    // render only once - renderSimpleInbox handles both tabs
     await renderSimpleInbox();
 }
 
-// ========== CREATE NOTIFICATION (FIXED - ADDED THIS FUNCTION) ==========
+// ========== CREATE NOTIFICATION ==========
 async function createSimpleNotification(type, userId, actorId, targetId) {
     if (!userId || !actorId || userId === actorId) return;
     try {
-        // Check for duplicate in last 10 seconds
         const { data: recent } = await SB
             .from("notifications")
             .select("id")
@@ -677,6 +687,35 @@ async function createSimpleNotification(type, userId, actorId, targetId) {
     }
 }
 
+// ========== OPEN NOTIFICATION TARGET (FIXED) ==========
+async function openNotificationTarget(type, targetId) {
+    bottomNav('home');
+    
+    setTimeout(async () => {
+        const postEl = document.querySelector(`[data-post-id="${targetId}"]`);
+        
+        if (postEl) {
+            postEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            
+            postEl.style.transition = '0.3s';
+            postEl.style.boxShadow = '0 0 0 2px #00ff88';
+            setTimeout(() => {
+                postEl.style.boxShadow = '';
+            }, 2000);
+            
+            if (type === 'comment' || type === 'reply') {
+                const commentBtn = postEl.querySelector('.action-icon[onclick*="toggleComments"]');
+                if (commentBtn) {
+                    commentBtn.click();
+                }
+            }
+        }
+    }, 700);
+}
+
 // ========== RENDER ACTIVITY ==========
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
@@ -685,15 +724,12 @@ async function renderSimpleActivity() {
     container.innerHTML = '<div style="padding:30px;text-align:center;color:#888;">Loading notifications...</div>';
     
     try {
-        // Get notifications
         const { data: notifications, error: notifError } = await SB
             .from('notifications')
             .select('*')
             .eq('user_id', window.USER.id)
             .order('created_at', { ascending: false })
             .limit(100);
-        
-        console.log("📋 Notifications loaded:", notifications?.length || 0);
         
         if (notifError) {
             console.error("Notification error:", notifError);
@@ -706,7 +742,6 @@ async function renderSimpleActivity() {
             return;
         }
         
-        // Get actor profiles
         const actorIds = [...new Set(notifications.map(n => n.actor_id).filter(id => id))];
         let actorMap = new Map();
         
@@ -721,7 +756,6 @@ async function renderSimpleActivity() {
             }
         }
         
-        // Build HTML
         let html = '';
         for (const n of notifications) {
             const actor = actorMap.get(n.actor_id);
@@ -736,11 +770,11 @@ async function renderSimpleActivity() {
             if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
                 icon = '❤️';
                 text = 'liked your post';
-                clickAction = `viewPostAndComments(${n.target_id})`;
+                clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`;
             } else if (n.type === 'comment' || n.type === 'reply') {
                 icon = '💬';
                 text = 'commented on your post';
-                clickAction = `viewPostAndComments(${n.target_id})`;
+                clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`;
             } else if (n.type === 'follow') {
                 icon = '👤';
                 text = 'started following you';
@@ -762,7 +796,6 @@ async function renderSimpleActivity() {
         }
         container.innerHTML = html;
         
-        // Mark as read
         await SB.from('notifications').update({ is_read: true }).eq('user_id', window.USER.id);
         await loadNotificationCounts();
         
@@ -877,6 +910,7 @@ window.updateTypingStatus = updateTypingStatus;
 window.viewPostAndComments = viewPostAndComments;
 window.loadNotificationCounts = loadNotificationCounts;
 window.updateInboxTabBadgesOnly = updateInboxTabBadgesOnly;
+window.openNotificationTarget = openNotificationTarget;
 </script>
 
 <script>
