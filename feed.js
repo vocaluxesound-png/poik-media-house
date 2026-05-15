@@ -223,7 +223,14 @@ async function loadFeed(reset = true) {
             const isLiked = USER && userLikedPosts.has(Number(p.id));
             const isPostOwner = USER && p.user_id === USER.id;
             
-            let totalCount = p.comments_count || 0;
+            // FIX: Get real comment count from database
+            const { count: realCommentCount } = await SB
+                .from("comments")
+                .select("*", { count: 'exact', head: true })
+                .eq("post_id", p.id);
+            let totalCount = realCommentCount || 0;
+            
+            // Also count replies
             const { count: replyCount } = await SB
                 .from("comment_replies")
                 .select("*", { count: 'exact', head: true })
@@ -295,7 +302,7 @@ async function loadFeed(reset = true) {
                     <div class="post-actions-right">
                         <div id="like-btn-${p.id}" class="action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
                             <i class="fas fa-heart"></i>
-                            <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                            <span id="likes-${p.id}">${p.likes || 0}</span>
                         </div>
                         <div class="action-icon" onclick="toggleComments(${p.id})">
                             <i class="far fa-comment-dots"></i>
@@ -496,7 +503,13 @@ async function loadProfile() {
                 let privacyText = p.privacy === 'public' ? 'Public' : (p.privacy === 'friends' ? 'Friends' : 'Only Me');
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = p.comments_count || 0;
+                
+                // FIX: Get real comment count from database
+                const { count: realCommentCount } = await SB
+                    .from("comments")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("post_id", p.id);
+                let totalComments = realCommentCount || 0;
                 
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
@@ -527,7 +540,7 @@ async function loadProfile() {
                         <div class="post-caption" style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                         <div class="profile-post-actions">
                             <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes || 0}</span>
                             </div>
                             <div class="profile-action-icon" onclick="toggleComments(${p.id})">
                                 <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
@@ -675,7 +688,13 @@ async function viewProfile(userId) {
             for (const p of posts) {
                 let timestamp = p.created_at ? timeAgo(p.created_at) : '';
                 const isLiked = USER && userLikedPosts.has(Number(p.id));
-                let totalComments = p.comments_count || 0;
+                
+                // FIX: Get real comment count from database
+                const { count: realCommentCount } = await SB
+                    .from("comments")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("post_id", p.id);
+                let totalComments = realCommentCount || 0;
                 
                 let mediaHtml = '';
                 if (p.is_video || isVideoUrl(p.image_url)) {
@@ -695,7 +714,7 @@ async function viewProfile(userId) {
                         <div style="padding: 12px;">${escapeHtml(p.caption || '')}</div>
                         <div class="profile-post-actions">
                             <div id="like-btn-${p.id}" class="profile-action-icon ${isLiked ? 'liked' : ''}" onclick="likePost(${p.id})">
-                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes_count || 0}</span>
+                                <i class="fas fa-heart"></i> <span id="likes-${p.id}">${p.likes || 0}</span>
                             </div>
                             <div class="profile-action-icon" onclick="toggleComments(${p.id})">
                                 <i class="far fa-comment-dots"></i> <span id="comment-count-${p.id}">${totalComments || 0}</span>
