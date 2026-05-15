@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -115,14 +115,11 @@
 <script src="feed.js"></script>
 <script src="friends.js"></script>
 <script src="search.js"></script>
-
-<!-- NEW SCRIPTS -->
-<script src="chat.js"></script>
-<script src="upload.js"></script>
+<script src="notifications.js"></script>
 
 <script>
 // ============================================================
-// FINAL VERSION - INBOX WITH TWO TABS + NOTIFICATIONS
+// COMPLETE FIXED VERSION - CLEAN ARCHITECTURE
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -148,10 +145,6 @@ window.timeAgo = function(dateString) {
     return `${Math.floor(days / 7)}w ago`;
 };
 
-function isVideoUrl(url) {
-    return url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm') || url.includes('video'));
-}
-
 // ========== UNREAD COUNTS ==========
 async function getUnreadMessagesCount() {
     if (!window.USER) return 0;
@@ -173,41 +166,25 @@ async function getUnreadMessagesCount() {
 async function getUnreadNotificationsCount() {
     if (!window.USER) return { total: 0, likes: 0, comments: 0, follows: 0 };
     try {
-        const { data: notifications, error } = await SB
+        const { data: notifications } = await SB
             .from("notifications")
             .select("type")
             .eq("user_id", window.USER.id)
             .eq("is_read", false);
         
-        if (error) {
-            console.error("getUnreadNotificationsCount error:", error);
-            return { total: 0, likes: 0, comments: 0, follows: 0 };
-        }
-        
         let likes = 0, comments = 0, follows = 0;
-        
         if (notifications) {
             for (const n of notifications) {
-                if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
-                    likes++;
-                } else if (n.type === 'comment' || n.type === 'reply') {
-                    comments++;
-                } else if (n.type === 'follow') {
-                    follows++;
-                }
+                if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') likes++;
+                else if (n.type === 'comment' || n.type === 'reply') comments++;
+                else if (n.type === 'follow') follows++;
             }
         }
-        
-        console.log("📊 Unread notifications:", { likes, comments, follows, total: likes + comments + follows });
-        
         return { total: likes + comments + follows, likes, comments, follows };
-    } catch(e) {
-        console.error("getUnreadNotificationsCount error:", e);
-        return { total: 0, likes: 0, comments: 0, follows: 0 };
-    }
+    } catch(e) { return { total: 0, likes: 0, comments: 0, follows: 0 }; }
 }
 
-// ========== GREEN PILL (ALL NOTIFICATIONS) ==========
+// ========== GREEN PILL ==========
 async function showGreenPill() {
     const msgCount = await getUnreadMessagesCount();
     const notifCounts = await getUnreadNotificationsCount();
@@ -241,7 +218,6 @@ async function showGreenPill() {
         pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
         pill.onclick = async () => { 
             hideGreenPill(); 
-            await markNotificationsAsRead();
             bottomNav('inbox');
             setTimeout(async () => {
                 if (typeof switchInboxTabSimple === 'function') {
@@ -258,7 +234,7 @@ function hideGreenPill() {
     if (pill) pill.remove();
 }
 
-// ========== INBOX BADGE (ONLY MESSAGES) ==========
+// ========== INBOX BADGE ==========
 async function updateInboxBadge() {
     const msgCount = await getUnreadMessagesCount();
     const greenDot = document.getElementById('inboxGreenDot');
@@ -268,19 +244,31 @@ async function updateInboxBadge() {
     }
 }
 
-// ========== MARK MESSAGES AS READ ==========
+async function updateTabCounts() {
+    chatsUnreadCount = await getUnreadMessagesCount();
+    const notif = await getUnreadNotificationsCount();
+    activityUnreadCount = notif.total;
+}
+
+// ========== MARK FUNCTIONS ==========
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
     await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
-    await showGreenPill();
-    await updateInboxBadge();
+    await loadNotificationCounts();
 }
 
-// ========== MARK NOTIFICATIONS AS READ ==========
 async function markNotificationsAsRead() {
     if (!window.USER) return;
     await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
+    await loadNotificationCounts();
+}
+
+// ========== LOAD NOTIFICATION COUNTS (FIXED - ASYNC) ==========
+async function loadNotificationCounts() {
+    if (!window.USER) return;
     await showGreenPill();
+    await updateInboxBadge();
+    await updateTabCounts();
 }
 
 // ========== SEND MESSAGE ==========
@@ -293,7 +281,7 @@ async function sendSimpleMessage(receiverId, message) {
             message: message.trim(),
             is_read: false
         });
-        await loadNotificationCounts();  // ADD THIS LINE
+        await loadNotificationCounts();
         return true;
     } catch(e) { return false; }
 }
@@ -463,22 +451,16 @@ async function loadSimpleInbox() {
     await renderSimpleInbox();
 }
 
-async function updateTabCounts() {
-    chatsUnreadCount = await getUnreadMessagesCount();
-    const notif = await getUnreadNotificationsCount();
-    activityUnreadCount = notif.total;
-}
-
 async function renderSimpleInbox() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = `
         <div style="max-width:600px;margin:0 auto;padding-bottom:70px;">
             <div style="padding:16px;border-bottom:1px solid #222;"><h2 style="font-size:20px;">Inbox</h2></div>
             <div style="display:flex;border-bottom:1px solid #333;">
-                <button onclick="switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='chats'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='chats'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
+                <button onclick="window.switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='chats'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='chats'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
                     💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}
                 </button>
-                <button onclick="switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='activity'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='activity'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
+                <button onclick="window.switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='activity'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='activity'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
                     🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}
                 </button>
             </div>
@@ -509,14 +491,8 @@ async function renderSimpleChats() {
                     ${conv.isOnline ? '<div class="online-dot"></div>' : ''}
                 </div>
                 <div style="flex:1;">
-                    <div style="display:flex;justify-content:space-between;">
-                        <span style="font-weight:bold;">${escapeHtml(conv.username)}</span>
-                        <span style="font-size:10px;color:#888;">${timeAgo(conv.lastMessageTime)}</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;">
-                        <span style="font-size:13px;color:${conv.unreadCount>0?'#00ff88':'#888'}">${escapeHtml(conv.lastMessage.substring(0,40))}</span>
-                        ${conv.unreadCount>0 ? `<span style="background:#00ff88;color:black;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:bold;">${conv.unreadCount}</span>` : ''}
-                    </div>
+                    <div><span style="font-weight:bold;">${escapeHtml(conv.username)}</span><span style="font-size:10px;color:#888;float:right;">${timeAgo(conv.lastMessageTime)}</span></div>
+                    <div><span style="font-size:13px;color:${conv.unreadCount>0?'#00ff88':'#888'}">${escapeHtml(conv.lastMessage.substring(0,40))}</span>${conv.unreadCount>0 ? `<span style="background:#00ff88;color:black;border-radius:12px;padding:2px 8px;font-size:10px;float:right;">${conv.unreadCount}</span>` : ''}</div>
                 </div>
             </div>
         `;
@@ -529,16 +505,7 @@ async function openSimpleChat(userId) {
     currentOpenChatUserId = userId;
     
     await markMessagesRead(userId);
-    await showGreenPill();
-    await updateInboxBadge();
-    await updateTabCounts();
-    
-    // Update the chats badge in real-time
-    const chatsBtn = document.querySelector('button[onclick*="chats"]');
-    if (chatsBtn) {
-        const newCount = await getUnreadMessagesCount();
-        chatsBtn.innerHTML = `💬 Chats ${newCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${newCount}</span>` : ''}`;
-    }
+    await loadNotificationCounts();
     
     const result = await getSimpleMessages(userId);
     const messages = result.messages;
@@ -557,16 +524,9 @@ async function openSimpleChat(userId) {
     } else {
         for (const msg of messages) {
             const isMine = msg.sender_id === window.USER.id;
-            let avatarHtml = '';
-            if (!isMine && profile) {
-                avatarHtml = profile.avatar_url 
-                    ? `<img src="${profile.avatar_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">` 
-                    : `<div style="width:32px;height:32px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:8px;">👤</div>`;
-            }
             messagesHtml += `
-                <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};align-items:flex-start;margin-bottom:8px;">
-                    ${!isMine ? avatarHtml : ''}
-                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
+                <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:8px;">
+                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};">
                         ${escapeHtml(msg.message)}
                         <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
                     </div>
@@ -576,25 +536,19 @@ async function openSimpleChat(userId) {
     }
     
     container.innerHTML = `
-        <div class="chat-container-fixed">
-            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #333;background:#0a0a0a;">
+        <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #333;">
                 <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div class="chat-header-clickable" onclick="goToProfileFromChat('${userId}')" style="display:flex;align-items:center;gap:12px;">
-                    <div style="position:relative;">
-                        ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
-                        ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0px;right:0px;"></div>' : ''}
-                    </div>
-                    <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div></div>
+                <div onclick="goToProfileFromChat('${userId}')" style="position:relative;cursor:pointer;">
+                    ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
+                    ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0;right:0;"></div>' : ''}
                 </div>
+                <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div><div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div></div>
             </div>
-            <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
-            <div class="chat-input-fixed">
-                <input type="text" id="simple-chat-input" placeholder="Message..." 
-                    onkeypress="if(event.key==='Enter') sendSimpleChatMessage()"
-                    onfocus="updateTypingStatus(currentOpenChatUserId, true)"
-                    onblur="updateTypingStatus(currentOpenChatUserId, false)"
-                    oninput="updateTypingStatus(currentOpenChatUserId, this.value.length > 0)">
-                <button onclick="sendSimpleChatMessage()">➤</button>
+            <div id="simple-chat-messages" style="flex:1;overflow-y:auto;padding:16px;">${messagesHtml}</div>
+            <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;">
+                <input type="text" id="simple-chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;background:#222;color:white;" onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
+                <button onclick="sendSimpleChatMessage()" style="background:#00ff88;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;">➤</button>
             </div>
         </div>
     `;
@@ -603,37 +557,24 @@ async function openSimpleChat(userId) {
     if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
     
     if (messagePollInterval) clearInterval(messagePollInterval);
-    messagePollInterval = setInterval(async () => {
-        if (currentOpenChatUserId) await refreshSimpleChatMessages();
-    }, 2000);
+    messagePollInterval = setInterval(async () => { if (currentOpenChatUserId) await refreshSimpleChatMessages(); }, 2000);
 }
 
 async function refreshSimpleChatMessages() {
     if (!currentOpenChatUserId) return;
     const result = await getSimpleMessages(currentOpenChatUserId);
     const messages = result.messages;
-    const profile = result.profile;
     const container = document.getElementById('simple-chat-messages');
     if (!container) return;
     
-    if (messages.length === 0) {
-        container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No messages yet. Say hi!</div>';
-        return;
-    }
+    if (messages.length === 0) { container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; return; }
     
     let html = '';
     for (const msg of messages) {
         const isMine = msg.sender_id === window.USER.id;
-        let avatarHtml = '';
-        if (!isMine && profile) {
-            avatarHtml = profile.avatar_url 
-                ? `<img src="${profile.avatar_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">` 
-                : `<div style="width:32px;height:32px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:8px;">👤</div>`;
-        }
         html += `
-            <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};align-items:flex-start;margin-bottom:8px;">
-                ${!isMine ? avatarHtml : ''}
-                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};word-wrap:break-word;">
+            <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:8px;">
+                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};">
                     ${escapeHtml(msg.message)}
                     <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
                 </div>
@@ -661,30 +602,24 @@ async function closeSimpleChat() {
     stopTypingPolling();
     if (messagePollInterval) clearInterval(messagePollInterval);
     currentOpenChatUserId = null;
-    await renderSimpleChats();
     await updateTabCounts();
     await renderSimpleInbox();
 }
 
-// ========== SWITCH INBOX TAB (FIXED) ==========
+// ========== SWITCH INBOX TAB ==========
 async function switchInboxTabSimple(tab) {
-    console.log('📂 Switching inbox tab:', tab);
     inboxTab = tab;
     await renderSimpleInbox();
     
     if (tab === 'activity') {
-        await markNotificationsAsRead();
-        hideGreenPill();
-        await updateTabCounts();
         await renderSimpleActivity();
     }
-    
     if (tab === 'chats') {
         await renderSimpleChats();
     }
 }
 
-// ========== RENDER ACTIVITY (FIXED) ==========
+// ========== RENDER ACTIVITY ==========
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
@@ -703,23 +638,17 @@ async function renderSimpleActivity() {
                 )
             `)
             .eq('user_id', window.USER.id)
-            .order('created_at', { ascending: false });
-        
-        console.log('🔔 Activity notifications:', data);
+            .order('created_at', { ascending: false })
+            .limit(100);
         
         if (error) {
             console.error('Activity error:', error);
-            container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Failed to load notifications</div>';
+            container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Failed to load notifications. Please refresh.</div>';
             return;
         }
         
         if (!data || data.length === 0) {
-            container.innerHTML = `
-                <div style="padding:50px;text-align:center;color:#888;">
-                    <i class="fas fa-bell" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i>
-                    <p>No notifications yet</p>
-                </div>
-            `;
+            container.innerHTML = '<div style="padding:50px;text-align:center;color:#888;"><i class="fas fa-bell" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i><p>No notifications yet</p></div>';
             return;
         }
         
@@ -727,20 +656,24 @@ async function renderSimpleActivity() {
         for (const n of data) {
             let icon = '🔔';
             let text = '';
+            let clickAction = '';
             
             if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
                 icon = '❤️';
                 text = 'liked your post';
+                clickAction = `viewPostAndComments(${n.target_id})`;
             } else if (n.type === 'comment' || n.type === 'reply') {
                 icon = '💬';
                 text = 'commented on your post';
+                clickAction = `viewPostAndComments(${n.target_id})`;
             } else if (n.type === 'follow') {
                 icon = '👤';
                 text = 'started following you';
+                clickAction = `viewProfile('${n.actor?.id}')`;
             }
             
             html += `
-                <div onclick="${n.type === 'follow' ? `viewProfile('${n.actor?.id}')` : `viewPostAndComments('${n.target_id}')`}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
+                <div onclick="${clickAction}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
                     <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#222;display:flex;align-items:center;justify-content:center;font-size:20px;">
                         ${n.actor?.avatar_url ? `<img src="${n.actor.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
                     </div>
@@ -754,10 +687,7 @@ async function renderSimpleActivity() {
         }
         container.innerHTML = html;
         
-        // Mark as read after viewing
-        await SB.from('notifications').update({ is_read: true }).eq('user_id', window.USER.id).eq('is_read', false);
-        await updateTabCounts();
-        hideGreenPill();
+        await markNotificationsAsRead();
         
     } catch (e) {
         console.error('Render activity error:', e);
@@ -765,6 +695,7 @@ async function renderSimpleActivity() {
     }
 }
 
+// ========== CREATE NOTIFICATION ==========
 async function createSimpleNotification(type, userId, actorId, targetId) {
     if (!userId || !actorId || userId === actorId) return;
     try {
@@ -779,7 +710,7 @@ async function createSimpleNotification(type, userId, actorId, targetId) {
         
         if (recent && recent.length > 0) return;
         
-        const { error } = await SB.from("notifications").insert({
+        await SB.from("notifications").insert({
             user_id: userId,
             actor_id: actorId,
             type: type,
@@ -787,34 +718,26 @@ async function createSimpleNotification(type, userId, actorId, targetId) {
             is_read: false
         });
         
-        if (error) {
-            console.error("createSimpleNotification insert error:", error);
-            return;
-        }
-        
-        await showGreenPill();
-    } catch(e) {
-        console.error("createSimpleNotification error:", e);
+        await loadNotificationCounts();
+    } catch(e) { console.error("Create notification error:", e); }
+}
+
+// ========== GO TO PROFILE FROM CHAT (FIXED) ==========
+async function goToProfileFromChat(userId) {
+    // Clear all intervals to prevent chat reopening
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
     }
-}
-
-function startAutoRefresh() {
-    if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(async () => {
-        await showGreenPill();
-        await updateInboxBadge();
-        if (inboxTab === 'activity' && document.getElementById('inbox-content-simple')) {
-            await renderSimpleActivity();
-        }
-    }, 5000);
-}
-
-// ========== LOAD NOTIFICATION COUNTS ==========
-async function loadNotificationCounts() {
-    if (!window.USER) return;
-    await showGreenPill();
-    await updateInboxBadge();
-    await updateTabCounts();
+    if (typingPollInterval) {
+        clearInterval(typingPollInterval);
+        typingPollInterval = null;
+    }
+    currentOpenChatUserId = null;
+    
+    if (typeof viewProfile === 'function') {
+        await viewProfile(userId);
+    }
 }
 
 // ========== VIEW POST AND COMMENTS ==========
@@ -827,16 +750,8 @@ async function viewPostAndComments(postId) {
             if (typeof loadCommentsOnly === 'function') {
                 loadCommentsOnly(postId);
             }
-            document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth' });
         }
     }, 500);
-}
-
-function goToProfileFromChat(userId) {
-    // DO NOT call closeSimpleChat() here
-    if (typeof viewProfile === 'function') {
-        viewProfile(userId);
-    }
 }
 
 function goToHome() {
@@ -848,6 +763,13 @@ function goToHome() {
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'flex';
     if (typeof refreshFeed === 'function') refreshFeed();
+}
+
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(async () => {
+        await loadNotificationCounts();
+    }, 10000);
 }
 
 // ========== INIT ==========
@@ -863,13 +785,12 @@ function goToHome() {
     }
 })();
 
-// Expose functions
+// Expose functions globally
 window.bottomNav = function(page) {
     document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
     if (page === 'home') {
         document.querySelector('.bottom-nav-item:first-child')?.classList.add('active');
-        if (typeof goToHome === 'function') goToHome();
-        else if (typeof refreshFeed === 'function') refreshFeed();
+        goToHome();
     } else if (page === 'friends') {
         document.querySelector('.bottom-nav-item:nth-child(2)')?.classList.add('active');
         window.isFriendsView = true;
@@ -889,7 +810,6 @@ window.loadInbox = loadSimpleInbox;
 window.openChat = openSimpleChat;
 window.closeChat = closeSimpleChat;
 window.sendChatMessage = sendSimpleChatMessage;
-window.switchInboxTab = switchInboxTabSimple;
 window.switchInboxTabSimple = switchInboxTabSimple;
 window.showGreenPill = showGreenPill;
 window.updateInboxBadge = updateInboxBadge;
@@ -901,13 +821,12 @@ window.loadNotificationCounts = loadNotificationCounts;
 </script>
 
 <script>
-setInterval(function() {
-    if (typeof USER !== 'undefined' && USER && !window.USER) {
-        window.USER = USER;
-        if (typeof showGreenPill === 'function') showGreenPill();
-        if (typeof updateInboxBadge === 'function') updateInboxBadge();
+// Focus event to refresh counts when user returns to tab (replaces aggressive setInterval)
+window.addEventListener('focus', async () => {
+    if (window.USER) {
+        await loadNotificationCounts();
     }
-}, 500);
+});
 </script>
 
 </body>
