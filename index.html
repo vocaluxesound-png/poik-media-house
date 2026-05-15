@@ -638,15 +638,13 @@ async function closeSimpleChat() {
 
 // ========== SWITCH INBOX TAB ==========
 async function switchInboxTabSimple(tab) {
-    inboxTab = tab;
-    await renderSimpleInbox();
+    // Prevent unnecessary rerender if already on this tab
+    if (inboxTab === tab) return;
     
-    if (tab === 'activity') {
-        await renderSimpleActivity();
-    }
-    if (tab === 'chats') {
-        await renderSimpleChats();
-    }
+    inboxTab = tab;
+    
+    // render only once - renderSimpleInbox handles both tabs
+    await renderSimpleInbox();
 }
 
 // ========== RENDER ACTIVITY ==========
