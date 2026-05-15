@@ -293,6 +293,7 @@ async function sendSimpleMessage(receiverId, message) {
             message: message.trim(),
             is_read: false
         });
+        await loadNotificationCounts();  // ADD THIS LINE
         return true;
     } catch(e) { return false; }
 }
@@ -832,7 +833,7 @@ async function viewPostAndComments(postId) {
 }
 
 function goToProfileFromChat(userId) {
-    closeSimpleChat();
+    // DO NOT call closeSimpleChat() here
     if (typeof viewProfile === 'function') {
         viewProfile(userId);
     }
