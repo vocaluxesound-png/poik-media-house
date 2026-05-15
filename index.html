@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -119,13 +119,17 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - GPT OPTIMIZED
+// COMPLETE FIXED VERSION - WITH BADGE-ONLY UPDATES
 // ============================================================
 
 let currentOpenChatUserId = null;
 let refreshInterval = null;
 let messagePollInterval = null;
 let typingPollInterval = null;
+
+// Badge state
+let chatsUnreadCount = 0;
+let activityUnreadCount = 0;
 
 window.escapeHtml = function(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); };
 
@@ -250,25 +254,45 @@ async function updateTabCounts() {
     activityUnreadCount = notif.total;
 }
 
+// ========== UPDATE ONLY BADGES (NO RE-RENDER) ==========
+function updateInboxTabBadgesOnly() {
+    const chatsBtn = document.querySelector('button[onclick*="switchInboxTabSimple(\'chats\')"]');
+    const activityBtn = document.querySelector('button[onclick*="switchInboxTabSimple(\'activity\')"]');
+    
+    if (chatsBtn) {
+        chatsBtn.innerHTML = `💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}`;
+    }
+    
+    if (activityBtn) {
+        activityBtn.innerHTML = `🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}`;
+    }
+}
+
 // ========== MARK FUNCTIONS ==========
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
     await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
-    await loadNotificationCounts();
+    await updateTabCounts();
+    await updateInboxBadge();
+    updateInboxTabBadgesOnly();
+    await showGreenPill();
 }
 
 async function markNotificationsAsRead() {
     if (!window.USER) return;
     await SB.from("notifications").update({ is_read: true }).eq("user_id", window.USER.id);
-    await loadNotificationCounts();
+    await updateTabCounts();
+    updateInboxTabBadgesOnly();
+    await showGreenPill();
 }
 
 // ========== LOAD NOTIFICATION COUNTS ==========
 async function loadNotificationCounts() {
     if (!window.USER) return;
-    await showGreenPill();
-    await updateInboxBadge();
     await updateTabCounts();
+    await updateInboxBadge();
+    updateInboxTabBadgesOnly();
+    await showGreenPill();
 }
 
 // ========== SEND MESSAGE ==========
@@ -433,8 +457,6 @@ function stopTypingPolling() {
 
 // ========== INBOX FUNCTIONS ==========
 let inboxTab = 'chats';
-let chatsUnreadCount = 0;
-let activityUnreadCount = 0;
 
 async function loadSimpleInbox() {
     const feedDiv = document.getElementById("feed");
@@ -501,17 +523,14 @@ async function renderSimpleChats() {
     container.innerHTML = html;
 }
 
-// FIX 2 & 5: Chat opens faster + username clickable
 async function openSimpleChat(userId) {
     currentOpenChatUserId = userId;
     
-    // FIRST: Render UI immediately
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
     
     container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;"><div class="loading">Loading chat...</div></div>';
     
-    // Fetch data in background
     const result = await getSimpleMessages(userId);
     const messages = result.messages;
     const profile = result.profile;
@@ -543,7 +562,6 @@ async function openSimpleChat(userId) {
                     ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
                     ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0;right:0;"></div>' : ''}
                 </div>
-                <!-- FIX 5: Username clickable -->
                 <div onclick="goToProfileFromChat('${userId}')" style="cursor:pointer;">
                     <div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div>
                     <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
@@ -557,7 +575,6 @@ async function openSimpleChat(userId) {
         </div>
     `;
     
-    // THEN: Mark messages as read and update counts (background)
     setTimeout(async () => {
         await markMessagesRead(userId);
         await loadNotificationCounts();
@@ -615,6 +632,7 @@ async function closeSimpleChat() {
     if (messagePollInterval) clearInterval(messagePollInterval);
     currentOpenChatUserId = null;
     await updateTabCounts();
+    updateInboxTabBadgesOnly();
     await renderSimpleInbox();
 }
 
@@ -776,18 +794,15 @@ function goToHome() {
     if (typeof refreshFeed === 'function') refreshFeed();
 }
 
-// FIX 1: Fixed startAutoRefresh - NO ACTIVITY REFRESH
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
     
     refreshInterval = setInterval(async () => {
-        // ONLY refresh notification counts
-        // DO NOT rerender activity UI automatically
-        await showGreenPill();
-        await updateInboxBadge();
         await updateTabCounts();
+        await updateInboxBadge();
+        updateInboxTabBadgesOnly();
+        await showGreenPill();
         
-        // Refresh chats ONLY if chats tab open and no active chat
         if (inboxTab === 'chats' && !currentOpenChatUserId && document.getElementById('inbox-content-simple')) {
             await renderSimpleChats();
         }
@@ -840,6 +855,7 @@ window.goToProfileFromChat = goToProfileFromChat;
 window.updateTypingStatus = updateTypingStatus;
 window.viewPostAndComments = viewPostAndComments;
 window.loadNotificationCounts = loadNotificationCounts;
+window.updateInboxTabBadgesOnly = updateInboxTabBadgesOnly;
 </script>
 
 <script>
