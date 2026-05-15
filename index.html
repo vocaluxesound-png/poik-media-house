@@ -5,7 +5,7 @@
 <title>Poik Poik</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -119,7 +119,7 @@
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - CLEAN ARCHITECTURE
+// COMPLETE FIXED VERSION - GPT OPTIMIZED
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -263,7 +263,7 @@ async function markNotificationsAsRead() {
     await loadNotificationCounts();
 }
 
-// ========== LOAD NOTIFICATION COUNTS (FIXED - ASYNC) ==========
+// ========== LOAD NOTIFICATION COUNTS ==========
 async function loadNotificationCounts() {
     if (!window.USER) return;
     await showGreenPill();
@@ -501,22 +501,22 @@ async function renderSimpleChats() {
     container.innerHTML = html;
 }
 
+// FIX 2 & 5: Chat opens faster + username clickable
 async function openSimpleChat(userId) {
     currentOpenChatUserId = userId;
     
-    await markMessagesRead(userId);
-    await loadNotificationCounts();
+    // FIRST: Render UI immediately
+    const container = document.getElementById('inbox-content-simple');
+    if (!container) return;
     
+    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;"><div class="loading">Loading chat...</div></div>';
+    
+    // Fetch data in background
     const result = await getSimpleMessages(userId);
     const messages = result.messages;
     const profile = result.profile;
     
-    const container = document.getElementById('inbox-content-simple');
-    if (!container) return;
-    
     const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
-    
-    startTypingPolling(userId);
     
     let messagesHtml = '';
     if (messages.length === 0) {
@@ -539,11 +539,15 @@ async function openSimpleChat(userId) {
         <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
             <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #333;">
                 <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div onclick="goToProfileFromChat('${userId}')" style="position:relative;cursor:pointer;">
+                <div style="position:relative;cursor:pointer;" onclick="goToProfileFromChat('${userId}')">
                     ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
                     ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0;right:0;"></div>' : ''}
                 </div>
-                <div><div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div><div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div></div>
+                <!-- FIX 5: Username clickable -->
+                <div onclick="goToProfileFromChat('${userId}')" style="cursor:pointer;">
+                    <div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div>
+                    <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
+                </div>
             </div>
             <div id="simple-chat-messages" style="flex:1;overflow-y:auto;padding:16px;">${messagesHtml}</div>
             <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #333;">
@@ -553,11 +557,19 @@ async function openSimpleChat(userId) {
         </div>
     `;
     
+    // THEN: Mark messages as read and update counts (background)
+    setTimeout(async () => {
+        await markMessagesRead(userId);
+        await loadNotificationCounts();
+    }, 100);
+    
+    startTypingPolling(userId);
+    
     const msgContainer = document.getElementById('simple-chat-messages');
     if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
     
     if (messagePollInterval) clearInterval(messagePollInterval);
-    messagePollInterval = setInterval(async () => { if (currentOpenChatUserId) await refreshSimpleChatMessages(); }, 2000);
+    messagePollInterval = setInterval(async () => { if (currentOpenChatUserId) await refreshSimpleChatMessages(); }, 3000);
 }
 
 async function refreshSimpleChatMessages() {
@@ -643,7 +655,7 @@ async function renderSimpleActivity() {
         
         if (error) {
             console.error('Activity error:', error);
-            container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Failed to load notifications. Please refresh.</div>';
+            container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Failed to load notifications</div>';
             return;
         }
         
@@ -722,9 +734,8 @@ async function createSimpleNotification(type, userId, actorId, targetId) {
     } catch(e) { console.error("Create notification error:", e); }
 }
 
-// ========== GO TO PROFILE FROM CHAT (FIXED) ==========
+// ========== GO TO PROFILE FROM CHAT ==========
 async function goToProfileFromChat(userId) {
-    // Clear all intervals to prevent chat reopening
     if (messagePollInterval) {
         clearInterval(messagePollInterval);
         messagePollInterval = null;
@@ -765,10 +776,21 @@ function goToHome() {
     if (typeof refreshFeed === 'function') refreshFeed();
 }
 
+// FIX 1: Fixed startAutoRefresh - NO ACTIVITY REFRESH
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
+    
     refreshInterval = setInterval(async () => {
-        await loadNotificationCounts();
+        // ONLY refresh notification counts
+        // DO NOT rerender activity UI automatically
+        await showGreenPill();
+        await updateInboxBadge();
+        await updateTabCounts();
+        
+        // Refresh chats ONLY if chats tab open and no active chat
+        if (inboxTab === 'chats' && !currentOpenChatUserId && document.getElementById('inbox-content-simple')) {
+            await renderSimpleChats();
+        }
     }, 10000);
 }
 
@@ -821,7 +843,6 @@ window.loadNotificationCounts = loadNotificationCounts;
 </script>
 
 <script>
-// Focus event to refresh counts when user returns to tab (replaces aggressive setInterval)
 window.addEventListener('focus', async () => {
     if (window.USER) {
         await loadNotificationCounts();
