@@ -524,6 +524,7 @@ async function renderSimpleChats() {
 }
 
 async function openSimpleChat(userId) {
+    document.body.style.overflow = 'hidden';
     currentOpenChatUserId = userId;
     
     const container = document.getElementById('inbox-content-simple');
@@ -640,6 +641,7 @@ async function sendSimpleChatMessage() {
 }
 
 async function closeSimpleChat() {
+    document.body.style.overflow = '';
     if (currentOpenChatUserId) {
         await markMessagesRead(currentOpenChatUserId);
     }
@@ -650,7 +652,6 @@ async function closeSimpleChat() {
     updateInboxTabBadgesOnly();
     await renderSimpleInbox();
 }
-
 // ========== SWITCH INBOX TAB ==========
 async function switchInboxTabSimple(tab) {
     if (inboxTab === tab) return;
