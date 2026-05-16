@@ -744,12 +744,6 @@ body {
     padding-bottom: 70px;
 }
 
-/* Fix chat typing box - Issue #5 */
-.chat-container-fixed {
-    height: calc(100vh - 130px);
-    display: flex;
-    flex-direction: column;
-}
 
 .chat-input-fixed {
     padding: 12px;
