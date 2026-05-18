@@ -11,7 +11,30 @@
 
 <div class="header">
 <div class="header-content">
-<div class="logo">POIK POIK</div>
+<div class="logo">
+    <svg width="140" height="40" viewBox="0 0 260 56" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <radialGradient id="bgP" cx="35%" cy="28%" r="62%">
+                <stop offset="0%" stop-color="#6aff8a"/>
+                <stop offset="50%" stop-color="#00ff88"/>
+                <stop offset="100%" stop-color="#008844"/>
+            </radialGradient>
+            <radialGradient id="shineP" cx="30%" cy="24%" r="38%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+            </radialGradient>
+            <clipPath id="pClip">
+                <rect x="0" y="0" width="60" height="30"/>
+            </clipPath>
+        </defs>
+        <rect x="0" y="4" width="8" height="38" rx="2.5" fill="url(#bgP)"/>
+        <circle cx="20" cy="18" r="14" fill="url(#bgP)" clip-path="url(#pClip)"/>
+        <circle cx="20" cy="18" r="14" fill="url(#shineP)" clip-path="url(#pClip)"/>
+        <ellipse cx="14" cy="12" rx="4" ry="3" fill="#fff" opacity="0.38" clip-path="url(#pClip)"/>
+        <text x="34" y="36" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="#00ff88" letter-spacing="-0.3">oik</text>
+        <text x="88" y="36" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="#ffffff" letter-spacing="-0.3"> Poik</text>
+    </svg>
+</div>
 <div class="header-icons">
 <i class="fas fa-search" onclick="openSearchModal()" style="cursor: pointer;"></i>
 <i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444; cursor: pointer;" title="Logout"></i>
