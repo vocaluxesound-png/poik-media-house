@@ -11,46 +11,7 @@
 
 <div class="header">
 <div class="header-content">
-<div class="logo">
-    <svg width="200" height="50" viewBox="0 0 360 70" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <radialGradient id="bgP" cx="35%" cy="28%" r="62%">
-                <stop offset="0%" stop-color="#6aff8a"/>
-                <stop offset="50%" stop-color="#00ff88"/>
-                <stop offset="100%" stop-color="#008844"/>
-            </radialGradient>
-            <radialGradient id="shineP" cx="30%" cy="24%" r="38%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
-                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-            </radialGradient>
-            <clipPath id="pClip">
-                <rect x="0" y="0" width="80" height="38"/>
-            </clipPath>
-        </defs>
-        
-        <!-- Stylized P Icon -->
-        <rect x="0" y="5" width="12" height="48" rx="4" fill="url(#bgP)"/>
-        <circle cx="28" cy="23" r="18" fill="url(#bgP)" clip-path="url(#pClip)"/>
-        <circle cx="28" cy="23" r="18" fill="url(#shineP)" clip-path="url(#pClip)"/>
-        <ellipse cx="20" cy="16" rx="6" ry="4" fill="#fff" opacity="0.38" clip-path="url(#pClip)"/>
-        
-        <!-- "oik" - green -->
-        <text x="50" y="47" 
-            font-family="'Inter', -apple-system, 'Segoe UI', sans-serif" 
-            font-size="36" 
-            font-weight="500" 
-            fill="#00ff88" 
-            letter-spacing="-0.5">oik</text>
-        
-        <!-- " Poik" - white -->
-        <text x="130" y="47" 
-            font-family="'Inter', -apple-system, 'Segoe UI', sans-serif" 
-            font-size="36" 
-            font-weight="700" 
-            fill="#ffffff" 
-            letter-spacing="-0.5"> Poik</text>
-    </svg>
-</div>
+<div class="logo">POIK POIK</div>
 <div class="header-icons">
 <i class="fas fa-search" onclick="openSearchModal()" style="cursor: pointer;"></i>
 <i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444; cursor: pointer;" title="Logout"></i>
@@ -563,7 +524,6 @@ async function renderSimpleChats() {
 }
 
 async function openSimpleChat(userId) {
-    document.body.style.overflow = 'hidden';
     currentOpenChatUserId = userId;
     
     const container = document.getElementById('inbox-content-simple');
@@ -680,7 +640,6 @@ async function sendSimpleChatMessage() {
 }
 
 async function closeSimpleChat() {
-    document.body.style.overflow = '';
     if (currentOpenChatUserId) {
         await markMessagesRead(currentOpenChatUserId);
     }
@@ -691,6 +650,7 @@ async function closeSimpleChat() {
     updateInboxTabBadgesOnly();
     await renderSimpleInbox();
 }
+
 // ========== SWITCH INBOX TAB ==========
 async function switchInboxTabSimple(tab) {
     if (inboxTab === tab) return;
