@@ -1,114 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Poik Poik</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Google Font: Syne for logo/headings -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=25">
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- App Styles -->
+<link rel="stylesheet" href="style.css?v=30">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
 
+<!-- ======== HEADER ======== -->
 <div class="header">
-<div class="header-content">
-<div class="logo">POIK POIK</div>
-<div class="header-icons">
-<i class="fas fa-search" onclick="openSearchModal()" style="cursor: pointer;"></i>
-<i class="fas fa-sign-out-alt" onclick="logout()" style="color: #ff4444; cursor: pointer;" title="Logout"></i>
-<div id="headerAvatar" class="header-avatar" onclick="openAuthModal()" style="cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-<i class="fas fa-user" style="color: white;"></i>
-</div>
-</div>
-</div>
+  <div class="header-content">
+    <a href="/" style="text-decoration:none;">
+      <svg width="160" height="42" viewBox="0 0 200 52" role="img" xmlns="http://www.w3.org/2000/svg">
+        <title>Poik Poik</title>
+        <defs>
+          <radialGradient id="bgP" cx="35%" cy="28%" r="62%">
+            <stop offset="0%" stop-color="#6ab8ff"/>
+            <stop offset="50%" stop-color="#2979ff"/>
+            <stop offset="100%" stop-color="#1446b0"/>
+          </radialGradient>
+          <radialGradient id="shineP" cx="30%" cy="24%" r="38%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="200" height="52" rx="14" fill="#1d2030"/>
+        <rect x="14" y="9" width="7" height="33" rx="2" fill="url(#bgP)"/>
+        <circle cx="27" cy="20" r="11" fill="url(#bgP)"/>
+        <circle cx="27" cy="20" r="11" fill="url(#shineP)"/>
+        <ellipse cx="23" cy="16" rx="3" ry="2.5" fill="#fff" opacity="0.38"/>
+        <rect x="14" y="26" width="26" height="18" fill="#1d2030"/>
+        <rect x="14" y="9" width="7" height="33" rx="2" fill="url(#bgP)"/>
+        <text x="37" y="33" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="19" font-weight="500" fill="#2979ff" letter-spacing="-0.3">oik</text>
+        <text x="72" y="33" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="19" font-weight="500" fill="#ffffff" letter-spacing="-0.3"> Poik</text>
+      </svg>
+    </a>
+    <div class="header-icons">
+      <i class="fas fa-search" onclick="openSearchModal()" style="cursor:pointer;"></i>
+      <i class="fas fa-sign-out-alt" onclick="logout()" style="color:#ff1744;cursor:pointer;" title="Logout"></i>
+      <div id="headerAvatar" class="header-avatar" onclick="openAuthModal()" style="cursor:pointer;">
+        <i class="fas fa-user" style="color:#aaa;font-size:16px;"></i>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- ======== TOP NAV ======== -->
 <div class="top-nav">
-<button class="nav-item active" onclick="switchTab('feed')">Feed</button>
-<button class="nav-item" onclick="switchTab('explore')">Explore</button>
-<button class="nav-item" onclick="switchTab('following')">Following</button>
+  <button class="nav-item active" onclick="switchTab('feed')">Feed</button>
+  <button class="nav-item" onclick="switchTab('explore')">Explore</button>
+  <button class="nav-item" onclick="switchTab('following')">Following</button>
 </div>
 
+<!-- ======== MAIN FEED ======== -->
 <div id="feed" class="feed"><div class="loading">Loading...</div></div>
 
-<!-- Search Modal -->
-<div id="searchModal" class="search-modal" style="display: none;">
-<div class="search-modal-content">
-<div class="search-header">
-<i class="fas fa-search"></i>
-<input type="text" id="searchInput" placeholder="Search users, posts..." autocomplete="off">
-<i class="fas fa-times" onclick="closeSearchModal()" style="cursor: pointer;"></i>
-</div>
-<div id="searchResults" class="search-results"></div>
-</div>
-</div>
-
-<div class="bottom-nav">
-<div class="bottom-nav-items">
-<button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
-<button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
-<div class="plus-circle" onclick="openEnhancedUploadModal()"><i class="fas fa-plus"></i></div>
-<button id="inboxNavBtn" class="bottom-nav-item" onclick="bottomNav('inbox')">
-<i class="far fa-comment-dots"></i>
-<span>Inbox</span>
-<div id="inboxGreenDot" class="inbox-dot"></div>
-</button>
-<button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
-</div>
+<!-- ======== SEARCH MODAL ======== -->
+<div id="searchModal" class="search-modal" style="display:none;">
+  <div class="search-modal-content">
+    <div class="search-header">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search users, posts..." autocomplete="off">
+      <i class="fas fa-times" onclick="closeSearchModal()" style="cursor:pointer; color:#666;"></i>
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
 </div>
 
-<div id="uploadModal" class="upload-modal">
-<h3>Upload</h3>
-<input type="file" id="uploadFile" accept="image/*,video/*">
-<input type="text" id="uploadCaption" placeholder="Caption...">
-<select id="uploadPrivacy" class="privacy-select">
-<option value="public">🌍 Public</option>
-<option value="friends">👥 Friends Only</option>
-<option value="private">🔒 Only Me</option>
-</select>
-<button onclick="uploadPost()">Post</button>
-<button onclick="closeUploadModal()" style="background:#444;">Cancel</button>
+<!-- ======== BOTTOM NAV ======== -->
+<div class="bottom-nav" id="mainBottomNav">
+  <div class="bottom-nav-items">
+    <button class="bottom-nav-item active" onclick="bottomNav('home')"><i class="fas fa-home"></i><span>Home</span></button>
+    <button class="bottom-nav-item" onclick="bottomNav('friends')"><i class="fas fa-user-friends"></i><span>Friends</span></button>
+    <div class="plus-circle" onclick="openEnhancedUploadModal()"><i class="fas fa-plus"></i></div>
+    <button id="inboxNavBtn" class="bottom-nav-item" onclick="bottomNav('inbox')">
+      <i class="far fa-comment-dots"></i>
+      <span>Inbox</span>
+      <div id="inboxGreenDot" class="inbox-dot"></div>
+    </button>
+    <button class="bottom-nav-item" onclick="bottomNav('profile')"><i class="far fa-user"></i><span>Profile</span></button>
+  </div>
 </div>
 
+<!-- ======== SHARE MODAL ======== -->
 <div id="shareModal" class="share-modal">
-<h3 style="text-align:center;">Share to</h3>
-<div class="share-options">
-<div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
-<div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
-<div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
-<div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
-<div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
-</div>
-<button onclick="closeShareModal()" style="width:100%; padding:12px; margin-top:15px; background:#333; border:none; border-radius:30px; color:white;">Cancel</button>
+  <h3 style="text-align:center; font-size:17px;">Share to</h3>
+  <div class="share-options">
+    <div class="share-option" onclick="shareTo('facebook')"><i class="fab fa-facebook-f" style="color:#1877f2;"></i><span>Facebook</span></div>
+    <div class="share-option" onclick="shareTo('whatsapp')"><i class="fab fa-whatsapp" style="color:#25D366;"></i><span>WhatsApp</span></div>
+    <div class="share-option" onclick="shareTo('twitter')"><i class="fab fa-twitter" style="color:#1DA1F2;"></i><span>Twitter</span></div>
+    <div class="share-option" onclick="shareTo('instagram')"><i class="fab fa-instagram" style="color:#E4405F;"></i><span>Instagram</span></div>
+    <div class="share-option" onclick="copyLink()"><i class="fas fa-link"></i><span>Copy Link</span></div>
+  </div>
+  <button onclick="closeShareModal()" style="width:100%;padding:12px;margin-top:16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:28px;color:#ccc;cursor:pointer;font-size:15px;">Cancel</button>
 </div>
 
+<!-- ======== IMAGE MODAL ======== -->
 <div id="imageModal" class="modal" onclick="closeModal()">
-<span class="close-modal" onclick="closeModal()">&times;</span>
-<img id="modalImage">
+  <span class="close-modal" onclick="closeModal()"><i class="fas fa-times"></i></span>
+  <img id="modalImage">
 </div>
 
+<!-- ======== AUTH MODAL ======== -->
 <div id="authModal" class="auth-modal">
-<div class="auth-box">
-<h3 style="margin-bottom:20px;">Join Poik Poik</h3>
-<p style="font-size:14px; color:#888; margin-bottom:15px;">Enter your email to receive a one-time password</p>
-<input type="email" id="authEmail" placeholder="Email">
-<button id="magicLoginBtn" class="magic-btn">Send One-time password</button>
-<button id="closeAuthBtn" class="cancel-btn">Cancel</button>
-</div>
+  <div class="auth-box">
+    <div style="font-size:32px;margin-bottom:12px;">👋</div>
+    <h3 style="margin-bottom:8px;font-family:'Syne',sans-serif;font-size:22px;">Join Poik Poik</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:18px;">Enter your email to receive a one-time password</p>
+    <input type="email" id="authEmail" placeholder="your@email.com">
+    <button id="magicLoginBtn" class="magic-btn">Send Verification Email</button>
+    <button id="closeAuthBtn" class="cancel-btn">Cancel</button>
+  </div>
 </div>
 
+<!-- ======== EDIT PROFILE MODAL ======== -->
 <div id="editProfileModal" class="edit-profile-modal">
-<div class="edit-profile-box">
-<h3 style="margin-bottom:20px;">Edit Profile</h3>
-<input type="text" id="editUsername" placeholder="Username">
-<textarea id="editBio" rows="3" placeholder="Bio / Description (short)"></textarea>
-<button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
-<button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
-</div>
+  <div class="edit-profile-box">
+    <h3 style="margin-bottom:18px;font-family:'Syne',sans-serif;">Edit Profile</h3>
+    <input type="text" id="editUsername" placeholder="Username">
+    <textarea id="editBio" rows="3" placeholder="Bio / Description"></textarea>
+    <button id="saveProfileBtn" class="save-profile-btn">Save Changes</button>
+    <button id="closeEditModal" class="cancel-edit-btn">Cancel</button>
+  </div>
 </div>
 
+<!-- ======== HIDDEN FILE INPUT FOR AVATAR ======== -->
 <input type="file" id="avatarInput" accept="image/*">
 
-<!-- EXISTING SCRIPTS -->
+<!-- ======== SCRIPTS ======== -->
 <script src="auth.js"></script>
 <script src="profile.js"></script>
 <script src="comments.js"></script>
@@ -116,10 +155,11 @@
 <script src="friends.js"></script>
 <script src="search.js"></script>
 <script src="notifications.js"></script>
+<script src="chat.js"></script>
 
 <script>
 // ============================================================
-// COMPLETE FIXED VERSION - ALL ISSUES FIXED
+// MAIN APP CONTROLLER - index.html inline script
 // ============================================================
 
 let currentOpenChatUserId = null;
@@ -127,41 +167,63 @@ let refreshInterval = null;
 let messagePollInterval = null;
 let typingPollInterval = null;
 
-// Badge state
 let chatsUnreadCount = 0;
 let activityUnreadCount = 0;
 
-window.escapeHtml = function(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); };
+// -------- UTILS --------
+window.escapeHtml = function(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+};
 
 window.timeAgo = function(dateString) {
     if (!dateString) return '';
-    const now = new Date();
-    const then = new Date(dateString);
-    const seconds = Math.floor((now - then) / 1000);
-    if (seconds < 60) return 'just now';
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    return `${Math.floor(days / 7)}w ago`;
+    const now = new Date(), then = new Date(dateString);
+    const s = Math.floor((now - then) / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    const d = Math.floor(h / 24);
+    if (d === 1) return '1 day ago';
+    if (d < 7) return d + ' days ago';
+    return Math.floor(d / 7) + 'w ago';
 };
 
-// ========== UNREAD COUNTS ==========
+// -------- KEYBOARD / VIEWPORT FIX --------
+// This is the KEY FIX for "mobile keyboard hides input"
+// We listen to the visual viewport resize and adjust the chat container height
+function setupKeyboardFix() {
+    if (!window.visualViewport) return;
+    window.visualViewport.addEventListener('resize', () => {
+        const chatContainer = document.querySelector('.chat-container-fixed');
+        if (!chatContainer) return;
+        // Only apply on mobile
+        if (window.innerWidth >= 768) return;
+        const vvHeight = window.visualViewport.height;
+        const vvOffsetTop = window.visualViewport.offsetTop;
+        chatContainer.style.height = vvHeight + 'px';
+        chatContainer.style.top = vvOffsetTop + 'px';
+        chatContainer.style.bottom = 'auto';
+        // Scroll messages to bottom when keyboard opens
+        const msgs = document.getElementById('simple-chat-messages');
+        if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 80);
+    });
+}
+setupKeyboardFix();
+
+// -------- UNREAD COUNTS --------
 async function getUnreadMessagesCount() {
     if (!window.USER) return 0;
     try {
-        let query = SB
-            .from("messages")
+        let query = SB.from("messages")
             .select("*", { count: 'exact', head: true })
             .eq("receiver_id", window.USER.id)
             .eq("is_read", false);
-        
-        if (currentOpenChatUserId) {
-            query = query.neq("sender_id", currentOpenChatUserId);
-        }
+        if (currentOpenChatUserId) query = query.neq("sender_id", currentOpenChatUserId);
         const { count } = await query;
         return count || 0;
     } catch(e) { return 0; }
@@ -170,67 +232,46 @@ async function getUnreadMessagesCount() {
 async function getUnreadNotificationsCount() {
     if (!window.USER) return { total: 0, likes: 0, comments: 0, follows: 0 };
     try {
-        const { data: notifications } = await SB
-            .from("notifications")
-            .select("type")
-            .eq("user_id", window.USER.id)
-            .eq("is_read", false);
-        
+        const { data } = await SB.from("notifications")
+            .select("type").eq("user_id", window.USER.id).eq("is_read", false);
         let likes = 0, comments = 0, follows = 0;
-        if (notifications) {
-            for (const n of notifications) {
-                if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') likes++;
-                else if (n.type === 'comment' || n.type === 'reply') comments++;
-                else if (n.type === 'follow') follows++;
-            }
+        if (data) for (const n of data) {
+            if (n.type?.includes('like')) likes++;
+            else if (n.type === 'comment' || n.type === 'reply') comments++;
+            else if (n.type === 'follow') follows++;
         }
         return { total: likes + comments + follows, likes, comments, follows };
     } catch(e) { return { total: 0, likes: 0, comments: 0, follows: 0 }; }
 }
 
-// ========== GREEN PILL ==========
+// -------- GREEN PILL --------
 async function showGreenPill() {
     const msgCount = await getUnreadMessagesCount();
-    const notifCounts = await getUnreadNotificationsCount();
-    const total = msgCount + notifCounts.total;
-    
+    const notif = await getUnreadNotificationsCount();
+    const total = msgCount + notif.total;
     if (total === 0) { hideGreenPill(); return; }
-    
-    let existingPill = document.getElementById('notification-pill');
-    if (existingPill) existingPill.remove();
-    
+    let existing = document.getElementById('notification-pill');
+    if (existing) existing.remove();
     let pillContent = '';
-    if (notifCounts.likes > 0) pillContent += `<span class="pill-item"><i class="fas fa-heart" style="color:black;"></i> ${notifCounts.likes}</span>`;
-    if (notifCounts.comments > 0) pillContent += `<span class="pill-item"><i class="fas fa-comment" style="color:black;"></i> ${notifCounts.comments}</span>`;
-    if (notifCounts.follows > 0) pillContent += `<span class="pill-item"><i class="fas fa-user-plus" style="color:black;"></i> ${notifCounts.follows}</span>`;
-    if (msgCount > 0) pillContent += `<span class="pill-item"><i class="fas fa-envelope" style="color:black;"></i> ${msgCount}</span>`;
-    
-    if (pillContent === '') return;
-    
+    if (notif.likes > 0) pillContent += `<span class="pill-item"><i class="fas fa-heart"></i> ${notif.likes}</span>`;
+    if (notif.comments > 0) pillContent += `<span class="pill-item"><i class="fas fa-comment"></i> ${notif.comments}</span>`;
+    if (notif.follows > 0) pillContent += `<span class="pill-item"><i class="fas fa-user-plus"></i> ${notif.follows}</span>`;
+    if (msgCount > 0) pillContent += `<span class="pill-item"><i class="fas fa-envelope"></i> ${msgCount}</span>`;
+    if (!pillContent) return;
     const inboxBtn = document.getElementById('inboxNavBtn');
-    if (inboxBtn) {
-        const rect = inboxBtn.getBoundingClientRect();
-        const pill = document.createElement('div');
-        pill.id = 'notification-pill';
-        pill.className = 'notification-pill';
-        pill.style.position = 'fixed';
-        pill.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
-        pill.style.left = (rect.left + rect.width / 2) + 'px';
-        pill.style.transform = 'translateX(-50%)';
-        pill.style.zIndex = '1002';
-        pill.style.cursor = 'pointer';
-        pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
-        pill.onclick = async () => { 
-            hideGreenPill(); 
-            bottomNav('inbox');
-            setTimeout(async () => {
-                if (typeof switchInboxTabSimple === 'function') {
-                    await switchInboxTabSimple('activity');
-                }
-            }, 150);
-        };
-        document.body.appendChild(pill);
-    }
+    if (!inboxBtn) return;
+    const rect = inboxBtn.getBoundingClientRect();
+    const pill = document.createElement('div');
+    pill.id = 'notification-pill';
+    pill.className = 'notification-pill';
+    pill.style.cssText = `position:fixed;bottom:${window.innerHeight - rect.top + 6}px;left:${rect.left + rect.width/2}px;transform:translateX(-50%);z-index:1002;cursor:pointer;`;
+    pill.innerHTML = `<div class="pill-inner">${pillContent}</div><div class="pill-pointer"></div>`;
+    pill.onclick = async () => {
+        hideGreenPill();
+        bottomNav('inbox');
+        setTimeout(async () => { if (typeof switchInboxTabSimple === 'function') await switchInboxTabSimple('activity'); }, 150);
+    };
+    document.body.appendChild(pill);
 }
 
 function hideGreenPill() {
@@ -238,14 +279,11 @@ function hideGreenPill() {
     if (pill) pill.remove();
 }
 
-// ========== INBOX BADGE ==========
+// -------- INBOX BADGE --------
 async function updateInboxBadge() {
     const msgCount = await getUnreadMessagesCount();
-    const greenDot = document.getElementById('inboxGreenDot');
-    if (greenDot) {
-        if (msgCount > 0) greenDot.classList.add('show');
-        else greenDot.classList.remove('show');
-    }
+    const dot = document.getElementById('inboxGreenDot');
+    if (dot) dot.classList.toggle('show', msgCount > 0);
 }
 
 async function updateTabCounts() {
@@ -254,24 +292,18 @@ async function updateTabCounts() {
     activityUnreadCount = notif.total;
 }
 
-// ========== UPDATE ONLY BADGES (NO RE-RENDER) ==========
 function updateInboxTabBadgesOnly() {
     const chatsBtn = document.querySelector('button[onclick*="switchInboxTabSimple(\'chats\')"]');
-    const activityBtn = document.querySelector('button[onclick*="switchInboxTabSimple(\'activity\')"]');
-    
-    if (chatsBtn) {
-        chatsBtn.innerHTML = `💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}`;
-    }
-    
-    if (activityBtn) {
-        activityBtn.innerHTML = `🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}`;
-    }
+    const actBtn   = document.querySelector('button[onclick*="switchInboxTabSimple(\'activity\')"]');
+    if (chatsBtn) chatsBtn.innerHTML = `💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#2979ff;color:#fff;border-radius:10px;padding:0 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}`;
+    if (actBtn)   actBtn.innerHTML   = `🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#2979ff;color:#fff;border-radius:10px;padding:0 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}`;
 }
 
-// ========== MARK FUNCTIONS ==========
+// -------- MARK READ --------
 async function markMessagesRead(senderId) {
     if (!window.USER) return;
-    await SB.from("messages").update({ is_read: true }).eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
+    await SB.from("messages").update({ is_read: true })
+        .eq("sender_id", senderId).eq("receiver_id", window.USER.id).eq("is_read", false);
     await updateTabCounts();
     await updateInboxBadge();
     updateInboxTabBadgesOnly();
@@ -286,7 +318,6 @@ async function markNotificationsAsRead() {
     await showGreenPill();
 }
 
-// ========== LOAD NOTIFICATION COUNTS ==========
 async function loadNotificationCounts() {
     if (!window.USER) return;
     await updateTabCounts();
@@ -295,157 +326,102 @@ async function loadNotificationCounts() {
     await showGreenPill();
 }
 
-// ========== SEND MESSAGE ==========
+// -------- SEND MESSAGE --------
 async function sendSimpleMessage(receiverId, message) {
     if (!window.USER || !message.trim()) return false;
     try {
-        await SB.from("messages").insert({
-            sender_id: window.USER.id,
-            receiver_id: receiverId,
-            message: message.trim(),
-            is_read: false
-        });
+        await SB.from("messages").insert({ sender_id: window.USER.id, receiver_id: receiverId, message: message.trim(), is_read: false });
         await loadNotificationCounts();
         return true;
     } catch(e) { return false; }
 }
 
-// ========== GET CONVERSATIONS ==========
+// -------- GET CONVERSATIONS --------
 async function getSimpleConversations() {
     if (!window.USER) return [];
     try {
-        const { data: messages } = await SB
-            .from("messages")
-            .select("*")
+        const { data: messages } = await SB.from("messages").select("*")
             .or(`sender_id.eq.${window.USER.id},receiver_id.eq.${window.USER.id}`)
             .order("created_at", { ascending: false });
-        
         if (!messages || messages.length === 0) return [];
-        
         const convMap = new Map();
         for (const msg of messages) {
             const otherId = msg.sender_id === window.USER.id ? msg.receiver_id : msg.sender_id;
             if (!convMap.has(otherId)) {
-                convMap.set(otherId, {
-                    userId: otherId,
-                    lastMessage: msg.message,
-                    lastMessageTime: msg.created_at,
-                    unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) ? 1 : 0
-                });
+                convMap.set(otherId, { userId: otherId, lastMessage: msg.message, lastMessageTime: msg.created_at, unreadCount: (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) ? 1 : 0 });
             } else {
-                const conv = convMap.get(otherId);
-                if (msg.created_at > conv.lastMessageTime) {
-                    conv.lastMessage = msg.message;
-                    conv.lastMessageTime = msg.created_at;
-                }
-                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) {
-                    conv.unreadCount++;
-                }
+                const c = convMap.get(otherId);
+                if (msg.created_at > c.lastMessageTime) { c.lastMessage = msg.message; c.lastMessageTime = msg.created_at; }
+                if (msg.receiver_id === window.USER.id && !msg.is_read && currentOpenChatUserId !== otherId) c.unreadCount++;
             }
         }
-        
         const userIds = [...convMap.keys()];
         const { data: profiles } = await SB.from("profiles").select("id, username, avatar_url, last_seen").in("id", userIds);
         const profileMap = new Map();
         if (profiles) profiles.forEach(p => profileMap.set(p.id, p));
-        
         const result = [];
         for (const [userId, conv] of convMap) {
-            const profile = profileMap.get(userId);
-            const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
-            result.push({
-                userId: userId,
-                username: profile?.username || 'User',
-                avatarUrl: profile?.avatar_url,
-                lastMessage: conv.lastMessage,
-                lastMessageTime: conv.lastMessageTime,
-                unreadCount: conv.unreadCount,
-                isOnline: isOnline
-            });
+            const p = profileMap.get(userId);
+            const isOnline = p?.last_seen ? (new Date() - new Date(p.last_seen)) < 120000 : false;
+            result.push({ userId, username: p?.username || 'User', avatarUrl: p?.avatar_url, lastMessage: conv.lastMessage, lastMessageTime: conv.lastMessageTime, unreadCount: conv.unreadCount, isOnline });
         }
-        result.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+        result.sort((a,b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
         return result;
     } catch(e) { return []; }
 }
 
-// ========== GET MESSAGES WITH USER ==========
+// -------- GET MESSAGES --------
 async function getSimpleMessages(userId) {
-    if (!window.USER) return [];
+    if (!window.USER) return { messages: [], profile: null };
     try {
-        const { data } = await SB
-            .from("messages")
-            .select("*")
+        const { data } = await SB.from("messages").select("*")
             .or(`and(sender_id.eq.${window.USER.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${window.USER.id})`)
             .order("created_at", { ascending: true });
-        
-        const { data: profile } = await SB
-            .from("profiles")
-            .select("avatar_url, username, last_seen, id")
-            .eq("id", userId)
-            .single();
-        
-        return { messages: data || [], profile: profile };
+        const { data: profile } = await SB.from("profiles").select("avatar_url, username, last_seen, id").eq("id", userId).single();
+        return { messages: data || [], profile };
     } catch(e) { return { messages: [], profile: null }; }
 }
 
-// ========== TYPING INDICATOR ==========
+// -------- TYPING --------
 async function updateTypingStatus(chatWithId, isTyping) {
     if (!window.USER) return;
     try {
-        const { data: existing } = await SB
-            .from("typing_status")
-            .select("id")
-            .eq("user_id", window.USER.id)
-            .eq("chat_with_id", chatWithId)
-            .single();
-        
-        if (existing) {
-            await SB.from("typing_status").update({ is_typing: isTyping, updated_at: new Date().toISOString() }).eq("id", existing.id);
-        } else {
-            await SB.from("typing_status").insert({ user_id: window.USER.id, chat_with_id: chatWithId, is_typing: isTyping });
-        }
-    } catch(e) { console.error("Typing status error:", e); }
+        const { data: existing } = await SB.from("typing_status").select("id")
+            .eq("user_id", window.USER.id).eq("chat_with_id", chatWithId).single();
+        if (existing) await SB.from("typing_status").update({ is_typing: isTyping, updated_at: new Date().toISOString() }).eq("id", existing.id);
+        else await SB.from("typing_status").insert({ user_id: window.USER.id, chat_with_id: chatWithId, is_typing: isTyping });
+    } catch(e) {}
 }
 
 async function checkTypingStatus(chatWithId) {
     if (!window.USER) return false;
     try {
-        const { data } = await SB.from("typing_status").select("is_typing, updated_at").eq("user_id", chatWithId).eq("chat_with_id", window.USER.id).single();
-        if (data && data.is_typing) {
-            const updatedAt = new Date(data.updated_at);
-            const now = new Date();
-            if ((now - updatedAt) < 5000) return true;
-        }
+        const { data } = await SB.from("typing_status").select("is_typing, updated_at")
+            .eq("user_id", chatWithId).eq("chat_with_id", window.USER.id).single();
+        if (data?.is_typing && (new Date() - new Date(data.updated_at)) < 5000) return true;
         return false;
     } catch(e) { return false; }
 }
 
 function showTypingIndicator(show) {
     let indicator = document.getElementById('typing-indicator');
-    if (show) {
-        if (!indicator) {
-            const container = document.getElementById('simple-chat-messages');
-            if (container) {
-                indicator = document.createElement('div');
-                indicator.id = 'typing-indicator';
-                indicator.className = 'typing-indicator';
-                indicator.innerHTML = `<span></span><span></span><span></span>`;
-                container.appendChild(indicator);
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-    } else {
-        if (indicator) indicator.remove();
+    const container = document.getElementById('simple-chat-messages');
+    if (show && !indicator && container) {
+        indicator = document.createElement('div');
+        indicator.id = 'typing-indicator';
+        indicator.className = 'typing-indicator';
+        indicator.innerHTML = '<span></span><span></span><span></span>';
+        container.appendChild(indicator);
+        container.scrollTop = container.scrollHeight;
+    } else if (!show && indicator) {
+        indicator.remove();
     }
 }
 
 function startTypingPolling(chatWithId) {
     if (typingPollInterval) clearInterval(typingPollInterval);
     typingPollInterval = setInterval(async () => {
-        if (currentOpenChatUserId === chatWithId) {
-            const isTyping = await checkTypingStatus(chatWithId);
-            showTypingIndicator(isTyping);
-        }
+        if (currentOpenChatUserId === chatWithId) showTypingIndicator(await checkTypingStatus(chatWithId));
     }, 2000);
 }
 
@@ -455,19 +431,17 @@ function stopTypingPolling() {
     showTypingIndicator(false);
 }
 
-// ========== INBOX FUNCTIONS ==========
+// -------- INBOX --------
 let inboxTab = 'chats';
 
 async function loadSimpleInbox() {
     const feedDiv = document.getElementById("feed");
     if (!feedDiv) return;
     if (!window.USER) { alert('Please login'); openAuthModal(); return; }
-    
     window.isProfileView = true;
     window.isFriendsView = false;
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'none';
-    
     feedDiv.innerHTML = '<div class="loading">Loading inbox...</div>';
     await updateTabCounts();
     await renderSimpleInbox();
@@ -476,20 +450,18 @@ async function loadSimpleInbox() {
 async function renderSimpleInbox() {
     const feedDiv = document.getElementById("feed");
     feedDiv.innerHTML = `
-        <div style="max-width:600px;margin:0 auto;padding-bottom:70px;">
-            <div style="padding:16px;border-bottom:1px solid #222;"><h2 style="font-size:20px;">Inbox</h2></div>
-            <div style="display:flex;border-bottom:1px solid #333;">
-                <button onclick="window.switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='chats'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='chats'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
-                    💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}
+        <div style="max-width:600px;margin:0 auto;padding-bottom:80px;">
+            <div style="padding:16px;border-bottom:1px solid #111;"><h2 style="font-size:20px;font-family:'Syne',sans-serif;">Inbox</h2></div>
+            <div style="display:flex;border-bottom:1px solid #1a1a1a;">
+                <button onclick="window.switchInboxTabSimple('chats')" style="flex:1;background:none;border:none;padding:13px;color:${inboxTab==='chats'?'#2979ff':'#666'};border-bottom:2px solid ${inboxTab==='chats'?'#2979ff':'transparent'};cursor:pointer;font-weight:700;font-size:14px;">
+                    💬 Chats ${chatsUnreadCount > 0 ? `<span style="background:#2979ff;color:#fff;border-radius:10px;padding:0 6px;margin-left:4px;font-size:11px;">${chatsUnreadCount}</span>` : ''}
                 </button>
-                <button onclick="window.switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:12px;color:${inboxTab==='activity'?'#00ff88':'#888'};border-bottom:2px solid ${inboxTab==='activity'?'#00ff88':'transparent'};cursor:pointer;font-weight:bold;">
-                    🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#00ff88;color:black;border-radius:10px;padding:0px 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}
+                <button onclick="window.switchInboxTabSimple('activity')" style="flex:1;background:none;border:none;padding:13px;color:${inboxTab==='activity'?'#2979ff':'#666'};border-bottom:2px solid ${inboxTab==='activity'?'#2979ff':'transparent'};cursor:pointer;font-weight:700;font-size:14px;">
+                    🔔 Activity ${activityUnreadCount > 0 ? `<span style="background:#2979ff;color:#fff;border-radius:10px;padding:0 6px;margin-left:4px;font-size:11px;">${activityUnreadCount}</span>` : ''}
                 </button>
             </div>
             <div id="inbox-content-simple">${inboxTab==='chats'?'<div class="loading">Loading chats...</div>':'<div class="loading">Loading notifications...</div>'}</div>
-        </div>
-    `;
-    
+        </div>`;
     if (inboxTab === 'chats') await renderSimpleChats();
     else await renderSimpleActivity();
 }
@@ -497,136 +469,143 @@ async function renderSimpleInbox() {
 async function renderSimpleChats() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
-    
     const conversations = await getSimpleConversations();
-    if (conversations.length === 0) {
-        container.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">No messages yet</div>';
-        return;
-    }
-    
-    let html = '<div style="padding:8px 0;">';
+    if (conversations.length === 0) { container.innerHTML = '<div style="text-align:center;padding:60px;color:#555;">No messages yet<br><span style="font-size:12px;">Find people and start chatting!</span></div>'; return; }
+    let html = '';
     for (const conv of conversations) {
         html += `
-            <div onclick="openSimpleChat('${conv.userId}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
-                <div style="position:relative;">
-                    ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`}
-                    ${conv.isOnline ? '<div class="online-dot"></div>' : ''}
+        <div onclick="openSimpleChat('${conv.userId}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #0d0d0d;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#0d0d0d'" onmouseout="this.style.background='transparent'">
+            <div style="position:relative;flex-shrink:0;">
+                ${conv.avatarUrl ? `<img src="${conv.avatarUrl}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">` : `<div style="width:50px;height:50px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:22px;">👤</div>`}
+                ${conv.isOnline ? `<div style="position:absolute;bottom:1px;right:1px;" class="online-dot"></div>` : ''}
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                    <span style="font-weight:700;font-size:14px;">${escapeHtml(conv.username)}</span>
+                    <span style="font-size:10px;color:#555;">${timeAgo(conv.lastMessageTime)}</span>
                 </div>
-                <div style="flex:1;">
-                    <div><span style="font-weight:bold;">${escapeHtml(conv.username)}</span><span style="font-size:10px;color:#888;float:right;">${timeAgo(conv.lastMessageTime)}</span></div>
-                    <div><span style="font-size:13px;color:${conv.unreadCount>0?'#00ff88':'#888'}">${escapeHtml(conv.lastMessage.substring(0,40))}</span>${conv.unreadCount>0 ? `<span style="background:#00ff88;color:black;border-radius:12px;padding:2px 8px;font-size:10px;float:right;">${conv.unreadCount}</span>` : ''}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:13px;color:${conv.unreadCount>0?'#fff':'#666'};font-weight:${conv.unreadCount>0?'600':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escapeHtml(conv.lastMessage.substring(0,40))}</span>
+                    ${conv.unreadCount>0 ? `<span style="background:#2979ff;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;">${conv.unreadCount}</span>` : ''}
                 </div>
             </div>
-        `;
+        </div>`;
     }
-    html += '</div>';
     container.innerHTML = html;
 }
 
+// -------- OPEN CHAT --------
 async function openSimpleChat(userId) {
+    // Prevent body scroll while chat is open
     document.body.style.overflow = 'hidden';
     currentOpenChatUserId = userId;
-    
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
-    
-    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;"><div class="loading">Loading chat...</div></div>';
-    
+    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:200px;"><div class="loading">Loading chat...</div></div>';
     const result = await getSimpleMessages(userId);
-    const messages = result.messages;
-    const profile = result.profile;
-    
+    const { messages, profile } = result;
     const isOnline = profile?.last_seen ? (new Date() - new Date(profile.last_seen)) < 120000 : false;
-    
-    let messagesHtml = '';
-    if (messages.length === 0) {
-        messagesHtml = '<div style="text-align:center;padding:40px;color:#888;">No messages yet. Say hi!</div>';
-    } else {
-        for (const msg of messages) {
-            const isMine = msg.sender_id === window.USER.id;
-            messagesHtml += `
-                <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:8px;">
-                    <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};">
-                        ${escapeHtml(msg.message)}
-                        <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
+
+    // Render messages HTML (initial load)
+    let messagesHtml = renderMessagesHTML(messages);
+
+    // Build chat UI
+    container.innerHTML = `
+        <div class="chat-container-fixed" id="chatContainerFixed">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1a1a1a;background:#0a0a0a;flex-shrink:0;">
+                <button onclick="closeSimpleChat()" style="background:none;border:none;color:#2979ff;font-size:22px;cursor:pointer;padding:0 4px;flex-shrink:0;">←</button>
+                <div onclick="goToProfileFromChat('${userId}')" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;">
+                    <div style="position:relative;flex-shrink:0;">
+                        ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>`}
+                        ${isOnline ? `<div style="position:absolute;bottom:0;right:0;" class="online-dot"></div>` : ''}
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:15px;">${escapeHtml(profile?.username || 'User')}</div>
+                        <div style="font-size:11px;color:${isOnline?'#00e676':'#555'};">${isOnline ? '● Active now' : (profile?.last_seen ? 'Last seen ' + timeAgo(profile.last_seen) : 'Offline')}</div>
                     </div>
                 </div>
-            `;
-        }
-    }
-    
-    container.innerHTML = `
-        <div class="chat-container-fixed">
-            <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #333;">
-                <button onclick="closeSimpleChat()" style="background:none;border:none;color:#00ff88;font-size:20px;cursor:pointer;">←</button>
-                <div style="position:relative;cursor:pointer;" onclick="goToProfileFromChat('${userId}')">
-                    ${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:40px;height:40px;border-radius:50%;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;">👤</div>`}
-                    ${isOnline ? '<div class="online-dot" style="position:absolute;bottom:0;right:0;"></div>' : ''}
-                </div>
-                <div onclick="goToProfileFromChat('${userId}')" style="cursor:pointer;">
-                    <div style="font-weight:bold;">${escapeHtml(profile?.username || 'User')}</div>
-                    <div style="font-size:10px;color:${isOnline ? '#00ff88' : '#888'};">${isOnline ? '🟢 Active now' : (profile?.last_seen ? `Last seen ${timeAgo(profile.last_seen)}` : 'Offline')}</div>
-                </div>
             </div>
+            <!-- Messages -->
             <div id="simple-chat-messages" class="chat-messages-fixed">${messagesHtml}</div>
-            <div class="chat-input-fixed">
-                <input type="text" id="simple-chat-input" placeholder="Message..." style="flex:1;padding:10px;border-radius:20px;background:#222;color:white;" onkeypress="if(event.key==='Enter') sendSimpleChatMessage()">
-                <button onclick="sendSimpleChatMessage()" style="background:#00ff88;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;">➤</button>
+            <!-- Input -->
+            <div class="chat-input-fixed" id="chatInputArea">
+                <input type="text" id="simple-chat-input" placeholder="Message..." autocomplete="off"
+                    oninput="handleChatTyping('${userId}')"
+                    onkeypress="if(event.key==='Enter'){event.preventDefault();sendSimpleChatMessage();}">
+                <button onclick="sendSimpleChatMessage()" aria-label="Send">
+                    <i class="fas fa-paper-plane" style="font-size:16px;"></i>
+                </button>
             </div>
-        </div>
-    `;
-    
+        </div>`;
+
+    // Scroll to bottom
+    const msgContainer = document.getElementById('simple-chat-messages');
+    if (msgContainer) setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 50);
+
+    // Mark read, setup polling
     setTimeout(async () => {
         await markMessagesRead(userId);
         await loadNotificationCounts();
     }, 100);
-    
+
     startTypingPolling(userId);
-    
-    const msgContainer = document.getElementById('simple-chat-messages');
-    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
-    
+
     if (messagePollInterval) clearInterval(messagePollInterval);
     messagePollInterval = setInterval(async () => { if (currentOpenChatUserId) await refreshSimpleChatMessages(); }, 3000);
+
+    // Re-apply keyboard fix to the new container
+    setupKeyboardFix();
 }
 
+// Typing debounce
+let typingTimeout = null;
+function handleChatTyping(chatWithId) {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    updateTypingStatus(chatWithId, true);
+    typingTimeout = setTimeout(() => updateTypingStatus(chatWithId, false), 3000);
+}
+
+function renderMessagesHTML(messages) {
+    if (!messages || messages.length === 0) return '<div style="text-align:center;padding:40px;color:#555;">No messages yet. Say hi! 👋</div>';
+    let html = '';
+    for (const msg of messages) {
+        const isMine = msg.sender_id === window.USER?.id;
+        html += `
+        <div style="display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:6px;">
+            <div class="message-bubble ${isMine?'message-bubble-mine':'message-bubble-theirs'}">
+                ${escapeHtml(msg.message)}
+                <div style="font-size:9px;color:${isMine?'rgba(255,255,255,0.6)':'#555'};margin-top:3px;text-align:right;">${timeAgo(msg.created_at)}</div>
+            </div>
+        </div>`;
+    }
+    return html;
+}
+
+// Refresh — only append new messages, no full re-render
+let lastMessageCount = 0;
 async function refreshSimpleChatMessages() {
     if (!currentOpenChatUserId) return;
     const result = await getSimpleMessages(currentOpenChatUserId);
     const messages = result.messages;
     const container = document.getElementById('simple-chat-messages');
     if (!container) return;
-    
-    if (messages.length === 0) { 
-        container.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">No messages yet. Say hi!</div>'; 
-        return; 
-    }
-    
-    // Check if user was near bottom before refresh
-    const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    const oldScrollHeight = container.scrollHeight;
-    
-    let html = '';
-    for (const msg of messages) {
-        const isMine = msg.sender_id === window.USER.id;
-        html += `
-            <div style="display:flex;justify-content:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:8px;">
-                <div style="max-width:70%;padding:10px 14px;border-radius:20px;background:${isMine ? '#00ff88' : '#222'};color:${isMine ? 'black' : 'white'};">
-                    ${escapeHtml(msg.message)}
-                    <div style="font-size:9px;color:${isMine ? '#006644' : '#888'};">${timeAgo(msg.created_at)}</div>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-    
-    // ONLY auto-scroll if user was already near bottom
-    if (wasNearBottom) {
-        container.scrollTop = container.scrollHeight;
-    } else {
-        // preserve scroll position
-        const newScrollHeight = container.scrollHeight;
-        container.scrollTop += (newScrollHeight - oldScrollHeight);
+    if (messages.length === lastMessageCount) return; // Nothing new
+    const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
+    // Append only new messages
+    const newMessages = messages.slice(lastMessageCount);
+    lastMessageCount = messages.length;
+    if (newMessages.length > 0) {
+        const fragment = document.createDocumentFragment();
+        for (const msg of newMessages) {
+            const isMine = msg.sender_id === window.USER?.id;
+            const div = document.createElement('div');
+            div.style.cssText = `display:flex;justify-content:${isMine?'flex-end':'flex-start'};margin-bottom:6px;`;
+            div.innerHTML = `<div class="message-bubble ${isMine?'message-bubble-mine':'message-bubble-theirs'}">${escapeHtml(msg.message)}<div style="font-size:9px;color:${isMine?'rgba(255,255,255,0.6)':'#555'};margin-top:3px;text-align:right;">${timeAgo(msg.created_at)}</div></div>`;
+            fragment.appendChild(div);
+        }
+        container.appendChild(fragment);
+        if (wasNearBottom) container.scrollTop = container.scrollHeight;
     }
 }
 
@@ -635,214 +614,140 @@ async function sendSimpleChatMessage() {
     const message = input?.value.trim();
     if (!message || !currentOpenChatUserId) return;
     input.value = '';
+    if (typingTimeout) clearTimeout(typingTimeout);
     await updateTypingStatus(currentOpenChatUserId, false);
-    await sendSimpleMessage(currentOpenChatUserId, message);
-    await refreshSimpleChatMessages();
+    const success = await sendSimpleMessage(currentOpenChatUserId, message);
+    if (success) {
+        await refreshSimpleChatMessages();
+        // Also reset count so next poll is correct
+        lastMessageCount = 0;
+        await refreshSimpleChatMessages();
+    }
 }
 
 async function closeSimpleChat() {
     document.body.style.overflow = '';
-    if (currentOpenChatUserId) {
-        await markMessagesRead(currentOpenChatUserId);
-    }
+    if (currentOpenChatUserId) await markMessagesRead(currentOpenChatUserId);
     stopTypingPolling();
     if (messagePollInterval) clearInterval(messagePollInterval);
+    messagePollInterval = null;
     currentOpenChatUserId = null;
+    lastMessageCount = 0;
     await updateTabCounts();
     updateInboxTabBadgesOnly();
     await renderSimpleInbox();
 }
-// ========== SWITCH INBOX TAB ==========
+
 async function switchInboxTabSimple(tab) {
     if (inboxTab === tab) return;
     inboxTab = tab;
     await renderSimpleInbox();
 }
 
-// ========== CREATE NOTIFICATION ==========
+// -------- NOTIFICATIONS / ACTIVITY --------
 async function createSimpleNotification(type, userId, actorId, targetId) {
     if (!userId || !actorId || userId === actorId) return;
     try {
-        const { data: recent } = await SB
-            .from("notifications")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("actor_id", actorId)
-            .eq("type", type)
+        const { data: recent } = await SB.from("notifications").select("id")
+            .eq("user_id", userId).eq("actor_id", actorId).eq("type", type)
             .eq("target_id", targetId || 0)
             .gte("created_at", new Date(Date.now() - 10000).toISOString());
-        
         if (recent && recent.length > 0) return;
-        
-        await SB.from("notifications").insert({
-            user_id: userId,
-            actor_id: actorId,
-            type: type,
-            target_id: targetId || 0,
-            is_read: false
-        });
-        
+        await SB.from("notifications").insert({ user_id: userId, actor_id: actorId, type, target_id: targetId || 0, is_read: false });
         await loadNotificationCounts();
-    } catch(e) { 
-        console.error("Create notification error:", e); 
-    }
+    } catch(e) {}
 }
 
-// ========== OPEN NOTIFICATION TARGET (FIXED) ==========
 async function openNotificationTarget(type, targetId) {
     bottomNav('home');
-    
     setTimeout(async () => {
         const postEl = document.querySelector(`[data-post-id="${targetId}"]`);
-        
         if (postEl) {
-            postEl.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-            
+            postEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             postEl.style.transition = '0.3s';
-            postEl.style.boxShadow = '0 0 0 2px #00ff88';
-            setTimeout(() => {
-                postEl.style.boxShadow = '';
-            }, 2000);
-            
+            postEl.style.boxShadow = '0 0 0 2px #2979ff';
+            setTimeout(() => { postEl.style.boxShadow = ''; }, 2000);
             if (type === 'comment' || type === 'reply') {
-                const commentBtn = postEl.querySelector('.action-icon[onclick*="toggleComments"]');
-                if (commentBtn) {
-                    commentBtn.click();
-                }
+                const btn = postEl.querySelector('.action-icon[onclick*="toggleComments"]');
+                if (btn) btn.click();
             }
         }
     }, 700);
 }
 
-// ========== RENDER ACTIVITY ==========
 async function renderSimpleActivity() {
     const container = document.getElementById('inbox-content-simple');
     if (!container) return;
-    
-    container.innerHTML = '<div style="padding:30px;text-align:center;color:#888;">Loading notifications...</div>';
-    
+    container.innerHTML = '<div class="loading">Loading notifications...</div>';
     try {
-        const { data: notifications, error: notifError } = await SB
-            .from('notifications')
-            .select('*')
-            .eq('user_id', window.USER.id)
-            .order('created_at', { ascending: false })
-            .limit(100);
-        
-        if (notifError) {
-            console.error("Notification error:", notifError);
-            container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Error loading notifications</div>';
+        const { data: notifications, error } = await SB.from('notifications')
+            .select('*').eq('user_id', window.USER.id)
+            .order('created_at', { ascending: false }).limit(100);
+        if (error || !notifications?.length) {
+            container.innerHTML = '<div style="text-align:center;padding:60px;color:#555;"><i class="fas fa-bell" style="font-size:44px;margin-bottom:14px;opacity:0.3;display:block;"></i>No notifications yet</div>';
             return;
         }
-        
-        if (!notifications || notifications.length === 0) {
-            container.innerHTML = '<div style="padding:50px;text-align:center;color:#888;"><i class="fas fa-bell" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i><p>No notifications yet</p></div>';
-            return;
-        }
-        
-        const actorIds = [...new Set(notifications.map(n => n.actor_id).filter(id => id))];
+        const actorIds = [...new Set(notifications.map(n => n.actor_id).filter(Boolean))];
         let actorMap = new Map();
-        
         if (actorIds.length > 0) {
-            const { data: actors, error: actorError } = await SB
-                .from('profiles')
-                .select('id, username, avatar_url')
-                .in('id', actorIds);
-            
-            if (!actorError && actors) {
-                actors.forEach(a => actorMap.set(a.id, a));
-            }
+            const { data: actors } = await SB.from('profiles').select('id, username, avatar_url').in('id', actorIds);
+            if (actors) actors.forEach(a => actorMap.set(a.id, a));
         }
-        
         let html = '';
         for (const n of notifications) {
             const actor = actorMap.get(n.actor_id);
             const actorName = actor?.username || 'Someone';
-            const actorAvatar = actor?.avatar_url;
-            const timeText = window.timeAgo ? window.timeAgo(n.created_at) : new Date(n.created_at).toLocaleString();
-            
-            let icon = '🔔';
-            let text = '';
-            let clickAction = '';
-            
-            if (n.type === 'like_post' || n.type === 'like_comment' || n.type === 'like_reply') {
-                icon = '❤️';
-                text = 'liked your post';
-                clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`;
-            } else if (n.type === 'comment' || n.type === 'reply') {
-                icon = '💬';
-                text = 'commented on your post';
-                clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`;
-            } else if (n.type === 'follow') {
-                icon = '👤';
-                text = 'started following you';
-                clickAction = `viewProfile('${n.actor_id}')`;
-            }
-            
+            const timeText = window.timeAgo ? window.timeAgo(n.created_at) : '';
+            let icon = '🔔', text = '', clickAction = '';
+            if (n.type?.includes('like')) { icon = '❤️'; text = 'liked your post'; clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`; }
+            else if (n.type === 'comment' || n.type === 'reply') { icon = '💬'; text = 'commented on your post'; clickAction = `openNotificationTarget('${n.type}', ${n.target_id})`; }
+            else if (n.type === 'follow') { icon = '👤'; text = 'started following you'; clickAction = `viewProfile('${n.actor_id}')`; }
             html += `
-                <div onclick="${clickAction}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #1a1a1a;cursor:pointer;">
-                    <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#222;display:flex;align-items:center;justify-content:center;font-size:20px;">
-                        ${actorAvatar ? `<img src="${actorAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-size:14px;"><strong>${window.escapeHtml ? window.escapeHtml(actorName) : actorName}</strong> ${text}</div>
-                        <div style="font-size:11px;color:#888;margin-top:4px;">${timeText}</div>
-                    </div>
-                    <div style="font-size:20px;">${icon}</div>
+            <div onclick="${clickAction}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #0d0d0d;cursor:pointer;background:${n.is_read?'transparent':'rgba(41,121,255,0.04)'};" onmouseover="this.style.background='#0d0d0d'" onmouseout="this.style.background='${n.is_read?'transparent':'rgba(41,121,255,0.04)'}'">
+                <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+                    ${actor?.avatar_url ? `<img src="${actor.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
                 </div>
-            `;
+                <div style="flex:1;">
+                    <div style="font-size:14px;"><strong>${window.escapeHtml(actorName)}</strong> ${text}</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">${timeText}</div>
+                </div>
+                <div style="font-size:20px;">${icon}</div>
+                ${!n.is_read ? '<div style="width:8px;height:8px;background:#2979ff;border-radius:50%;flex-shrink:0;"></div>' : ''}
+            </div>`;
         }
         container.innerHTML = html;
-        
         await SB.from('notifications').update({ is_read: true }).eq('user_id', window.USER.id);
         await loadNotificationCounts();
-        
-    } catch (e) {
-        console.error('Render activity error:', e);
-        container.innerHTML = '<div style="padding:30px;text-align:center;color:red;">Error loading activity</div>';
+    } catch(e) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:#ff1744;">Error loading activity</div>';
     }
 }
 
-// ========== GO TO PROFILE FROM CHAT ==========
+// -------- PROFILE FROM CHAT --------
 async function goToProfileFromChat(userId) {
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
-    }
-    if (typingPollInterval) {
-        clearInterval(typingPollInterval);
-        typingPollInterval = null;
-    }
+    if (messagePollInterval) { clearInterval(messagePollInterval); messagePollInterval = null; }
+    if (typingPollInterval) { clearInterval(typingPollInterval); typingPollInterval = null; }
     currentOpenChatUserId = null;
-    
-    if (typeof viewProfile === 'function') {
-        await viewProfile(userId);
-    }
+    if (typeof viewProfile === 'function') await viewProfile(userId);
 }
 
-// ========== VIEW POST AND COMMENTS ==========
 async function viewPostAndComments(postId) {
     goToHome();
     setTimeout(() => {
-        const commentsSection = document.getElementById(`comments-${postId}`);
-        if (commentsSection) {
-            commentsSection.style.display = 'block';
-            if (typeof loadCommentsOnly === 'function') {
-                loadCommentsOnly(postId);
-            }
+        const section = document.getElementById(`comments-${postId}`);
+        if (section) {
+            section.style.display = 'block';
+            if (typeof loadCommentsOnly === 'function') loadCommentsOnly(postId);
         }
     }, 500);
 }
 
 function goToHome() {
+    document.body.style.overflow = '';
     window.isProfileView = false;
     window.isFriendsView = false;
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
-    const homeBtn = document.querySelector('.bottom-nav-item:first-child');
-    if (homeBtn) homeBtn.classList.add('active');
+    document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelector('.bottom-nav-item:first-child')?.classList.add('active');
     const topNav = document.querySelector('.top-nav');
     if (topNav) topNav.style.display = 'flex';
     if (typeof refreshFeed === 'function') refreshFeed();
@@ -850,35 +755,21 @@ function goToHome() {
 
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
-    
     refreshInterval = setInterval(async () => {
         await updateTabCounts();
         await updateInboxBadge();
         updateInboxTabBadgesOnly();
         await showGreenPill();
-        
         if (inboxTab === 'chats' && !currentOpenChatUserId && document.getElementById('inbox-content-simple')) {
             await renderSimpleChats();
         }
     }, 10000);
 }
 
-// ========== INIT ==========
-(async function() {
-    const sessionRestored = await restoreSession();
-    if (!sessionRestored) await checkAuth();
-    if (typeof loadFeed === 'function') loadFeed();
-    if (window.USER) {
-        await loadNotificationCounts();
-        setTimeout(() => {
-            startAutoRefresh();
-        }, 2000);
-    }
-})();
-
-// Expose functions globally
+// -------- BOTTOM NAV --------
 window.bottomNav = function(page) {
-    document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+    document.body.style.overflow = '';
+    document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
     if (page === 'home') {
         document.querySelector('.bottom-nav-item:first-child')?.classList.add('active');
         goToHome();
@@ -897,6 +788,21 @@ window.bottomNav = function(page) {
     }
 };
 
+// -------- INIT --------
+(async function() {
+    const sessionRestored = await restoreSession();
+    if (!sessionRestored) await checkAuth();
+    if (typeof loadFeed === 'function') loadFeed();
+    if (window.USER) {
+        await loadNotificationCounts();
+        setTimeout(() => startAutoRefresh(), 2000);
+    }
+})();
+
+// Re-check on window focus
+window.addEventListener('focus', async () => { if (window.USER) await loadNotificationCounts(); });
+
+// -------- EXPOSE GLOBALS --------
 window.loadInbox = loadSimpleInbox;
 window.openChat = openSimpleChat;
 window.closeChat = closeSimpleChat;
@@ -912,14 +818,7 @@ window.viewPostAndComments = viewPostAndComments;
 window.loadNotificationCounts = loadNotificationCounts;
 window.updateInboxTabBadgesOnly = updateInboxTabBadgesOnly;
 window.openNotificationTarget = openNotificationTarget;
-</script>
-
-<script>
-window.addEventListener('focus', async () => {
-    if (window.USER) {
-        await loadNotificationCounts();
-    }
-});
+window.goToHome = goToHome;
 </script>
 
 </body>
