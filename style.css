@@ -1320,3 +1320,7 @@ html, body {
     scrollbar-width: thin;
     scrollbar-color: #00ff88 #111;
 }
+/* Hide feed when chat is open */
+body.chat-open .feed {
+    display: none;
+}
