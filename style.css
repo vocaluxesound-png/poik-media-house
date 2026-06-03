@@ -3,7 +3,7 @@ body { background: black; color: white; font-family: system-ui, -apple-system, '
 
 .header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 12px 16px; z-index: 100; border-bottom: 1px solid #222; }
 .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-.logo { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #00ff88 40%, #ffffff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.logo { font-size: 24px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
 .header-icons { display: flex; gap: 16px; align-items: center; }
 .header-icons i { font-size: 22px; cursor: pointer; color: #ccc; }
 
