@@ -526,10 +526,10 @@ async function renderSimpleChats() {
 }
 
 async function openSimpleChat(userId) {
+    document.body.classList.add('chat-open');
     currentOpenChatUserId = userId;
     
     const container = document.getElementById('inbox-content-simple');
-    if (!container) return;
     
     container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;"><div class="loading">Loading chat...</div></div>';
     
@@ -642,6 +642,7 @@ async function sendSimpleChatMessage() {
 }
 
 async function closeSimpleChat() {
+    document.body.classList.remove('chat-open');
     if (currentOpenChatUserId) {
         await markMessagesRead(currentOpenChatUserId);
     }
